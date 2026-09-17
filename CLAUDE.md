@@ -6,7 +6,9 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 
 ## Estado actual
 
-**Fase 1 en curso.** Están en pie las premisas de día 0 (sección 1.1 del roadmap): monorepo `backend/` + `frontend/`, hexágono vacío con composition root, Biome + CI, Docker + compose con Postgres, y las tres skills. **Faltan de la Fase 1:** auth JWT y roles (entregable 5), el contrato REST completo con envoltura de errores y `X-Request-Id` (entregable 6), OpenAPI generable y `AGENTS.md` (entregable 9). El único endpoint que existe es `GET /api/v1/health`. No hay modelo de datos: `prisma/schema.prisma` solo declara el datasource.
+**Fase 1 entregada, salvo la verificación de Docker** (`docker compose up` nunca se ejecutó: Docker no estaba instalado en la máquina donde se construyó). Están en pie: monorepo, hexágono con composition root, auth JWT con roles, contrato REST con envoltura de errores y `X-Request-Id`, OpenAPI generado, Biome + CI, Dockerfiles y compose, `AGENTS.md` y las tres skills.
+
+Existen dos endpoints: `GET /api/v1/health` (público) y `GET /api/v1/me` (autenticado). **No hay modelo de datos** — `prisma/schema.prisma` solo declara el datasource — ni persistencia real: eso es la Fase 2. La emisión de tokens es de la Fase 3; hoy solo se verifican.
 
 Lo que aún no existe está descrito como destino, no como hecho. Verifica antes de asumir que un archivo o comando está.
 
@@ -43,6 +45,8 @@ Monorepo con `backend/` y `frontend/` independientes, cada uno con su `package.j
 | FHIR R4 `/fhir` | Hermes (rol `service`) | `OperationOutcome` con `application/fhir+json` |
 
 Nunca mezclar las envolturas. `GET /fhir/metadata` (CapabilityStatement) debe declarar **exactamente** lo implementado; perfiles y constantes FHIR viven en un solo módulo.
+
+**Cómo se escribe una ruta REST:** se envuelve con `publicRoute` o `privateRoute` de `backend/src/http/route.ts` (resuelven `X-Request-Id`, aplican el rol y normalizan errores), y se declara en `backend/src/http/openapi.ts` seguido de `npm --prefix backend run openapi:generate`. `openapi.json` es generado: editarlo a mano rompe la suite `contrato-api`, que también falla si hay una ruta sin declarar. Para comprobar propiedad de un recurso, `requireTenant` — falla como `not_found`, nunca `forbidden`.
 
 **Conceptos de dominio que atraviesan fases:** el apartado de cupo es atómico (`free` → `busy_tentative` en la misma transacción, dos solicitudes concurrentes nunca toman el mismo cupo); las solicitudes vencen y el vencimiento se evalúa **al leer** (también en lecturas FHIR de `Slot`, `Appointment` y `Task`), con barrido periódico adicional en Fase 5. Paginación REST por cursor (50 por defecto, 200 máximo); FHIR usa `_count`/`_offset`.
 

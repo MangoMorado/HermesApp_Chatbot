@@ -1,0 +1,57 @@
+# AGENTS.md — backend
+
+Reglas en [`../GOBERNANZA.md`](../GOBERNANZA.md). Aquí solo el mapa.
+
+## Dónde va cada cosa
+
+```
+src/app/                  Adaptadores de entrada HTTP (route handlers de Next).
+src/http/                 Glue del adaptador REST: envoltura de errores, X-Request-Id,
+                          envoltorios de ruta, fuente del OpenAPI. No es dominio.
+src/composition-root.ts   Único punto que ensambla adaptadores con casos de uso.
+src/config/env.ts         Único punto que lee process.env.
+src/modules/<contexto>/   domain / application / infrastructure (ver src/modules/README.md).
+prisma/                   Esquema. La URL de conexión vive en prisma.config.ts (Prisma 7).
+scripts/                  Utilidades de build; se ejecutan con tsx.
+tests/                    Suites por comportamiento, no por archivo.
+openapi.json              Generado. No se edita a mano.
+```
+
+## Las dos superficies
+
+`/api/v1` responde errores como `{ error: { code, message, request_id, details } }` con
+cabecera `X-Request-Id`. `/fhir` (Fase 4) responde `OperationOutcome` con
+`application/fhir+json`. **Nunca se mezclan.**
+
+## Al escribir una ruta nueva de /api/v1
+
+1. Envuélvela con `publicRoute` o `privateRoute` de `src/http/route.ts`. Eso resuelve el
+   `X-Request-Id`, aplica el rol y normaliza los errores.
+2. Declárala en `src/http/openapi.ts` y corre `npm run openapi:generate`. La suite
+   `contrato-api` falla si `openapi.json` quedó desfasado o si la ruta no está declarada.
+3. El handler valida, delega en un caso de uso y serializa. Si crece más que eso, falta un
+   caso de uso.
+
+## Auth
+
+El `tenant_id` sale **solo** del claim del token; `privateRoute` ya lo resuelve. Para
+comprobar propiedad de un recurso usa `requireTenant`, que falla como `not_found` y no
+como `forbidden`. Para el rol `widget`, `requireSession`.
+
+## Comandos
+
+```bash
+npm run dev                # http://localhost:3001
+npm test                   # Vitest
+npm run typecheck
+npm run openapi:generate   # regenera openapi.json
+npm run db:generate        # prisma generate (necesita backend/.env)
+```
+
+Un solo test: `npx vitest run tests/roles.test.ts`, o por nombre con `-t "<nombre>"`.
+
+## Fronteras
+
+`domain/` y `application/` no importan `next`, `@prisma/client`, `react` ni `node:*`. Lo
+vigilan la regla `noRestrictedImports` de `biome.json` **y** la suite `fronteras`. Si
+necesitas algo de fuera desde el núcleo, la respuesta es un puerto, no una excepción.

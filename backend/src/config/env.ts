@@ -9,6 +9,11 @@ export type AppConfig = {
   readonly nodeEnv: Environment;
   readonly databaseUrl: string;
   readonly appTimezone: string;
+  readonly jwt: {
+    readonly secret: string;
+    readonly issuer: string;
+    readonly audience: string;
+  };
 };
 
 function required(name: string): string {
@@ -35,5 +40,10 @@ export function loadConfig(): AppConfig {
     nodeEnv: parseEnvironment(optional("NODE_ENV", "development")),
     databaseUrl: required("DATABASE_URL"),
     appTimezone: optional("APP_TIMEZONE", "America/Bogota"),
+    jwt: {
+      secret: required("JWT_SECRET"),
+      issuer: optional("JWT_ISSUER", "chatbot-ingenius-360"),
+      audience: optional("JWT_AUDIENCE", "chatbot-ingenius-360"),
+    },
   };
 }

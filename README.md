@@ -6,8 +6,8 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fase 1 en curso. Los cimientos (monorepo, hexágono, calidad, Docker) están en
-> pie; faltan auth y el contrato REST completo. No hay modelo de datos todavía.
+> Estado: Fase 1 completa salvo verificación de Docker. Cimientos, auth por JWT, contrato
+> REST y OpenAPI en pie. No hay modelo de datos todavía: eso es la Fase 2.
 
 ## Requisitos
 
@@ -33,6 +33,33 @@ npm --prefix frontend run dev      # http://localhost:3000
 Comprobación rápida: `curl http://localhost:3001/api/v1/health` responde
 `{"status":"ok","checkedAt":"..."}`.
 
+## Endpoints
+
+| Ruta | Acceso | Qué hace |
+| --- | --- | --- |
+| `GET /api/v1/health` | público | Comprueba que el servicio responde |
+| `GET /api/v1/me` | cualquier rol autenticado | Identidad efectiva del token |
+
+Los errores siempre vienen como `{ error: { code, message, request_id, details? } }` con
+cabecera `X-Request-Id`. Si el cliente manda `X-Request-Id`, se devuelve el mismo.
+
+El contrato vive en [`backend/openapi.json`](backend/openapi.json), que se **genera**:
+
+```bash
+npm --prefix backend run openapi:generate
+```
+
+Se edita `backend/src/http/openapi.ts`, nunca el JSON. La suite `contrato-api` falla si el
+JSON quedó desfasado o si hay una ruta de `/api/v1` sin declarar.
+
+## Autenticación
+
+JWT HS256 en `Authorization: Bearer <token>`. Claims: `sub`, `tenant_id`, `role`
+(`widget` · `operator` · `admin` · `service`) y `session_id` para el widget.
+
+El `tenant_id` sale **solo** del claim. Un recurso de otro tenant responde `404`, nunca
+`403`. La emisión de tokens llega en la Fase 3; por ahora se firman a mano para pruebas.
+
 ## Docker
 
 ```bash
@@ -49,6 +76,8 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 | --- | --- | --- |
 | `DATABASE_URL` | backend | Conexión a Postgres (la lee `prisma.config.ts` y `src/config/env.ts`) |
 | `APP_TIMEZONE` | backend | Zona de referencia para agenda y búsquedas FHIR |
+| `JWT_SECRET` | backend | Secreto HS256 de verificación (obligatorio) |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | backend | Emisor y audiencia esperados |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose | Credenciales del contenedor de Postgres |
 | `NEXT_PUBLIC_API_BASE_URL` | frontend | Base del backend |
 
@@ -60,7 +89,9 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 backend/
   prisma/schema.prisma        # adaptador de persistencia (modelo real: Fase 2)
   prisma.config.ts            # URL de conexion (Prisma 7 la saco del schema)
+  openapi.json                # contrato REST generado; no se edita a mano
   src/app/                    # adaptadores de entrada HTTP (route handlers)
+  src/http/                   # envoltura de errores, X-Request-Id, fuente del OpenAPI
   src/composition-root.ts     # unico punto que ensambla adaptadores con casos de uso
   src/config/env.ts           # unico punto que lee process.env
   src/modules/<contexto>/     # domain / application / infrastructure
@@ -86,7 +117,8 @@ con `-t "<nombre>"`.
 | Suite | Qué protege |
 | --- | --- |
 | `fronteras` | `domain` y `application` no importan framework, ORM ni `node:*` |
-| `contrato-api` | Forma de la respuesta de `/api/v1/health` |
+| `contrato-api` | Envoltura de errores, `X-Request-Id` y OpenAPI sin desfase |
+| `roles` | 401 sin token, `404` por tenant ajeno, alcance del widget |
 
-Las demás suites (`roles`, `aislamiento-tenant`, `flujo`, `fhir-conformance`…) llegan con
-sus fases; están listadas en `GOBERNANZA.md`.
+Las demás (`aislamiento-tenant`, `flujo`, `fhir-conformance`…) llegan con sus fases; están
+listadas en `GOBERNANZA.md`.

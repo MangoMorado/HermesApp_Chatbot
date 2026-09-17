@@ -1,0 +1,20 @@
+/** Codigos de error del contrato REST. Estables: el cliente los ramifica. */
+export const ERROR_CODES = [
+  "unauthorized",
+  "forbidden",
+  "not_found",
+  "validation_failed",
+  "method_not_allowed",
+  "internal_error",
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+export const STATUS_BY_CODE: Record<ErrorCode, number> = {
+  unauthorized: 401,
+  forbidden: 403,
+  not_found: 404,
+  validation_failed: 422,
+  method_not_allowed: 405,
+  internal_error: 500,
+};
