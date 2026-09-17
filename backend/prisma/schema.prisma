@@ -1,0 +1,13 @@
+// Adaptador de persistencia del dia 1. El dominio no conoce este archivo:
+// habla con puertos y la implementacion Prisma vive en infrastructure/.
+// La URL de conexion vive en prisma.config.ts (Prisma 7 la saco del schema).
+// El modelo de datos real (expediente, agenda, cupos, conversaciones,
+// auditoria) llega en la Fase 2.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}

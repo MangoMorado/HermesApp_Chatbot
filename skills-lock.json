@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "fhir-developer-skill": {
+      "source": "anthropics/healthcare",
+      "sourceType": "github",
+      "skillPath": "plugins/healthcare/skills/fhir-developer/SKILL.md",
+      "computedHash": "6b53a78ec6be62023708e970d75fe0f5ca44aa13304d80c11445f1228c4390a2"
+    },
+    "hexagonal-architecture": {
+      "source": "lexler/skill-factory",
+      "sourceType": "github",
+      "skillPath": "output_skills/design/hexagonal-architecture/SKILL.md",
+      "computedHash": "bf6afa87ee9b7408f250166b0acffe2041d267083f1736929042ede6d3faf53f"
+    },
+    "security-best-practices": {
+      "source": "tech-leads-club/agent-skills",
+      "sourceType": "github",
+      "skillPath": "packages/skills-catalog/skills/(security)/security-best-practices/SKILL.md",
+      "computedHash": "625129f146ac17f2b1f2f9b9ecc7f37cecc75caba27f6e0850ce7f3d9f655943"
+    }
+  }
+}
