@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Los scripts de shell deben mantener LF siempre: CRLF rompe el shebang y
+# `set -e` en el contenedor Alpine (busybox sh) aunque el checkout sea en Windows.
+*.sh text eol=lf
