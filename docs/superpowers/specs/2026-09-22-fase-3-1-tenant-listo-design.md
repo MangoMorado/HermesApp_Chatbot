@@ -45,9 +45,11 @@ backend/src/modules/
   auth/         # se amplía con el puerto TokenIssuer y su adaptador jose
 ```
 
-- `platform` orquesta el alta invocando casos de uso de `bot-config` y `knowledge`; ninguno
-  de ellos importa `platform`. Sin ciclos.
-- `widget` resuelve claves a través de un puerto declarado en `bot-config`.
+- Los módulos nuevos solo importan `shared` y `auth` de otros módulos (lo vigila `fronteras`).
+  Como `patients` con `AppointmentHistory`, cada uno declara el puerto que necesita y el
+  composition root lo cumple con el caso de uso del módulo dueño:
+  - `platform` declara `TenantProvisioning`; lo cumplen casos de uso de `bot-config` y `knowledge`.
+  - `widget` declara `WidgetKeyResolver` y `WidgetSettingsReader`; los cumple `bot-config`.
 - Ningún módulo nuevo importa `hermes-simulator` (lo vigila `fronteras`).
 - `config/env.ts` añade `PLATFORM_SECRET` (opcional; ausente ⇒ superficie de plataforma
   apagada) y `TRUST_PROXY` (por defecto `false`).
@@ -111,6 +113,16 @@ resuelto por la clave del widget, y `actor_subject` es `widget:anonymous`. Se a�
 variante de `idempotentRoute` que persiste una **referencia** (`{ session_id }`) y reconstruye
 la respuesta: en la repetición se re-firma un token para esa sesión si sigue vigente (si
 venció → `401`). `refresh` usa la misma variante. Ningún JWT queda en `response_body`.
+
+Como la apertura es anónima, quien conozca la clave pública y la `Idempotency-Key` de otro
+navegador obtendría un token de esa sesión al repetir la petición. Por eso en esta ruta la
+`Idempotency-Key` actúa como secreto del cliente: debe tener al menos 32 caracteres (el
+widget usa `crypto.randomUUID()`), más corta → `validation_failed`, y nunca se registra en
+logs.
+
+El núcleo de idempotencia (reservar, ejecutar, completar, repetir) se extrae a
+`http/idempotency-core.ts` y lo comparten tres ámbitos: tenant (`idempotentRoute`),
+plataforma y sesión del widget (DRY al tercer uso).
 
 ### 4.4 Errores
 
