@@ -4,7 +4,7 @@ Plan de producto en **cinco fases**, desde repositorio vacío hasta MVP desplega
 Arranca con hexágono, gobernanza, skills, puertas de calidad y Docker listos en la
 primera versión.
 
-> Última revisión: 17 de septiembre de 2026.
+> Última revisión: 22 de septiembre de 2026.
 
 ---
 
@@ -20,7 +20,7 @@ primera versión.
 | Agnóstico de ORM | Persistencia detrás de puertos; Prisma es el adaptador del día 1 |
 | Stack día 1 | Next.js (App Router) + Prisma + **Postgres** |
 | Gobernanza | `GOBERNANZA.md` se crea en la Fase 1 y manda sobre skills y estilo |
-| Skills | Hexagonal, FHIR developer y security-best-practices instaladas desde la Fase 1, usando skills.sh |
+| Skills | Inventario en `GOBERNANZA.md` §6 y `skills-lock.json` (hexagonal, FHIR, security, frontend-design, dry-refactoring, nielsen, grilling, find-skills); vía skills.sh |
 | Calidad | Biome (raíz + proyectos), React Doctor (frontend), CI en cada PR |
 | Deploy | Dockerfiles multi-stage + compose con Postgres desde la Fase 1 |
 | Principios | DRY (extraer al tercer uso), Clean Code (umbrales de gobernanza) |
@@ -63,10 +63,16 @@ primera versión.
 
 1. Estructura `backend/` + `frontend/` + raíz (Biome compartido, `.nvmrc`, CI, `docker-compose`).
 2. `GOBERNANZA.md` con no negociables, FHIR, Clean Code, DRY, SDD, skills y límites de agentes.
-3. Instalación e importación de skills:
+3. Instalación e importación de skills (inventario canónico en `GOBERNANZA.md` §6 /
+   `skills-lock.json`; viven en `.agents/skills/` y espejo en `.claude/skills/`):
    - hexagonal-architecture
    - fhir-developer-skill
-   - security-best-practices  
+   - security-best-practices
+   - frontend-design
+   - dry-refactoring
+   - nielsen-usability-heuristics
+   - grilling
+   - find-skills  
    Las skills orientan; **gana la gobernanza** si hay conflicto.
 4. Hexágono vacío: shell `domain` / `application` / `infrastructure` + composition root; Biome bloquea imports ilegales.
 5. Auth: JWT, roles (`widget` · `operator` · `admin` · `service`), tenant solo del claim.

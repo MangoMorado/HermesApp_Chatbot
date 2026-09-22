@@ -5,4 +5,5 @@ Object.assign(process.env, {
   JWT_SECRET: "secreto-de-pruebas-suficientemente-largo-para-hs256",
   JWT_ISSUER: "chatbot-ingenius-360",
   JWT_AUDIENCE: "chatbot-ingenius-360",
+  HERMES_SIMULATOR_ENABLED: "false",
 });

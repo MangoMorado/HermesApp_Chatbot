@@ -4,6 +4,7 @@ export const ERROR_CODES = [
   "forbidden",
   "not_found",
   "validation_failed",
+  "conflict",
   "method_not_allowed",
   "internal_error",
 ] as const;
@@ -15,6 +16,7 @@ export const STATUS_BY_CODE: Record<ErrorCode, number> = {
   forbidden: 403,
   not_found: 404,
   validation_failed: 422,
+  conflict: 409,
   method_not_allowed: 405,
   internal_error: 500,
 };

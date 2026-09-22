@@ -9,6 +9,7 @@ export type AppConfig = {
   readonly nodeEnv: Environment;
   readonly databaseUrl: string;
   readonly appTimezone: string;
+  readonly hermesSimulatorEnabled: boolean;
   readonly jwt: {
     readonly secret: string;
     readonly issuer: string;
@@ -40,6 +41,7 @@ export function loadConfig(): AppConfig {
     nodeEnv: parseEnvironment(optional("NODE_ENV", "development")),
     databaseUrl: required("DATABASE_URL"),
     appTimezone: optional("APP_TIMEZONE", "America/Bogota"),
+    hermesSimulatorEnabled: optional("HERMES_SIMULATOR_ENABLED", "false") === "true",
     jwt: {
       secret: required("JWT_SECRET"),
       issuer: optional("JWT_ISSUER", "chatbot-ingenius-360"),

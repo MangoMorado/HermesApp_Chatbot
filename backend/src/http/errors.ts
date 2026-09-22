@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { AuthError } from "@/modules/auth/domain/auth-error";
+import { ConflictError } from "@/modules/shared/domain/conflict-error";
+import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 import { type ErrorCode, STATUS_BY_CODE } from "./error-codes";
 import { REQUEST_ID_HEADER } from "./request-id";
@@ -34,6 +36,12 @@ export function toApiError(error: unknown): ApiError {
   }
   if (error instanceof ValidationError) {
     return new ApiError("validation_failed", error.message, error.details);
+  }
+  if (error instanceof NotFoundError) {
+    return new ApiError("not_found", error.message);
+  }
+  if (error instanceof ConflictError) {
+    return new ApiError("conflict", error.message, error.details);
   }
   if (error instanceof AuthError) {
     return new ApiError(error.reason, error.message);

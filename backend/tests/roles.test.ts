@@ -1,12 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
+import { GET as getPractitioners } from "@/app/api/v1/practitioners/route";
 import { requireRole, requireSession, requireTenant } from "@/modules/auth/application/authorize";
 import type { Actor } from "@/modules/auth/domain/actor";
 import { AuthError } from "@/modules/auth/domain/auth-error";
+import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { authorized, signToken } from "./helpers/token";
 
-const operator: Actor = { subject: "u-1", tenantId: "tenant-a", role: "operator" };
-const widget: Actor = { subject: "s-1", tenantId: "tenant-a", role: "widget", sessionId: "chat-1" };
+const operator: Actor = {
+  subject: "u-1",
+  tenantId: toTenantId("tenant-a"),
+  role: "operator",
+};
+const widget: Actor = {
+  subject: "s-1",
+  tenantId: toTenantId("tenant-a"),
+  role: "widget",
+  sessionId: "chat-1",
+};
 
 describe("roles: autorizacion en el nucleo", () => {
   it("admite el rol declarado por la ruta", () => {
@@ -91,5 +102,15 @@ describe("roles: ruta autenticada", () => {
     const body = await (await getIdentity(request)).json();
 
     expect(body.tenant_id).toBe("tenant-a");
+  });
+
+  it("widget no alcanza rutas de dominio", async () => {
+    const token = await signToken({ role: "widget", tenantId: "tenant-a", sessionId: "chat-1" });
+    const response = await getPractitioners(
+      new Request("http://localhost/api/v1/practitioners", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+    expect(response.status).toBe(403);
   });
 });

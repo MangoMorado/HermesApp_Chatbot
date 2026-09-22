@@ -1,3 +1,4 @@
+import type { TenantId } from "@/modules/shared/domain/tenant-id";
 import type { Role } from "./role";
 
 /**
@@ -6,7 +7,7 @@ import type { Role } from "./role";
  */
 export type Actor = {
   readonly subject: string;
-  readonly tenantId: string;
+  readonly tenantId: TenantId;
   readonly role: Role;
   /** Solo para el rol `widget`: la sesion de chat que puede alcanzar. */
   readonly sessionId?: string;

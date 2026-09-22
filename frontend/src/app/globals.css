@@ -1,0 +1,121 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f3ee;
+  --ink: #1c1917;
+  --muted: #57534e;
+  --accent: #0f766e;
+  --line: #d6d3d1;
+  --danger: #b91c1c;
+  font-family: "Segoe UI", "IBM Plex Sans", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+a {
+  color: var(--accent);
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.site-main {
+  padding: 1.5rem;
+  max-width: 960px;
+}
+
+.token-bar {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.token-bar label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.token-bar input,
+.panel input,
+.panel select,
+.panel button,
+.simulador input,
+.simulador button {
+  font: inherit;
+  padding: 0.45rem 0.65rem;
+}
+
+.token-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.token-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.panel section,
+.simulador section {
+  margin-bottom: 2rem;
+}
+
+.panel h1,
+.simulador h1 {
+  margin-top: 0;
+}
+
+.stack {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 28rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  padding: 0.4rem 0.35rem;
+}
+
+.error {
+  color: var(--danger);
+}
+
+.muted {
+  color: var(--muted);
+}

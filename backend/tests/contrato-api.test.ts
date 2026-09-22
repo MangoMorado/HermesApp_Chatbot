@@ -5,22 +5,29 @@ import { GET as getHealth } from "@/app/api/v1/health/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { ERROR_CODES } from "@/http/error-codes";
 import { buildOpenApiDocument } from "@/http/openapi";
+import { buildSimOpenApiDocument } from "@/http/openapi-sim";
 import { REQUEST_ID_HEADER } from "@/http/request-id";
 import { createCheckHealth } from "@/modules/health/application/check-health";
 import { signToken } from "./helpers/token";
 
 const API_DIR = join(process.cwd(), "src", "app", "api", "v1");
+const SIM_DIR = join(process.cwd(), "src", "app", "api", "sim", "v1");
 
-function declaredRoutes(dir: string): string[] {
+/** Normaliza `[id]` de App Router a `{id}` de OpenAPI. */
+function normalizePath(path: string): string {
+  return path.replace(/\[([^\]]+)\]/g, "{$1}");
+}
+
+function declaredRoutes(dir: string, root = dir): string[] {
   return readdirSync(dir).flatMap((entry) => {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
-      return declaredRoutes(full);
+      return declaredRoutes(full, root);
     }
     if (entry !== "route.ts") {
       return [];
     }
-    const segments = relative(API_DIR, join(full, "..")).split(sep).filter(Boolean);
+    const segments = relative(root, join(full, "..")).split(sep).filter(Boolean);
     return [`/${segments.join("/")}`];
   });
 }
@@ -100,11 +107,26 @@ describe("contrato-api: OpenAPI", () => {
     expect(JSON.parse(onDisk)).toEqual(buildOpenApiDocument());
   });
 
+  it("openapi-sim.json esta al dia con el generador", () => {
+    const onDisk = readFileSync(join(process.cwd(), "openapi-sim.json"), "utf8");
+
+    expect(JSON.parse(onDisk)).toEqual(buildSimOpenApiDocument());
+  });
+
   it("toda ruta de /api/v1 esta declarada en el contrato", () => {
     const document = buildOpenApiDocument() as { paths: Record<string, unknown> };
-    const declared = Object.keys(document.paths).sort();
+    const declared = Object.keys(document.paths).map(normalizePath).sort();
+    const onDisk = declaredRoutes(API_DIR).map(normalizePath).sort();
 
-    expect(declaredRoutes(API_DIR).sort()).toEqual(declared);
+    expect(onDisk).toEqual(declared);
+  });
+
+  it("toda ruta de /api/sim/v1 esta declarada en el contrato sim", () => {
+    const document = buildSimOpenApiDocument() as { paths: Record<string, unknown> };
+    const declared = Object.keys(document.paths).map(normalizePath).sort();
+    const onDisk = declaredRoutes(SIM_DIR).map(normalizePath).sort();
+
+    expect(onDisk).toEqual(declared);
   });
 
   it("las respuestas de error referencian el mismo esquema", async () => {

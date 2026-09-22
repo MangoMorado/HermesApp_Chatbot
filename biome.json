@@ -8,7 +8,12 @@
       "!**/.next",
       "!**/dist",
       "!**/coverage",
-      "!**/.claude/skills"
+      "!**/.claude/skills",
+      "!**/frontend/src/api",
+      "!**/frontend/src/sim",
+      "!**/openapi.json",
+      "!**/openapi-sim.json",
+      "!skills-lock.json"
     ]
   },
   "formatter": {

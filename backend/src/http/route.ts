@@ -6,8 +6,15 @@ import type { Role } from "@/modules/auth/domain/role";
 import { errorResponse, toApiError } from "./errors";
 import { REQUEST_ID_HEADER, resolveRequestId } from "./request-id";
 
-type PublicHandler = (context: { requestId: string }) => Promise<unknown> | unknown;
-type PrivateHandler = (context: { actor: Actor; requestId: string }) => Promise<unknown> | unknown;
+type PublicHandler = (context: {
+  requestId: string;
+  request: Request;
+}) => Promise<unknown> | unknown;
+type PrivateHandler = (context: {
+  actor: Actor;
+  requestId: string;
+  request: Request;
+}) => Promise<unknown> | unknown;
 
 function ok(payload: unknown, requestId: string): NextResponse {
   return NextResponse.json(payload, {
@@ -20,7 +27,7 @@ export function publicRoute(handler: PublicHandler) {
   return async (request: Request): Promise<NextResponse> => {
     const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
     try {
-      return ok(await handler({ requestId }), requestId);
+      return ok(await handler({ requestId, request }), requestId);
     } catch (error) {
       return errorResponse(toApiError(error), requestId);
     }
@@ -38,7 +45,7 @@ export function privateRoute(allowedRoles: readonly Role[], handler: PrivateHand
       const { authenticate } = getContainer();
       const actor = await authenticate(request.headers.get("Authorization"));
       requireRole(actor, allowedRoles);
-      return ok(await handler({ actor, requestId }), requestId);
+      return ok(await handler({ actor, requestId, request }), requestId);
     } catch (error) {
       return errorResponse(toApiError(error), requestId);
     }

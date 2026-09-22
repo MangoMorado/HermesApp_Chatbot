@@ -10,9 +10,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "biome check .",
-    "doctor": "react-doctor"
+    "doctor": "react-doctor .",
+    "api:generate": "orval"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.103.2",
     "next": "^16.3.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
@@ -22,6 +24,7 @@
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "orval": "^8.36.0",
     "react-doctor": "^0.9.14",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"

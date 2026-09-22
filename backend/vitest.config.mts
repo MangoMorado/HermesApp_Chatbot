@@ -27,6 +27,8 @@ export default defineConfig({
           globalSetup: ["tests/db/global-setup.ts"],
           // Una sola base compartida: los archivos corren en serie.
           fileParallelism: false,
+          maxWorkers: 1,
+          pool: "threads",
           hookTimeout: 60_000,
           testTimeout: 30_000,
         },

@@ -1,3 +1,4 @@
+import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import type { Actor } from "../domain/actor";
 import { unauthorized } from "../domain/auth-error";
 import type { TokenVerifier } from "../domain/ports/token-verifier";
@@ -27,7 +28,7 @@ export function createAuthenticate(verifier: TokenVerifier): Authenticate {
       const claims = await verifier.verify(token);
       return {
         subject: claims.subject,
-        tenantId: claims.tenantId,
+        tenantId: toTenantId(claims.tenantId),
         role: claims.role,
         ...(claims.sessionId ? { sessionId: claims.sessionId } : {}),
       };

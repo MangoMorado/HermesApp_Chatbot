@@ -1,8 +1,11 @@
 export default function HomePage() {
   return (
-    <main>
+    <div>
       <h1>Chatbot Ingenius 360</h1>
-      <p>Cimientos en pie. El panel llega en la Fase 2 y la consola de chat en la Fase 3.</p>
-    </main>
+      <p className="muted">
+        Pega un JWT arriba (desde <code>npm --prefix backend run token:dev</code>) y entra al panel
+        o al simulador.
+      </p>
+    </div>
   );
 }
