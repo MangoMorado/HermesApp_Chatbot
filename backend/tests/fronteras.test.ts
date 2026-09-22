@@ -69,4 +69,31 @@ describe("fronteras de capas", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("ningun modulo del chatbot importa hermes-simulator", () => {
+    const chatbotModules = readdirSync(MODULES_DIR).filter(
+      (entry) => entry !== "hermes-simulator" && statSync(join(MODULES_DIR, entry)).isDirectory(),
+    );
+    const offenders = chatbotModules
+      .flatMap((mod) => listFiles(join(MODULES_DIR, mod)))
+      .flatMap((file) =>
+        importsOf(file)
+          .filter((specifier) => /(^|\/)hermes-simulator(\/|$)/.test(specifier))
+          .map((specifier) => `${file} -> ${specifier}`),
+      );
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("hermes-simulator solo importa shared y auth de otros modulos", () => {
+    const allowed = new Set(["hermes-simulator", "shared", "auth"]);
+    const offenders = listFiles(join(MODULES_DIR, "hermes-simulator")).flatMap((file) =>
+      importsOf(file)
+        .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
+        .filter(({ module }) => module !== undefined && !allowed.has(module))
+        .map(({ specifier }) => `${file} -> ${specifier}`),
+    );
+
+    expect(offenders).toEqual([]);
+  });
 });

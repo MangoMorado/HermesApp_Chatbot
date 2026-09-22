@@ -1,4 +1,4 @@
-import type { Clock } from "../domain/ports/clock";
+import type { Clock } from "@/modules/shared/domain/ports/clock";
 
 export type HealthStatus = {
   readonly status: "ok";

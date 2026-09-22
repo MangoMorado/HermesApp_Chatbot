@@ -1,8 +1,8 @@
 // Adaptador de persistencia del dia 1. El dominio no conoce este archivo:
 // habla con puertos y la implementacion Prisma vive en infrastructure/.
 // La URL de conexion vive en prisma.config.ts (Prisma 7 la saco del schema).
-// El modelo de datos real (expediente, agenda, cupos, conversaciones,
-// auditoria) llega en la Fase 2.
+// Aislamiento por tenant reforzado en la base: toda referencia entre tablas de
+// dominio es una FK compuesta (tenant_id, id), asi que no puede cruzar tenants.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,4 +10,413 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["public", "hermes_sim"]
+}
+
+enum SlotStatus {
+  free
+  busy
+  busy_tentative
+  busy_unavailable
+
+  @@map("slot_status")
+  @@schema("public")
+}
+
+enum MedicalRecordStatus {
+  active
+  pre_registered
+
+  @@map("medical_record_status")
+  @@schema("public")
+}
+
+enum AppointmentStatus {
+  booked
+  cancelled
+  fulfilled
+  noshow
+
+  @@map("appointment_status")
+  @@schema("public")
+}
+
+enum DocumentType {
+  CC
+  TI
+  CE
+  PA
+  RC
+
+  @@map("document_type")
+  @@schema("public")
+}
+
+model Tenant {
+  id                String   @id
+  slug              String   @unique
+  name              String
+  maxQueryRangeDays Int      @default(31) @map("max_query_range_days")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  practitioners      Practitioner[]
+  healthcareServices HealthcareService[]
+  schedules          Schedule[]
+  slots              Slot[]
+  medicalRecords     MedicalRecord[]
+  appointments       Appointment[]
+  auditEvents        AuditEvent[]
+  idempotencyKeys    IdempotencyKey[]
+
+  @@map("tenants")
+  @@schema("public")
+}
+
+model Practitioner {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  identifierSystem String   @map("identifier_system")
+  identifierValue  String   @map("identifier_value")
+  name             String
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  schedules Schedule[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@map("practitioners")
+  @@schema("public")
+}
+
+model HealthcareService {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  identifierSystem String   @map("identifier_system")
+  identifierValue  String   @map("identifier_value")
+  name             String
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  schedules Schedule[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@map("healthcare_services")
+  @@schema("public")
+}
+
+model Schedule {
+  id                  String   @id
+  tenantId            String   @map("tenant_id")
+  identifierSystem    String   @map("identifier_system")
+  identifierValue     String   @map("identifier_value")
+  practitionerId      String   @map("practitioner_id")
+  healthcareServiceId String   @map("healthcare_service_id")
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant            Tenant            @relation(fields: [tenantId], references: [id])
+  practitioner      Practitioner      @relation(fields: [tenantId, practitionerId], references: [tenantId, id])
+  healthcareService HealthcareService @relation(fields: [tenantId, healthcareServiceId], references: [tenantId, id])
+  slots             Slot[]
+  appointments      Appointment[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@map("schedules")
+  @@schema("public")
+}
+
+model Slot {
+  id               String     @id
+  tenantId         String     @map("tenant_id")
+  identifierSystem String     @map("identifier_system")
+  identifierValue  String     @map("identifier_value")
+  scheduleId       String     @map("schedule_id")
+  startAt          DateTime   @map("start_at") @db.Timestamptz(3)
+  endAt            DateTime   @map("end_at") @db.Timestamptz(3)
+  status           SlotStatus @default(free)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  schedule     Schedule      @relation(fields: [tenantId, scheduleId], references: [tenantId, id])
+  appointments Appointment[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@index([tenantId, scheduleId, startAt])
+  @@index([tenantId, status, startAt])
+  @@map("slots")
+  @@schema("public")
+}
+
+model MedicalRecord {
+  id               String              @id
+  tenantId         String              @map("tenant_id")
+  identifierSystem String              @map("identifier_system")
+  identifierValue  String              @map("identifier_value")
+  documentType     DocumentType        @map("document_type")
+  documentNumber   String              @map("document_number")
+  givenNames       String              @map("given_names")
+  familyNames      String              @map("family_names")
+  birthDate        DateTime            @map("birth_date") @db.Date
+  phone            String?
+  email            String?
+  status           MedicalRecordStatus @default(active)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  appointments Appointment[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@unique([tenantId, documentType, documentNumber])
+  @@map("medical_records")
+  @@schema("public")
+}
+
+model Appointment {
+  id               String            @id
+  tenantId         String            @map("tenant_id")
+  identifierSystem String            @map("identifier_system")
+  identifierValue  String            @map("identifier_value")
+  medicalRecordId  String            @map("medical_record_id")
+  scheduleId       String            @map("schedule_id")
+  slotId           String            @map("slot_id")
+  startAt          DateTime          @map("start_at") @db.Timestamptz(3)
+  endAt            DateTime          @map("end_at") @db.Timestamptz(3)
+  status           AppointmentStatus
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  medicalRecord MedicalRecord @relation(fields: [tenantId, medicalRecordId], references: [tenantId, id])
+  schedule      Schedule      @relation(fields: [tenantId, scheduleId], references: [tenantId, id])
+  slot          Slot          @relation(fields: [tenantId, slotId], references: [tenantId, id])
+
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@index([tenantId, medicalRecordId, startAt])
+  @@index([tenantId, scheduleId, startAt])
+  @@map("appointments")
+  @@schema("public")
+}
+
+// Registra el hecho, nunca el contenido: sin columnas de datos de la peticion.
+model AuditEvent {
+  id           String   @id
+  tenantId     String   @map("tenant_id")
+  actorSubject String   @map("actor_subject")
+  actorRole    String   @map("actor_role")
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id")
+  requestId    String   @map("request_id")
+  occurredAt   DateTime @map("occurred_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, occurredAt])
+  @@map("audit_events")
+  @@schema("public")
+}
+
+model IdempotencyKey {
+  tenantId       String   @map("tenant_id")
+  key            String
+  actorSubject   String   @map("actor_subject")
+  method         String
+  path           String
+  requestHash    String   @map("request_hash")
+  responseStatus Int      @map("response_status")
+  responseBody   Json     @map("response_body")
+  createdAt      DateTime @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@id([tenantId, key])
+  @@map("idempotency_keys")
+  @@schema("public")
+}
+
+// ---------------------------------------------------------------------------
+// Simulador de Hermes. Schema propio, sin FKs hacia public: en produccion se
+// elimina completo. tenant_id es texto: el simulador conoce el tenant como
+// lo haria Hermes, sin depender de las tablas del chatbot.
+// ---------------------------------------------------------------------------
+
+enum SimSlotStatus {
+  free
+  busy
+  busy_tentative
+  busy_unavailable
+
+  @@map("slot_status")
+  @@schema("hermes_sim")
+}
+
+enum SimPatientStatus {
+  active
+  pre_registered
+
+  @@map("patient_status")
+  @@schema("hermes_sim")
+}
+
+enum SimAppointmentStatus {
+  booked
+  cancelled
+  fulfilled
+  noshow
+
+  @@map("appointment_status")
+  @@schema("hermes_sim")
+}
+
+enum SimDocumentType {
+  CC
+  TI
+  CE
+  PA
+  RC
+
+  @@map("document_type")
+  @@schema("hermes_sim")
+}
+
+model SimPractitioner {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  identifierSystem String   @map("identifier_system")
+  identifierValue  String   @map("identifier_value")
+  name             String
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  schedules SimSchedule[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@map("practitioners")
+  @@schema("hermes_sim")
+}
+
+model SimHealthcareService {
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  identifierSystem String   @map("identifier_system")
+  identifierValue  String   @map("identifier_value")
+  name             String
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  schedules SimSchedule[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@map("healthcare_services")
+  @@schema("hermes_sim")
+}
+
+model SimSchedule {
+  id                  String   @id
+  tenantId            String   @map("tenant_id")
+  identifierSystem    String   @map("identifier_system")
+  identifierValue     String   @map("identifier_value")
+  practitionerId      String   @map("practitioner_id")
+  healthcareServiceId String   @map("healthcare_service_id")
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  practitioner      SimPractitioner      @relation(fields: [tenantId, practitionerId], references: [tenantId, id])
+  healthcareService SimHealthcareService @relation(fields: [tenantId, healthcareServiceId], references: [tenantId, id])
+  slots             SimSlot[]
+  appointments      SimAppointment[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@map("schedules")
+  @@schema("hermes_sim")
+}
+
+model SimSlot {
+  id               String        @id
+  tenantId         String        @map("tenant_id")
+  identifierSystem String        @map("identifier_system")
+  identifierValue  String        @map("identifier_value")
+  scheduleId       String        @map("schedule_id")
+  startAt          DateTime      @map("start_at") @db.Timestamptz(3)
+  endAt            DateTime      @map("end_at") @db.Timestamptz(3)
+  status           SimSlotStatus @default(free)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  schedule     SimSchedule      @relation(fields: [tenantId, scheduleId], references: [tenantId, id])
+  appointments SimAppointment[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@index([tenantId, scheduleId, startAt])
+  @@map("slots")
+  @@schema("hermes_sim")
+}
+
+model SimPatient {
+  id               String           @id
+  tenantId         String           @map("tenant_id")
+  identifierSystem String           @map("identifier_system")
+  identifierValue  String           @map("identifier_value")
+  documentType     SimDocumentType  @map("document_type")
+  documentNumber   String           @map("document_number")
+  givenNames       String           @map("given_names")
+  familyNames      String           @map("family_names")
+  birthDate        DateTime         @map("birth_date") @db.Date
+  phone            String?
+  email            String?
+  status           SimPatientStatus @default(active)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  appointments SimAppointment[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@unique([tenantId, documentType, documentNumber])
+  @@map("patients")
+  @@schema("hermes_sim")
+}
+
+model SimAppointment {
+  id               String               @id
+  tenantId         String               @map("tenant_id")
+  identifierSystem String               @map("identifier_system")
+  identifierValue  String               @map("identifier_value")
+  patientId        String               @map("patient_id")
+  scheduleId       String               @map("schedule_id")
+  slotId           String               @map("slot_id")
+  startAt          DateTime             @map("start_at") @db.Timestamptz(3)
+  endAt            DateTime             @map("end_at") @db.Timestamptz(3)
+  status           SimAppointmentStatus
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  patient  SimPatient  @relation(fields: [tenantId, patientId], references: [tenantId, id])
+  schedule SimSchedule @relation(fields: [tenantId, scheduleId], references: [tenantId, id])
+  slot     SimSlot     @relation(fields: [tenantId, slotId], references: [tenantId, id])
+
+  @@unique([tenantId, identifierSystem, identifierValue])
+  @@index([tenantId, patientId, startAt])
+  @@map("appointments")
+  @@schema("hermes_sim")
 }

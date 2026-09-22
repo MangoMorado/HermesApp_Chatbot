@@ -2,7 +2,7 @@ import { loadConfig } from "./config/env";
 import { type Authenticate, createAuthenticate } from "./modules/auth/application/authenticate";
 import { createJoseTokenVerifier } from "./modules/auth/infrastructure/jose-token-verifier";
 import { type CheckHealth, createCheckHealth } from "./modules/health/application/check-health";
-import { systemClock } from "./modules/health/infrastructure/system-clock";
+import { systemClock } from "./modules/shared/infrastructure/system-clock";
 
 /**
  * Composition root unico: ensambla adaptadores concretos con los casos de uso.

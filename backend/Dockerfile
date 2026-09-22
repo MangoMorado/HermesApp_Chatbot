@@ -13,7 +13,21 @@ COPY . .
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=public
 RUN npx prisma generate && npm run build
 
+# Herramientas de operacion: CLI de Prisma para migrar y tsx para el seed.
+FROM node:26-alpine AS tools
+RUN apk add --no-cache openssl
+WORKDIR /app/tools
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev --no-audit --no-fund
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+COPY src/config ./src/config
+COPY src/modules/shared/infrastructure/prisma-client.ts ./src/modules/shared/infrastructure/prisma-client.ts
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=public
+RUN npx prisma generate
+
 FROM node:26-alpine AS runner
+RUN apk add --no-cache openssl
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
@@ -21,6 +35,8 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=tools --chown=nextjs:nodejs /app/tools ./tools
+COPY --chown=nextjs:nodejs docker/entrypoint.sh ./entrypoint.sh
 USER nextjs
 EXPOSE 3001
-CMD ["node", "server.js"]
+CMD ["sh", "/app/entrypoint.sh"]

@@ -6,9 +6,9 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 
 ## Estado actual
 
-**Fase 1 entregada, salvo la verificación de Docker** (`docker compose up` nunca se ejecutó: Docker no estaba instalado en la máquina donde se construyó). Están en pie: monorepo, hexágono con composition root, auth JWT con roles, contrato REST con envoltura de errores y `X-Request-Id`, OpenAPI generado, Biome + CI, Dockerfiles y compose, `AGENTS.md` y las tres skills.
+**Fase 1 cerrada.** Docker se verificó desplegando backend y frontend en Easypanel (VPS, proyecto `mango`): health 200, `/me` 401 sin token y 200 con token válido. Easypanel levanta cada Dockerfile por separado, así que `docker-compose.yml` sigue sin ejecutarse de punta a punta; se dio por bueno. Están en pie: monorepo, hexágono con composition root, auth JWT con roles, contrato REST con envoltura de errores y `X-Request-Id`, OpenAPI generado, Biome + CI, Dockerfiles y compose, `AGENTS.md` y las tres skills.
 
-Existen dos endpoints: `GET /api/v1/health` (público) y `GET /api/v1/me` (autenticado). **No hay modelo de datos** — `prisma/schema.prisma` solo declara el datasource — ni persistencia real: eso es la Fase 2. La emisión de tokens es de la Fase 3; hoy solo se verifican.
+Existen dos endpoints: `GET /api/v1/health` (público) y `GET /api/v1/me` (autenticado). **Fase 2 en curso** (spec en `docs/superpowers/specs/2026-09-22-fase-2-dominio-persistido-design.md`): esquema `public` + `hermes_sim`, núcleo compartido, ajustes del tenant, auditoría, idempotencia y seed listos; faltan casos de uso, rutas y frontend. La emisión de tokens es de la Fase 3; hoy solo se verifican.
 
 Lo que aún no existe está descrito como destino, no como hecho. Verifica antes de asumir que un archivo o comando está.
 
@@ -65,6 +65,7 @@ docker compose up     # Postgres + backend (3001) + frontend (3000)
 
 Un solo test: `npm --prefix backend exec vitest run tests/fronteras.test.ts`, o `-t "<nombre>"`.
 Prisma: `npm --prefix backend run db:generate`. Requiere `backend/.env` con `DATABASE_URL`.
+Suites contra Postgres: `npm --prefix backend run test:db` (proyecto Vitest `db`, lee `TEST_DATABASE_URL`, destruye y recrea esa base). Seed: `npm --prefix backend run db:seed -- --anchor YYYY-MM-DD`.
 
 Detalles de instalación que muerden: npm 12 bloquea los scripts de instalación, así que
 `prisma` y `@prisma/engines` están aprobados en `allowScripts` de `backend/package.json`.
@@ -84,13 +85,18 @@ Umbrales de Clean Code: complejidad cognitiva ≤ 15 por función, ≤ 60 línea
 
 ## Skills instaladas
 
-Las tres skills de la Fase 1 están en `.claude/skills/` (versionadas en el repo) y registradas en `skills-lock.json`, instaladas con el CLI de [skills.sh](https://skills.sh):
+En `.agents/skills/` (espejo en `.claude/skills/`) y fijadas en `skills-lock.json`, vía [skills.sh](https://skills.sh). El inventario canónico y los conflictos con la política del repo están en `GOBERNANZA.md` §6.
 
 | Skill | Origen | Uso |
 | --- | --- | --- |
-| `hexagonal-architecture` | `lexler/skill-factory` | Regla I/O vs. núcleo al trazar fronteras de capa |
+| `dry-refactoring` | `kucherenko/jscpd` | Eliminar duplicación detectada por jscpd |
 | `fhir-developer-skill` | `anthropics/healthcare` | R4: recursos, value sets, `OperationOutcome`, búsqueda |
-| `security-best-practices` | `tech-leads-club/agent-skills` | Revisión de seguridad (soporta TS/JS) |
+| `find-skills` | `vercel-labs/skills` | Descubrir e instalar skills del ecosistema |
+| `frontend-design` | `anthropics/skills` | Dirección visual distintiva al construir UI |
+| `grilling` | `mattpocock/skills` | Stress-test de planes y decisiones |
+| `hexagonal-architecture` | `lexler/skill-factory` | Regla I/O vs. núcleo al trazar fronteras de capa |
+| `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI |
+| `security-best-practices` | `openai/skills` | Revisión de seguridad (JS/TS, Next.js) |
 
 Actualizar: `npx skills update`. Reinstalar desde el lock: `npx skills experimental_install`.
 
