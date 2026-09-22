@@ -6,7 +6,7 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 
 ## Estado actual
 
-**Fase 1 entregada, salvo la verificación de Docker** (`docker compose up` nunca se ejecutó: Docker no estaba instalado en la máquina donde se construyó). Están en pie: monorepo, hexágono con composition root, auth JWT con roles, contrato REST con envoltura de errores y `X-Request-Id`, OpenAPI generado, Biome + CI, Dockerfiles y compose, `AGENTS.md` y las tres skills.
+**Fase 1 cerrada.** Docker se verificó desplegando backend y frontend en Easypanel (VPS, proyecto `mango`): health 200, `/me` 401 sin token y 200 con token válido. Easypanel levanta cada Dockerfile por separado, así que `docker-compose.yml` sigue sin ejecutarse de punta a punta; se dio por bueno. Están en pie: monorepo, hexágono con composition root, auth JWT con roles, contrato REST con envoltura de errores y `X-Request-Id`, OpenAPI generado, Biome + CI, Dockerfiles y compose, `AGENTS.md` y las tres skills.
 
 Existen dos endpoints: `GET /api/v1/health` (público) y `GET /api/v1/me` (autenticado). **No hay modelo de datos** — `prisma/schema.prisma` solo declara el datasource — ni persistencia real: eso es la Fase 2. La emisión de tokens es de la Fase 3; hoy solo se verifican.
 

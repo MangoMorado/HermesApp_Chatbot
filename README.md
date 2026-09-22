@@ -6,8 +6,9 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fase 1 completa salvo verificación de Docker. Cimientos, auth por JWT, contrato
-> REST y OpenAPI en pie. No hay modelo de datos todavía: eso es la Fase 2.
+> Estado: Fase 1 cerrada. Cimientos, auth por JWT, contrato REST y OpenAPI en pie; las
+> imágenes Docker se verificaron desplegadas en Easypanel. No hay modelo de datos
+> todavía: eso es la Fase 2.
 
 ## Requisitos
 
