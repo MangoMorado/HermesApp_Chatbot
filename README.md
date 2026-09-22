@@ -7,8 +7,10 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
 > Estado: Fase 1 cerrada. Cimientos, auth por JWT, contrato REST y OpenAPI en pie; las
-> imágenes Docker se verificaron desplegadas en Easypanel. No hay modelo de datos
-> todavía: eso es la Fase 2.
+> imágenes Docker se verificaron desplegadas en Easypanel. Fase 2 en curso: la capa de
+> persistencia ya está lista (esquemas `public` y `hermes_sim`, migraciones, núcleo
+> compartido, seed determinista); faltan los casos de uso, las rutas `/api/v1` y el
+> frontend.
 
 ## Requisitos
 
@@ -83,6 +85,7 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 | Variable | Dónde | Para qué |
 | --- | --- | --- |
 | `DATABASE_URL` | backend | Conexión a Postgres (la lee `prisma.config.ts` y `src/config/env.ts`) |
+| `TEST_DATABASE_URL` | backend (pruebas) | Base que usa el proyecto Vitest `db`; la suite la borra y recrea en cada corrida |
 | `APP_TIMEZONE` | backend | Zona de referencia para agenda y búsquedas FHIR |
 | `JWT_SECRET` | backend | Secreto HS256 de verificación (obligatorio) |
 | `JWT_ISSUER` / `JWT_AUDIENCE` | backend | Emisor y audiencia esperados |
@@ -95,7 +98,7 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 
 ```
 backend/
-  prisma/schema.prisma        # adaptador de persistencia (modelo real: Fase 2)
+  prisma/schema.prisma        # modelos del chatbot (schema public) y del simulador (hermes_sim)
   prisma.config.ts            # URL de conexion (Prisma 7 la saco del schema)
   openapi.json                # contrato REST generado; no se edita a mano
   src/app/                    # adaptadores de entrada HTTP (route handlers)
@@ -127,6 +130,10 @@ con `-t "<nombre>"`.
 | `fronteras` | `domain` y `application` no importan framework, ORM ni `node:*` |
 | `contrato-api` | Envoltura de errores, `X-Request-Id` y OpenAPI sin desfase |
 | `roles` | 401 sin token, `404` por tenant ajeno, alcance del widget |
+| `dominio` | Reglas compartidas: tenant id, paginación por cursor, ajustes del tenant, datos del seed |
+| `aislamiento-tenant` | La base impide referencias entre tenants; ajustes del tenant aislados |
+| `simetria-seed` | El simulador y el chatbot parten de los mismos datos deterministas |
+| `idempotencia` | Almacén de claves de idempotencia persistido por tenant |
 
-Las demás (`aislamiento-tenant`, `flujo`, `fhir-conformance`…) llegan con sus fases; están
+Las demás (`flujo`, `verificacion`, `fhir-conformance`…) llegan con sus fases; están
 listadas en `GOBERNANZA.md`.
