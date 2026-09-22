@@ -1,11 +1,29 @@
 {
   "version": 1,
   "skills": {
+    "dry-refactoring": {
+      "source": "kucherenko/jscpd",
+      "sourceType": "github",
+      "skillPath": "skills/dry-refactoring/SKILL.md",
+      "computedHash": "9770e254debf7978d722e56e6b823f588033d068440e035d9edda2cd75fbf56e"
+    },
     "fhir-developer-skill": {
       "source": "anthropics/healthcare",
       "sourceType": "github",
       "skillPath": "plugins/healthcare/skills/fhir-developer/SKILL.md",
       "computedHash": "6b53a78ec6be62023708e970d75fe0f5ca44aa13304d80c11445f1228c4390a2"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
+    },
+    "grilling": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/grilling/SKILL.md",
+      "computedHash": "4fa026e5979770347b3357ff5139e1e41d21c3a9f7335e9cd2811cb5b8d32f2f"
     },
     "hexagonal-architecture": {
       "source": "lexler/skill-factory",
@@ -13,11 +31,17 @@
       "skillPath": "output_skills/design/hexagonal-architecture/SKILL.md",
       "computedHash": "bf6afa87ee9b7408f250166b0acffe2041d267083f1736929042ede6d3faf53f"
     },
-    "security-best-practices": {
-      "source": "tech-leads-club/agent-skills",
+    "nielsen-usability-heuristics": {
+      "source": "dembrandt/dembrandt-skills",
       "sourceType": "github",
-      "skillPath": "packages/skills-catalog/skills/(security)/security-best-practices/SKILL.md",
-      "computedHash": "625129f146ac17f2b1f2f9b9ecc7f37cecc75caba27f6e0850ce7f3d9f655943"
+      "skillPath": "skills/nielsen-usability-heuristics/SKILL.md",
+      "computedHash": "ecb1580cb9c72202b843b5b33ee495f677717208ba66ca9affd6e034f8552ecc"
+    },
+    "security-best-practices": {
+      "source": "openai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/.curated/security-best-practices/SKILL.md",
+      "computedHash": "0c42fff660b6f7e85add36437edc36976466bb254b7cd9eb38ec67b2ad64a9bf"
     }
   }
 }

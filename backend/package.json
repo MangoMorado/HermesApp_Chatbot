@@ -23,10 +23,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
-    "@types/node": "^26.0.0",
+    "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "prisma": "^7.10.0",
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
   },
