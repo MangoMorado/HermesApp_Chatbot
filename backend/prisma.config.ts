@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { defineConfig, env } from "prisma/config";
 
 // Config de herramienta: la gobernanza permite leer el entorno aqui.
-// Node carga el .env local sin dependencias extra.
-if (existsSync(".env")) {
+// El .env local solo se carga si nadie definio DATABASE_URL (p. ej. las pruebas).
+if (!process.env.DATABASE_URL && existsSync(".env")) {
   process.loadEnvFile();
 }
 
