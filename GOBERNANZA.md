@@ -182,22 +182,27 @@ Se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronter
 
 ## 6. Skills
 
-Instaladas en `.agents/skills/` (espejo en `.claude/skills/` para Claude Code) y fijadas
-en `skills-lock.json`, vía el CLI de [skills.sh](https://skills.sh):
+Instaladas en `.agents/skills/` (espejo en `.claude/skills/` para Claude Code y, cuando
+aplica, en `.github/skills/` para GitHub Copilot) y fijadas en `skills-lock.json`, vía el
+CLI de [skills.sh](https://skills.sh):
 
 | Skill | Origen | Para qué |
 | --- | --- | --- |
 | `dry-refactoring` | `kucherenko/jscpd` | Eliminar duplicación detectada por jscpd |
 | `fhir-developer-skill` | `anthropics/healthcare` | R4: recursos, value sets, `OperationOutcome` |
 | `find-skills` | `vercel-labs/skills` | Descubrir e instalar skills del ecosistema |
-| `frontend-design` | `anthropics/skills` | Dirección visual distintiva al construir UI |
+| `frontend-design` | `anthropics/skills` | Dirección visual distintiva (ligera) al construir UI |
 | `grilling` | `mattpocock/skills` | Stress-test de planes y decisiones |
 | `hexagonal-architecture` | `lexler/skill-factory` | Decidir fronteras de capa |
+| `impeccable` | `pbakaus/impeccable` | Diseño UI de producción: craft, critique, audit, polish, DESIGN.md |
 | `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI |
 | `security-best-practices` | `openai/skills` | Revisión de seguridad (JS/TS, Next.js) |
 
 `hexagonal-architecture` y `fhir-developer-skill` viven hoy en `.claude/skills/`; el resto
-está en ambas carpetas. El inventario canónico es `skills-lock.json`.
+del inventario compartido está en `.agents/skills/` y `.claude/skills/`. `impeccable`
+también se replica en `.github/skills/` (y trae agentes auxiliares bajo `.claude/agents/`
+y `.github/agents/`, más el hook de detector en `.github/hooks/impeccable.json`). El
+inventario canónico es `skills-lock.json`.
 
 **Las skills orientan; gana la gobernanza.** Conflictos conocidos y cómo se resuelven:
 
@@ -208,8 +213,15 @@ está en ambas carpetas. El inventario canónico es `skills-lock.json`.
 - La skill `dry-refactoring` elimina clones de jscpd → los clones exactos sí se
   refactorizan; dos bloques parecidos sin ser copia no se abstraen hasta el tercer uso
   (sección 4).
+- Para trabajo de diseño UI, `impeccable` es la skill primaria (comandos `/impeccable`,
+  `PRODUCT.md` / `DESIGN.md`, detector de anti-patrones). `frontend-design` queda como
+  guía breve de dirección visual; si chocan, manda `impeccable` y, sobre ambas, esta
+  gobernanza (el frontend no lleva reglas de negocio; no inventar claims de producto ni
+  flujos clínicos fuera del roadmap). `nielsen-usability-heuristics` complementa el modo
+  critique de `impeccable`, no lo sustituye.
 
 Actualizar: `npx skills update`. Reproducir desde el lock: `npx skills experimental_install`.
+Para refrescar solo Impeccable (scripts/binarios/hooks): `npx impeccable update`.
 
 ---
 

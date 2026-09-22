@@ -85,22 +85,23 @@ Umbrales de Clean Code: complejidad cognitiva ≤ 15 por función, ≤ 40 línea
 
 ## Skills instaladas
 
-En `.agents/skills/` (espejo en `.claude/skills/`) y fijadas en `skills-lock.json`, vía [skills.sh](https://skills.sh). El inventario canónico y los conflictos con la política del repo están en `GOBERNANZA.md` §6.
+En `.agents/skills/` (espejo en `.claude/skills/` y, para Copilot, `.github/skills/`) y fijadas en `skills-lock.json`, vía [skills.sh](https://skills.sh). El inventario canónico y los conflictos con la política del repo están en `GOBERNANZA.md` §6.
 
 | Skill | Origen | Uso |
 | --- | --- | --- |
 | `dry-refactoring` | `kucherenko/jscpd` | Eliminar duplicación detectada por jscpd |
 | `fhir-developer-skill` | `anthropics/healthcare` | R4: recursos, value sets, `OperationOutcome`, búsqueda |
 | `find-skills` | `vercel-labs/skills` | Descubrir e instalar skills del ecosistema |
-| `frontend-design` | `anthropics/skills` | Dirección visual distintiva al construir UI |
+| `frontend-design` | `anthropics/skills` | Dirección visual distintiva (ligera) al construir UI |
 | `grilling` | `mattpocock/skills` | Stress-test de planes y decisiones |
 | `hexagonal-architecture` | `lexler/skill-factory` | Regla I/O vs. núcleo al trazar fronteras de capa |
+| `impeccable` | `pbakaus/impeccable` | Diseño UI de producción: craft, critique, audit, polish, DESIGN.md |
 | `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI |
 | `security-best-practices` | `openai/skills` | Revisión de seguridad (JS/TS, Next.js) |
 
-Actualizar: `npx skills update`. Reinstalar desde el lock: `npx skills experimental_install`.
+Actualizar: `npx skills update`. Reinstalar desde el lock: `npx skills experimental_install`. Refresco de Impeccable: `npx impeccable update`.
 
-**Las skills orientan; gana la gobernanza.** En concreto: la skill hexagonal habla de una capa «adapters» — aquí esa capa se llama `infrastructure` y el árbol es `domain`/`application`/`infrastructure`. La skill FHIR asume escenarios clínicos genéricos; el alcance real lo fija el roadmap (Fase 4) y `/fhir/metadata` debe declarar exactamente lo implementado, ni más ni menos.
+**Las skills orientan; gana la gobernanza.** En concreto: la skill hexagonal habla de una capa «adapters» — aquí esa capa se llama `infrastructure` y el árbol es `domain`/`application`/`infrastructure`. La skill FHIR asume escenarios clínicos genéricos; el alcance real lo fija el roadmap (Fase 4) y `/fhir/metadata` debe declarar exactamente lo implementado, ni más ni menos. Para UI, `impeccable` es la skill primaria de diseño; `frontend-design` es guía breve y cede ante `impeccable` (y ambas ante esta gobernanza: sin reglas de negocio en el frontend).
 
 ## SDD (Superpowers)
 
