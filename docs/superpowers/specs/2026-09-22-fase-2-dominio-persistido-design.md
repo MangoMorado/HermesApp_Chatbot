@@ -27,7 +27,7 @@ La fase se ejecuta en **tres sub-proyectos**, cada uno con su propio plan en
 | Cupos | Filas explícitas, sin reglas de recurrencia en el chatbot. El simulador los genera sobre sus tablas | Hermes es dueño de la agenda y en Fase 4 empuja `Slot` por FHIR |
 | Auth del frontend | Script `token:dev` firma JWT; el panel lo recibe pegado | La emisión de tokens es de la Fase 3; no se abre una puerta de emisión en el servidor |
 | Módulos | Uno por contexto: `shared`, `tenancy`, `scheduling`, `patients`, `hermes-simulator` | Umbrales de tamaño y dependencias sin ciclos |
-| Idempotencia | Desde esta fase en toda escritura (las del simulador) | GOBERNANZA §1.6 manda sobre el roadmap, que la ubicaba en Fase 3 |
+| Idempotencia | Desde esta fase en toda escritura (simulador y `PATCH /tenant-settings`) | GOBERNANZA §1.6 manda sobre el roadmap, que la ubicaba en Fase 3 |
 | Identificador Hermes | Todo maestro y cita guarda `identifier_system` + `identifier_value`, únicos por tenant | Base del `PUT` condicional (Fase 4) y de `simetria-seed` |
 | Citas | En Fase 2 el chatbot solo **lee** citas en firme; no las escribe | Las solicitudes son de la Fase 3; Hermes confirma (§1.2) |
 | Tope de rango | `max_query_range_days` por tenant (defecto 31, entre 1 y 366), editable por `admin` desde el panel | Cada tenant decide su horizonte de consulta sin afectar a los demás |
