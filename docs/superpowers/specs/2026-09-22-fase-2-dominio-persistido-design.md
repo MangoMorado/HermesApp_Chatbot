@@ -13,7 +13,7 @@ La fase se ejecuta en **tres sub-proyectos**, cada uno con su propio plan en
 
 1. **Persistencia base** — esquema y migraciones, puertos compartidos, adaptadores Prisma,
    seed, idempotencia y auditoría; suites `simetria-seed` y base de `aislamiento-tenant`.
-2. **Casos de uso y API REST** — `/api/v1` de lectura, `/api/sim/v1` de escritura, ambos
+2. **Casos de uso y API REST** — `/api/v1` (lectura + ajustes del tenant), `/api/sim/v1` de escritura, ambos
    OpenAPI; suites `dominio`, `aislamiento-tenant` completa, `idempotencia`,
    `contrato-api` y `fronteras` ampliadas.
 3. **Frontend** — clientes orval, `/panel`, `/simulador`, pegado de token.
@@ -30,6 +30,7 @@ La fase se ejecuta en **tres sub-proyectos**, cada uno con su propio plan en
 | Idempotencia | Desde esta fase en toda escritura (las del simulador) | GOBERNANZA §1.6 manda sobre el roadmap, que la ubicaba en Fase 3 |
 | Identificador Hermes | Todo maestro y cita guarda `identifier_system` + `identifier_value`, únicos por tenant | Base del `PUT` condicional (Fase 4) y de `simetria-seed` |
 | Citas | En Fase 2 el chatbot solo **lee** citas en firme; no las escribe | Las solicitudes son de la Fase 3; Hermes confirma (§1.2) |
+| Tope de rango | `max_query_range_days` por tenant (defecto 31, entre 1 y 366), editable por `admin` desde el panel | Cada tenant decide su horizonte de consulta sin afectar a los demás |
 | `conversations` | Se difiere a la Fase 3 junto con sus mensajes | Su forma depende del motor de flujo; ningún caso de uso de Fase 2 la usa |
 
 ## 3. Modelo de datos
@@ -43,7 +44,7 @@ Identificador Hermes = par (`identifier_system`, `identifier_value`), único por
 
 | Tabla | Campos | Restricciones e índices |
 | --- | --- | --- |
-| `tenants` | `id`, `slug`, `name` | `slug` único. El claim `tenant_id` del JWT es `tenants.id` |
+| `tenants` | `id`, `slug`, `name`, `max_query_range_days` | `slug` único; `max_query_range_days` entre 1 y 366, defecto 31. El claim `tenant_id` del JWT es `tenants.id` |
 | `practitioners` | identificador, `name`, `active` | FK `tenant_id` |
 | `healthcare_services` | identificador, `name`, `active` | FK `tenant_id` |
 | `schedules` | identificador, `practitioner_id`, `healthcare_service_id`, `active` | FKs dentro del mismo tenant |
@@ -96,14 +97,15 @@ string | null }`. Cursor malformado → `validation_failed`.
 ### 4.3 Fechas
 
 `from`/`to` en ISO 8601. Con offset se usan tal cual; una fecha sin hora se interpreta
-como el inicio del día en `APP_TIMEZONE` (`to` exclusivo). Rango máximo de consulta de
-disponibilidad y agenda: 31 días (fuera → `validation_failed`).
+como el inicio del día en `APP_TIMEZONE` (`to` exclusivo). El rango máximo de consulta de
+disponibilidad, agenda y citas es `max_query_range_days` del tenant del token (fuera →
+`validation_failed`, con el tope vigente en `details`).
 
 ## 5. Contratos HTTP
 
-### 5.1 `/api/v1` (chatbot, solo lectura)
+### 5.1 `/api/v1` (chatbot)
 
-Roles `operator` y `admin`. `widget` → `403 forbidden`. Recurso de otro tenant → `404`.
+Lectura para `operator` y `admin`; la única escritura es el ajuste del tenant. `widget` → `403 forbidden`. Recurso de otro tenant → `404`.
 
 | Ruta | Descripción |
 | --- | --- |
@@ -116,6 +118,8 @@ Roles `operator` y `admin`. `widget` → `403 forbidden`. Recurso de otro tenant
 | `GET /medical-records` | Búsqueda exacta por `document_type` + `document_number` |
 | `GET /medical-records/{id}` | Detalle del expediente |
 | `GET /medical-records/{id}/appointments` | Historial, orden `start_at` descendente |
+| `GET /tenant-settings` | Ajustes del tenant del token (`operator`, `admin`) |
+| `PATCH /tenant-settings` | Cambia `max_query_range_days`. Solo `admin`; exige `Idempotency-Key` y deja `audit_events` (`action` `tenant_settings.updated`, sin valores) |
 
 ### 5.2 `/api/sim/v1` (simulador)
 
@@ -164,7 +168,10 @@ Se añade `conflict` (`409`) a `ERROR_CODES`. El resto del contrato de errores n
   versionado; script `npm --prefix frontend run api:generate`.
 - Pantalla de token: campo para pegar el JWT, guardado en `sessionStorage`, borrable. El
   script `npm --prefix backend run token:dev -- --tenant <id> --role <rol>` lo firma.
-- `/panel`: disponibilidad, agenda de una agenda, búsqueda de expediente e historial.
+- `/panel`: disponibilidad, agenda de una agenda, búsqueda de expediente e historial. Los
+  selectores de fecha limitan el rango con el tope que devuelve `GET /tenant-settings`
+  (ayuda de forma; el backend decide).
+- `/panel/ajustes` (solo `admin`): edita el tope de rango del tenant.
 - `/simulador`: CRUD de maestros y «generar cupos».
 - Solo validación de forma; ningún cálculo de negocio. Errores mostrados con `message` y
   `request_id` de la envoltura.
@@ -173,13 +180,13 @@ Se añade `conflict` (`409`) a `ERROR_CODES`. El resto del contrato de errores n
 
 | Suite | Cubre | Contra |
 | --- | --- | --- |
-| `dominio` | Casos de uso: filtros, rangos, cursor, límites 50/200, fechas en `APP_TIMEZONE` | Adaptadores en memoria |
+| `dominio` | Casos de uso: filtros, rangos, tope por tenant, cursor, límites 50/200, fechas en `APP_TIMEZONE` | Adaptadores en memoria |
 | `aislamiento-tenant` | Toda ruta `/api/v1` con dos tenants: sin fugas en listas; ID ajeno → `404` | Postgres real |
 | `simetria-seed` | Todo maestro de `hermes_sim` tiene gemelo en `public` (mismo identificador y campos) | Postgres real |
-| `idempotencia` | Repetición → misma respuesta, sin duplicar filas ni auditoría; cuerpo distinto → `409` | Postgres real |
+| `idempotencia` | Escrituras del simulador y `PATCH /tenant-settings`. Repetición → misma respuesta, sin duplicar filas ni auditoría; cuerpo distinto → `409` | Postgres real |
 | `contrato-api` | Ampliada a ambos OpenAPI; ninguna ruta sin declarar | Sin base |
 | `fronteras` | Ampliada: chatbot no importa `hermes-simulator` | Sin base |
-| `roles` | Ampliada: `widget` → `403` en rutas de dominio; simulador solo `admin` | Sin base |
+| `roles` | Ampliada: `widget` → `403` en rutas de dominio; `PATCH /tenant-settings` y simulador solo `admin` | Sin base |
 
 Las suites con Postgres leen `TEST_DATABASE_URL` y aplican migraciones en una base
 dedicada. CI añade un servicio Postgres al job del backend.
