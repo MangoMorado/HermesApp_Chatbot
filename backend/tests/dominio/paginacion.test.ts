@@ -35,12 +35,20 @@ describe("dominio: paginacion", () => {
     expect(decodeCursor(raw)).toEqual(position);
   });
 
-  it.each(["", "%%%", "bm90LWpzb24", btoa(JSON.stringify({ a: 1 }))])(
-    "rechaza cursor malformado %s",
-    (raw) => {
-      expect(() => decodeCursor(raw)).toThrow(ValidationError);
-    },
-  );
+  const toBase64Url = (text: string): string =>
+    btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  it.each([
+    "",
+    "%%%",
+    "bm90LWpzb24",
+    btoa(JSON.stringify({ a: 1 })),
+    // base64url y JSON validos, pero con forma equivocada (arreglo de un solo elemento):
+    // ejercita el chequeo de forma/tipo de decodeCursor, no el charset ni el JSON.parse.
+    toBase64Url(JSON.stringify(["solo"])),
+  ])("rechaza cursor malformado %s", (raw) => {
+    expect(() => decodeCursor(raw)).toThrow(ValidationError);
+  });
 
   it("toPage corta en limit y emite cursor solo si hay mas", () => {
     const rows = [1, 2, 3].map((n) => ({ id: `id-${n}`, at: `k-${n}` }));

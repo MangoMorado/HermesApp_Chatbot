@@ -21,6 +21,13 @@ function parseAnchor(args: readonly string[]): string | undefined {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new Error("--anchor debe tener formato YYYY-MM-DD");
   }
+  // El regex solo valida el formato; una fecha como 2026-02-31 pasa el regex pero
+  // Date la normaliza a 2026-03-03, dejando el mensaje final ("ancla 2026-02-31")
+  // hablando de una fecha que no existe. Ida y vuelta: si no coincide, no es real.
+  const normalized = new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10);
+  if (normalized !== value) {
+    throw new Error(`--anchor no es una fecha de calendario valida: ${value}`);
+  }
   return value;
 }
 

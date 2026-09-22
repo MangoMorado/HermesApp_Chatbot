@@ -3,6 +3,21 @@ import { type SeedTenant, IDENTIFIER_SYSTEMS as SYS } from "./data";
 
 type Tx = Prisma.TransactionClient;
 
+/**
+ * Borra lo que ya exista de estos tenants antes de volver a insertar. Sin esto, sembrar
+ * con un ancla distinta deja cupos y citas de la fecha anterior huerfanos (cupos "busy"
+ * sin cita que los referencie). Orden de FK: citas -> cupos -> agendas -> servicios ->
+ * profesionales -> historias clinicas. Los tenants no se borran, solo se refrescan.
+ */
+async function deleteExisting(tx: Tx, tenantIds: string[]): Promise<void> {
+  await tx.appointment.deleteMany({ where: { tenantId: { in: tenantIds } } });
+  await tx.slot.deleteMany({ where: { tenantId: { in: tenantIds } } });
+  await tx.schedule.deleteMany({ where: { tenantId: { in: tenantIds } } });
+  await tx.healthcareService.deleteMany({ where: { tenantId: { in: tenantIds } } });
+  await tx.practitioner.deleteMany({ where: { tenantId: { in: tenantIds } } });
+  await tx.medicalRecord.deleteMany({ where: { tenantId: { in: tenantIds } } });
+}
+
 async function writeMasters(tx: Tx, t: SeedTenant): Promise<void> {
   for (const p of t.practitioners) {
     const data = {
@@ -92,6 +107,10 @@ export async function writeChatbot(
 ): Promise<void> {
   await prisma.$transaction(
     async (tx) => {
+      await deleteExisting(
+        tx,
+        tenants.map((t) => t.id),
+      );
       for (const t of tenants) {
         const data = { id: t.id, slug: t.slug, name: t.name };
         await tx.tenant.upsert({ where: { id: t.id }, create: data, update: data });
