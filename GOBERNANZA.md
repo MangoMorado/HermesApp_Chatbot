@@ -144,7 +144,7 @@ se mezclan**:
 | Regla | Umbral |
 | --- | --- |
 | Complejidad cognitiva por función | ≤ 15 |
-| Líneas por función | ≤ 60 (sin blancos) |
+| Líneas por función | ≤ 40 (sin blancos) |
 | Archivo de lógica | ≤ 400 líneas |
 | Ciclos de importación | 0 |
 | `process.env` | Solo en `backend/src/config/env.ts` y en configs de herramientas |
@@ -182,14 +182,22 @@ Se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronter
 
 ## 6. Skills
 
-Instaladas en `.claude/skills/` y fijadas en `skills-lock.json`, vía el CLI de
-[skills.sh](https://skills.sh):
+Instaladas en `.agents/skills/` (espejo en `.claude/skills/` para Claude Code) y fijadas
+en `skills-lock.json`, vía el CLI de [skills.sh](https://skills.sh):
 
 | Skill | Origen | Para qué |
 | --- | --- | --- |
-| `hexagonal-architecture` | `lexler/skill-factory` | Decidir fronteras de capa |
+| `dry-refactoring` | `kucherenko/jscpd` | Eliminar duplicación detectada por jscpd |
 | `fhir-developer-skill` | `anthropics/healthcare` | R4: recursos, value sets, `OperationOutcome` |
-| `security-best-practices` | `tech-leads-club/agent-skills` | Revisión de seguridad |
+| `find-skills` | `vercel-labs/skills` | Descubrir e instalar skills del ecosistema |
+| `frontend-design` | `anthropics/skills` | Dirección visual distintiva al construir UI |
+| `grilling` | `mattpocock/skills` | Stress-test de planes y decisiones |
+| `hexagonal-architecture` | `lexler/skill-factory` | Decidir fronteras de capa |
+| `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI |
+| `security-best-practices` | `openai/skills` | Revisión de seguridad (JS/TS, Next.js) |
+
+`hexagonal-architecture` y `fhir-developer-skill` viven hoy en `.claude/skills/`; el resto
+está en ambas carpetas. El inventario canónico es `skills-lock.json`.
 
 **Las skills orientan; gana la gobernanza.** Conflictos conocidos y cómo se resuelven:
 
@@ -197,6 +205,9 @@ Instaladas en `.claude/skills/` y fijadas en `skills-lock.json`, vía el CLI de
   (sección 2.1).
 - La skill FHIR asume escenarios clínicos genéricos y sugiere recursos que este producto
   no expone → el alcance lo fija `ROADMAP.md` y lo declara `/fhir/metadata` (sección 3.1).
+- La skill `dry-refactoring` elimina clones de jscpd → los clones exactos sí se
+  refactorizan; dos bloques parecidos sin ser copia no se abstraen hasta el tercer uso
+  (sección 4).
 
 Actualizar: `npx skills update`. Reproducir desde el lock: `npx skills experimental_install`.
 

@@ -85,13 +85,18 @@ Umbrales de Clean Code: complejidad cognitiva ≤ 15 por función, ≤ 60 línea
 
 ## Skills instaladas
 
-Las tres skills de la Fase 1 están en `.claude/skills/` (versionadas en el repo) y registradas en `skills-lock.json`, instaladas con el CLI de [skills.sh](https://skills.sh):
+En `.agents/skills/` (espejo en `.claude/skills/`) y fijadas en `skills-lock.json`, vía [skills.sh](https://skills.sh). El inventario canónico y los conflictos con la política del repo están en `GOBERNANZA.md` §6.
 
 | Skill | Origen | Uso |
 | --- | --- | --- |
-| `hexagonal-architecture` | `lexler/skill-factory` | Regla I/O vs. núcleo al trazar fronteras de capa |
+| `dry-refactoring` | `kucherenko/jscpd` | Eliminar duplicación detectada por jscpd |
 | `fhir-developer-skill` | `anthropics/healthcare` | R4: recursos, value sets, `OperationOutcome`, búsqueda |
-| `security-best-practices` | `tech-leads-club/agent-skills` | Revisión de seguridad (soporta TS/JS) |
+| `find-skills` | `vercel-labs/skills` | Descubrir e instalar skills del ecosistema |
+| `frontend-design` | `anthropics/skills` | Dirección visual distintiva al construir UI |
+| `grilling` | `mattpocock/skills` | Stress-test de planes y decisiones |
+| `hexagonal-architecture` | `lexler/skill-factory` | Regla I/O vs. núcleo al trazar fronteras de capa |
+| `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI |
+| `security-best-practices` | `openai/skills` | Revisión de seguridad (JS/TS, Next.js) |
 
 Actualizar: `npx skills update`. Reinstalar desde el lock: `npx skills experimental_install`.
 
