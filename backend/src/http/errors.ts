@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { AuthError } from "@/modules/auth/domain/auth-error";
+import { ValidationError } from "@/modules/shared/domain/validation-error";
 import { type ErrorCode, STATUS_BY_CODE } from "./error-codes";
 import { REQUEST_ID_HEADER } from "./request-id";
 
@@ -30,6 +31,9 @@ export class ApiError extends Error {
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) {
     return error;
+  }
+  if (error instanceof ValidationError) {
+    return new ApiError("validation_failed", error.message, error.details);
   }
   if (error instanceof AuthError) {
     return new ApiError(error.reason, error.message);
