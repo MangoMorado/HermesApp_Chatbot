@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AuthError } from "@/modules/auth/domain/auth-error";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import { NotFoundError } from "@/modules/shared/domain/not-found-error";
+import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 import { type ErrorCode, STATUS_BY_CODE } from "./error-codes";
 import { REQUEST_ID_HEADER } from "./request-id";
@@ -43,6 +44,11 @@ export function toApiError(error: unknown): ApiError {
   if (error instanceof ConflictError) {
     return new ApiError("conflict", error.message, error.details);
   }
+  if (error instanceof RateLimitedError) {
+    return new ApiError("rate_limited", error.message, {
+      retry_after_seconds: error.retryAfterSeconds,
+    });
+  }
   if (error instanceof AuthError) {
     return new ApiError(error.reason, error.message);
   }
@@ -59,8 +65,18 @@ export function errorResponse(error: ApiError, requestId: string): NextResponse<
     },
   };
 
-  return NextResponse.json(body, {
-    status: STATUS_BY_CODE[error.code],
-    headers: { [REQUEST_ID_HEADER]: requestId },
-  });
+  const headers: Record<string, string> = { [REQUEST_ID_HEADER]: requestId };
+  const retryAfter = retryAfterOf(error);
+  if (retryAfter !== null) {
+    headers["Retry-After"] = String(retryAfter);
+  }
+  return NextResponse.json(body, { status: STATUS_BY_CODE[error.code], headers });
+}
+
+function retryAfterOf(error: ApiError): number | null {
+  if (error.code !== "rate_limited" || !error.details || typeof error.details !== "object") {
+    return null;
+  }
+  const seconds = (error.details as { retry_after_seconds?: unknown }).retry_after_seconds;
+  return typeof seconds === "number" ? seconds : null;
 }

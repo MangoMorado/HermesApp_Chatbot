@@ -42,6 +42,7 @@
                   "validation_failed",
                   "conflict",
                   "method_not_allowed",
+                  "rate_limited",
                   "internal_error"
                 ]
               },

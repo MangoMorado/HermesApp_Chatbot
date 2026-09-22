@@ -4,10 +4,12 @@ import { describe, expect, it } from "vitest";
 import { GET as getHealth } from "@/app/api/v1/health/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { ERROR_CODES } from "@/http/error-codes";
+import { errorResponse, toApiError } from "@/http/errors";
 import { buildOpenApiDocument } from "@/http/openapi";
 import { buildSimOpenApiDocument } from "@/http/openapi-sim";
 import { REQUEST_ID_HEADER } from "@/http/request-id";
 import { createCheckHealth } from "@/modules/health/application/check-health";
+import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
 import { signToken } from "./helpers/token";
 
 const API_DIR = join(process.cwd(), "src", "app", "api", "v1");
@@ -143,5 +145,25 @@ describe("contrato-api: OpenAPI", () => {
 
     expect(response.status).toBe(200);
     expect(Object.keys(identity?.responses ?? {})).toContain("401");
+  });
+});
+
+describe("contrato-api: rate_limited", () => {
+  it("responde 429 con Retry-After y el mismo valor en details", async () => {
+    const response = errorResponse(toApiError(new RateLimitedError(17)), "peticion-rl");
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("17");
+    expect(body.error).toMatchObject({
+      code: "rate_limited",
+      request_id: "peticion-rl",
+      details: { retry_after_seconds: 17 },
+    });
+  });
+
+  it("otros errores no llevan Retry-After", () => {
+    const response = errorResponse(toApiError(new Error("x")), "peticion-500");
+    expect(response.headers.get("Retry-After")).toBeNull();
   });
 });

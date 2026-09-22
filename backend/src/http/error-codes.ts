@@ -6,6 +6,7 @@ export const ERROR_CODES = [
   "validation_failed",
   "conflict",
   "method_not_allowed",
+  "rate_limited",
   "internal_error",
 ] as const;
 
@@ -18,5 +19,6 @@ export const STATUS_BY_CODE: Record<ErrorCode, number> = {
   validation_failed: 422,
   conflict: 409,
   method_not_allowed: 405,
+  rate_limited: 429,
   internal_error: 500,
 };
