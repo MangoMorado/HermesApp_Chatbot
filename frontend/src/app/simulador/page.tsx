@@ -2,68 +2,48 @@
 
 import { useState } from "react";
 import { ErrorBox } from "@/components/error-box";
-import {
-  createSimPractitioner,
-  generateSimSlots,
-  listSimPractitioner,
-} from "@/sim/default/default";
-
-type PageResult = { data?: Record<string, unknown>[]; next_cursor?: string | null };
+import { idempotent, type PageResult, runAction } from "@/components/simulador/helpers";
+import { PatientsSection } from "@/components/simulador/patients-section";
+import { PractitionersSection } from "@/components/simulador/practitioners-section";
+import { SchedulesSection } from "@/components/simulador/schedules-section";
+import { ServicesSection } from "@/components/simulador/services-section";
+import { generateSimSlots } from "@/sim/default/default";
 
 export default function SimuladorPage() {
-  const [name, setName] = useState("");
-  const [identifier, setIdentifier] = useState("");
-  const [list, setList] = useState<PageResult | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [practitioners, setPractitioners] = useState<PageResult | null>(null);
+  const [services, setServices] = useState<PageResult | null>(null);
+  const [schedules, setSchedules] = useState<PageResult | null>(null);
+  const [patients, setPatients] = useState<PageResult | null>(null);
+
+  const [pracName, setPracName] = useState("");
+  const [pracIdValue, setPracIdValue] = useState("");
+  const [pracEditId, setPracEditId] = useState("");
+  const [pracEditName, setPracEditName] = useState("");
+
+  const [svcName, setSvcName] = useState("");
+  const [svcIdValue, setSvcIdValue] = useState("");
+  const [svcEditId, setSvcEditId] = useState("");
+  const [svcEditName, setSvcEditName] = useState("");
+
+  const [schIdValue, setSchIdValue] = useState("");
+  const [schPractitionerId, setSchPractitionerId] = useState("");
+  const [schServiceId, setSchServiceId] = useState("");
+  const [schEditId, setSchEditId] = useState("");
+
+  const [patIdValue, setPatIdValue] = useState("");
+  const [patDocType, setPatDocType] = useState("CC");
+  const [patDocNumber, setPatDocNumber] = useState("");
+  const [patGiven, setPatGiven] = useState("");
+  const [patFamily, setPatFamily] = useState("");
+  const [patBirth, setPatBirth] = useState("");
+  const [patEditId, setPatEditId] = useState("");
+  const [patEditGiven, setPatEditGiven] = useState("");
+
   const [scheduleId, setScheduleId] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [createdSlots, setCreatedSlots] = useState<number | null>(null);
-  const [error, setError] = useState<unknown>(null);
-
-  async function refresh() {
-    setError(null);
-    try {
-      setList((await listSimPractitioner()) as PageResult);
-    } catch (err) {
-      setError(err);
-    }
-  }
-
-  async function createPractitioner() {
-    setError(null);
-    try {
-      await createSimPractitioner({
-        body: JSON.stringify({
-          name,
-          identifier_value: identifier,
-        }),
-        headers: { "Idempotency-Key": crypto.randomUUID() },
-      });
-      setName("");
-      setIdentifier("");
-      await refresh();
-    } catch (err) {
-      setError(err);
-    }
-  }
-
-  async function generate() {
-    setError(null);
-    try {
-      const result = await generateSimSlots(scheduleId, {
-        body: JSON.stringify({
-          from,
-          to,
-          duration_minutes: 30,
-          windows: [{ weekday: 1, start_time: "08:00", end_time: "12:00" }],
-        }),
-        headers: { "Idempotency-Key": crypto.randomUUID() },
-      });
-      setCreatedSlots(result.created);
-    } catch (err) {
-      setError(err);
-    }
-  }
 
   return (
     <div className="simulador">
@@ -71,47 +51,69 @@ export default function SimuladorPage() {
       <p className="muted">Requiere HERMES_SIMULATOR_ENABLED=true y rol admin.</p>
       <ErrorBox error={error} />
 
-      <section>
-        <h2>Profesionales</h2>
-        <div className="stack">
-          <label>
-            Nombre
-            <input value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <label>
-            identifier_value
-            <input value={identifier} onChange={(e) => setIdentifier(e.target.value)} />
-          </label>
-          <div className="row">
-            <button type="button" onClick={createPractitioner}>
-              Crear
-            </button>
-            <button type="button" onClick={refresh}>
-              Listar
-            </button>
-          </div>
-        </div>
-        {list?.data ? (
-          <table>
-            <thead>
-              <tr>
-                <th>id</th>
-                <th>nombre</th>
-                <th>identificador</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.data.map((row) => (
-                <tr key={String(row.id)}>
-                  <td>{String(row.id)}</td>
-                  <td>{String(row.name)}</td>
-                  <td>{String(row.identifier_value)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : null}
-      </section>
+      <PractitionersSection
+        list={practitioners}
+        setList={setPractitioners}
+        setError={setError}
+        name={pracName}
+        setName={setPracName}
+        identifier={pracIdValue}
+        setIdentifier={setPracIdValue}
+        editId={pracEditId}
+        setEditId={setPracEditId}
+        editName={pracEditName}
+        setEditName={setPracEditName}
+      />
+
+      <ServicesSection
+        list={services}
+        setList={setServices}
+        setError={setError}
+        name={svcName}
+        setName={setSvcName}
+        identifier={svcIdValue}
+        setIdentifier={setSvcIdValue}
+        editId={svcEditId}
+        setEditId={setSvcEditId}
+        editName={svcEditName}
+        setEditName={setSvcEditName}
+      />
+
+      <SchedulesSection
+        list={schedules}
+        setList={setSchedules}
+        setError={setError}
+        identifier={schIdValue}
+        setIdentifier={setSchIdValue}
+        practitionerId={schPractitionerId}
+        setPractitionerId={setSchPractitionerId}
+        serviceId={schServiceId}
+        setServiceId={setSchServiceId}
+        editId={schEditId}
+        setEditId={setSchEditId}
+      />
+
+      <PatientsSection
+        list={patients}
+        setList={setPatients}
+        setError={setError}
+        identifier={patIdValue}
+        setIdentifier={setPatIdValue}
+        docType={patDocType}
+        setDocType={setPatDocType}
+        docNumber={patDocNumber}
+        setDocNumber={setPatDocNumber}
+        given={patGiven}
+        setGiven={setPatGiven}
+        family={patFamily}
+        setFamily={setPatFamily}
+        birth={patBirth}
+        setBirth={setPatBirth}
+        editId={patEditId}
+        setEditId={setPatEditId}
+        editGiven={patEditGiven}
+        setEditGiven={setPatEditGiven}
+      />
 
       <section>
         <h2>Generar cupos</h2>
@@ -132,7 +134,23 @@ export default function SimuladorPage() {
             Hasta
             <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="YYYY-MM-DD" />
           </label>
-          <button type="button" onClick={generate}>
+          <button
+            type="button"
+            onClick={() =>
+              runAction(setError, async () => {
+                const result = await generateSimSlots(
+                  scheduleId,
+                  idempotent({
+                    from,
+                    to,
+                    duration_minutes: 30,
+                    windows: [{ weekday: 1, start_time: "08:00", end_time: "12:00" }],
+                  }),
+                );
+                setCreatedSlots(result.created);
+              })
+            }
+          >
             Generar (lun 08–12)
           </button>
         </div>

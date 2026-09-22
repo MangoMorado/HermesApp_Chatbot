@@ -51,6 +51,7 @@ jobs:
       - run: npx prisma generate
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:db
 
   frontend:
     name: Frontend

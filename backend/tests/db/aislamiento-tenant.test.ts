@@ -1,6 +1,24 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { insertTenant, testPrisma, truncateAll } from "./support";
+import { GET as getAppointments } from "@/app/api/v1/appointments/route";
+import { GET as getAvailability } from "@/app/api/v1/availability/route";
+import { GET as getHealthcareServices } from "@/app/api/v1/healthcare-services/route";
+import { GET as getMedicalRecordAppointments } from "@/app/api/v1/medical-records/[id]/appointments/route";
+import { GET as getMedicalRecord } from "@/app/api/v1/medical-records/[id]/route";
+import { GET as findMedicalRecord } from "@/app/api/v1/medical-records/route";
+import { GET as getPractitioners } from "@/app/api/v1/practitioners/route";
+import { GET as getScheduleSlots } from "@/app/api/v1/schedules/[id]/slots/route";
+import { GET as getSchedules } from "@/app/api/v1/schedules/route";
+import { GET as getTenantSettings } from "@/app/api/v1/tenant-settings/route";
+import { resetContainer } from "@/composition-root";
+import { authedRequest, signToken } from "../helpers/token";
+import {
+  insertTenant,
+  seedTenantDomain,
+  type TenantDomainSeed,
+  testPrisma,
+  truncateAll,
+} from "./support";
 
 const prisma: PrismaClient = testPrisma();
 const SYSTEM = "urn:test";
@@ -29,6 +47,35 @@ async function service(tenantId: string, value: string): Promise<string> {
     },
   });
   return row.id;
+}
+
+type PageBody = { data: Array<{ id: string }> };
+
+async function operatorToken(tenantId: string): Promise<string> {
+  return signToken({ role: "operator", tenantId, subject: `op-${tenantId}` });
+}
+
+async function jsonGet(handler: (req: Request) => Promise<Response>, url: string, token: string) {
+  const response = await handler(authedRequest(url, token));
+  const body = await response.json();
+  return { response, body };
+}
+
+async function jsonGetWithParams(
+  handler: (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response>,
+  url: string,
+  token: string,
+  id: string,
+) {
+  const response = await handler(authedRequest(url, token), {
+    params: Promise.resolve({ id }),
+  });
+  const body = await response.json();
+  return { response, body };
+}
+
+function idsOf(body: PageBody): string[] {
+  return body.data.map((row) => row.id);
 }
 
 describe("aislamiento-tenant: la base impide referencias entre tenants", () => {
@@ -107,5 +154,181 @@ describe("aislamiento-tenant: la base impide referencias entre tenants", () => {
         },
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe("aislamiento-tenant: rutas /api/v1 no filtran datos ajenos", () => {
+  let seedA: TenantDomainSeed;
+  let seedB: TenantDomainSeed;
+  let tokenA: string;
+  let tokenB: string;
+
+  beforeEach(async () => {
+    await truncateAll(prisma);
+    resetContainer();
+    seedA = await seedTenantDomain(prisma, "a");
+    seedB = await seedTenantDomain(prisma, "b");
+    tokenA = await operatorToken(seedA.tenantId);
+    tokenB = await operatorToken(seedB.tenantId);
+  });
+
+  afterAll(async () => {
+    resetContainer();
+    await prisma.$disconnect();
+  });
+
+  it("GET /practitioners solo lista los del tenant del token", async () => {
+    const { response, body } = await jsonGet(
+      getPractitioners,
+      "http://localhost/api/v1/practitioners",
+      tokenA,
+    );
+    expect(response.status).toBe(200);
+    expect(idsOf(body)).toEqual([seedA.practitionerId]);
+  });
+
+  it("GET /healthcare-services solo lista los del tenant del token", async () => {
+    const { response, body } = await jsonGet(
+      getHealthcareServices,
+      "http://localhost/api/v1/healthcare-services",
+      tokenA,
+    );
+    expect(response.status).toBe(200);
+    expect(idsOf(body)).toEqual([seedA.serviceId]);
+  });
+
+  it("GET /schedules solo lista los del tenant del token", async () => {
+    const { response, body } = await jsonGet(
+      getSchedules,
+      "http://localhost/api/v1/schedules",
+      tokenA,
+    );
+    expect(response.status).toBe(200);
+    expect(idsOf(body)).toEqual([seedA.scheduleId]);
+  });
+
+  it("GET /availability no filtra cupos de otro tenant", async () => {
+    const url =
+      `http://localhost/api/v1/availability?from=${seedA.from}&to=${seedA.to}` +
+      `&schedule_id=${seedA.scheduleId}`;
+    const { response, body } = await jsonGet(getAvailability, url, tokenA);
+    expect(response.status).toBe(200);
+    expect(idsOf(body)).toEqual([seedA.freeSlotId]);
+
+    const leak = await jsonGet(
+      getAvailability,
+      `http://localhost/api/v1/availability?from=${seedB.from}&to=${seedB.to}` +
+        `&schedule_id=${seedB.scheduleId}`,
+      tokenA,
+    );
+    expect(leak.response.status).toBe(200);
+    expect(idsOf(leak.body)).toEqual([]);
+  });
+
+  it("GET /schedules/{id}/slots con agenda ajena responde 404", async () => {
+    const { response, body } = await jsonGetWithParams(
+      getScheduleSlots,
+      `http://localhost/api/v1/schedules/${seedB.scheduleId}/slots?from=${seedA.from}&to=${seedA.to}`,
+      tokenA,
+      seedB.scheduleId,
+    );
+    expect(response.status).toBe(404);
+    expect(body.error.code).toBe("not_found");
+  });
+
+  it("GET /schedules/{id}/slots solo ve cupos propios", async () => {
+    const { response, body } = await jsonGetWithParams(
+      getScheduleSlots,
+      `http://localhost/api/v1/schedules/${seedA.scheduleId}/slots?from=${seedA.from}&to=${seedA.to}`,
+      tokenA,
+      seedA.scheduleId,
+    );
+    expect(response.status).toBe(200);
+    expect(idsOf(body).sort()).toEqual([seedA.busySlotId, seedA.freeSlotId].sort());
+  });
+
+  it("GET /appointments con schedule ajeno responde 404", async () => {
+    const { response, body } = await jsonGet(
+      getAppointments,
+      `http://localhost/api/v1/appointments?schedule_id=${seedB.scheduleId}` +
+        `&from=${seedA.from}&to=${seedA.to}`,
+      tokenA,
+    );
+    expect(response.status).toBe(404);
+    expect(body.error.code).toBe("not_found");
+  });
+
+  it("GET /appointments solo lista citas del tenant", async () => {
+    const { response, body } = await jsonGet(
+      getAppointments,
+      `http://localhost/api/v1/appointments?schedule_id=${seedA.scheduleId}` +
+        `&from=${seedA.from}&to=${seedA.to}`,
+      tokenA,
+    );
+    expect(response.status).toBe(200);
+    expect(idsOf(body)).toEqual([seedA.appointmentId]);
+  });
+
+  it("GET /medical-records por documento ajeno responde 404", async () => {
+    const { response, body } = await jsonGet(
+      findMedicalRecord,
+      `http://localhost/api/v1/medical-records?document_type=CC&document_number=${seedB.documentNumber}`,
+      tokenA,
+    );
+    expect(response.status).toBe(404);
+    expect(body.error.code).toBe("not_found");
+  });
+
+  it("GET /medical-records encuentra el del propio tenant", async () => {
+    const { response, body } = await jsonGet(
+      findMedicalRecord,
+      `http://localhost/api/v1/medical-records?document_type=CC&document_number=${seedA.documentNumber}`,
+      tokenA,
+    );
+    expect(response.status).toBe(200);
+    expect(body.id).toBe(seedA.medicalRecordId);
+  });
+
+  it("GET /medical-records/{id} ajeno responde 404", async () => {
+    const { response, body } = await jsonGetWithParams(
+      getMedicalRecord,
+      `http://localhost/api/v1/medical-records/${seedB.medicalRecordId}`,
+      tokenA,
+      seedB.medicalRecordId,
+    );
+    expect(response.status).toBe(404);
+    expect(body.error.code).toBe("not_found");
+  });
+
+  it("GET /medical-records/{id}/appointments ajeno responde 404", async () => {
+    const { response, body } = await jsonGetWithParams(
+      getMedicalRecordAppointments,
+      `http://localhost/api/v1/medical-records/${seedB.medicalRecordId}/appointments`,
+      tokenA,
+      seedB.medicalRecordId,
+    );
+    expect(response.status).toBe(404);
+    expect(body.error.code).toBe("not_found");
+  });
+
+  it("GET /tenant-settings lee solo el tope del tenant del token", async () => {
+    await prisma.tenant.update({
+      where: { id: seedB.tenantId },
+      data: { maxQueryRangeDays: 90 },
+    });
+    const { response, body } = await jsonGet(
+      getTenantSettings,
+      "http://localhost/api/v1/tenant-settings",
+      tokenA,
+    );
+    expect(response.status).toBe(200);
+    expect(body.max_query_range_days).toBe(31);
+
+    const other = await jsonGet(
+      getTenantSettings,
+      "http://localhost/api/v1/tenant-settings",
+      tokenB,
+    );
+    expect(other.body.max_query_range_days).toBe(90);
   });
 });

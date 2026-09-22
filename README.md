@@ -6,11 +6,9 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fase 1 cerrada. Cimientos, auth por JWT, contrato REST y OpenAPI en pie; las
-> imágenes Docker se verificaron desplegadas en Easypanel. Fase 2 en curso: la capa de
-> persistencia ya está lista (esquemas `public` y `hermes_sim`, migraciones, núcleo
-> compartido, seed determinista); faltan los casos de uso, las rutas `/api/v1` y el
-> frontend.
+> Estado: Fases 1 y 2 cerradas. Dominio persistido, APIs `/api/v1` y `/api/sim/v1`,
+> panel/simulador con clientes orval, y suites de aislamiento/idempotencia contra
+> Postgres en CI. Fase 3 (chat, pre-agenda, emisión de tokens) aún no abierta.
 
 ## Requisitos
 

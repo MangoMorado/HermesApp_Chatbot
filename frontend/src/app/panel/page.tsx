@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   findMedicalRecord,
   getTenantSettings,
@@ -12,6 +12,19 @@ import {
 import { ErrorBox } from "@/components/error-box";
 
 type PageResult = { data?: unknown[]; next_cursor?: string | null };
+
+/** Días entre from inclusivo y to exclusivo (fechas YYYY-MM-DD). NaN si inválido. */
+function rangeDays(from: string, to: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    return Number.NaN;
+  }
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${to}T00:00:00Z`);
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+    return Number.NaN;
+  }
+  return Math.round((end - start) / 86_400_000);
+}
 
 export default function PanelPage() {
   const [maxDays, setMaxDays] = useState(31);
@@ -27,15 +40,15 @@ export default function PanelPage() {
   const [schedules, setSchedules] = useState<PageResult | null>(null);
   const [error, setError] = useState<unknown>(null);
 
-  async function loadSettings() {
-    setError(null);
-    try {
-      const settings = await getTenantSettings();
-      setMaxDays(settings.max_query_range_days);
-    } catch (err) {
-      setError(err);
-    }
-  }
+  useEffect(() => {
+    void getTenantSettings()
+      .then((settings) => setMaxDays(settings.max_query_range_days))
+      .catch((err) => setError(err));
+  }, []);
+
+  const days = rangeDays(from, to);
+  const rangeTooWide = !Number.isNaN(days) && days > maxDays;
+  const rangeReady = !Number.isNaN(days) && !rangeTooWide;
 
   async function loadSchedules() {
     setError(null);
@@ -47,6 +60,9 @@ export default function PanelPage() {
   }
 
   async function searchAvailability() {
+    if (!rangeReady) {
+      return;
+    }
     setError(null);
     try {
       setAvailability(
@@ -62,6 +78,9 @@ export default function PanelPage() {
   }
 
   async function searchAgenda() {
+    if (!rangeReady || !scheduleId) {
+      return;
+    }
     setError(null);
     try {
       setSlots((await listScheduleSlots(scheduleId, { from, to })) as PageResult);
@@ -95,9 +114,6 @@ export default function PanelPage() {
       <section>
         <h2>Ajustes del tenant (lectura)</h2>
         <p className="muted">Tope de rango: {maxDays} días (el backend valida).</p>
-        <button type="button" onClick={loadSettings}>
-          Cargar tope
-        </button>
       </section>
 
       <section>
@@ -146,13 +162,18 @@ export default function PanelPage() {
             Agenda id
             <input value={scheduleId} onChange={(e) => setScheduleId(e.target.value)} />
           </label>
-          <button type="button" onClick={searchAvailability}>
+          <button type="button" onClick={searchAvailability} disabled={!rangeReady}>
             Buscar libres
           </button>
-          <button type="button" onClick={searchAgenda}>
+          <button type="button" onClick={searchAgenda} disabled={!rangeReady || !scheduleId}>
             Ver agenda
           </button>
         </div>
+        {rangeTooWide ? (
+          <p className="muted">
+            El rango supera el tope de {maxDays} días del tenant. Acorta las fechas para buscar.
+          </p>
+        ) : null}
         {availability?.data ? (
           <table>
             <thead>

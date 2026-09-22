@@ -35,7 +35,12 @@ export async function signToken(options: TokenOptions): Promise<string> {
 }
 
 export function authorized(token: string): Request {
-  return new Request("http://localhost/api/v1/me", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  return authedRequest("http://localhost/api/v1/me", token);
+}
+
+/** Request autenticado a una URL arbitraria (suites HTTP). */
+export function authedRequest(url: string, token: string, init: RequestInit = {}): Request {
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+  return new Request(url, { ...init, headers });
 }

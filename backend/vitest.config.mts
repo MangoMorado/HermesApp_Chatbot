@@ -23,7 +23,7 @@ export default defineConfig({
           name: "db",
           environment: "node",
           include: ["tests/db/**/*.test.ts"],
-          setupFiles: ["tests/setup-env.ts"],
+          setupFiles: ["tests/setup-env.ts", "tests/db/setup-env-db.ts"],
           globalSetup: ["tests/db/global-setup.ts"],
           // Una sola base compartida: los archivos corren en serie.
           fileParallelism: false,

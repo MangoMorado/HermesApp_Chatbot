@@ -1,7 +1,7 @@
 # Fase 2 — Dominio persistido y APIs (diseño)
 
-> Estado: aprobado en brainstorming el 2026-09-22. Fuente del alcance: `ROADMAP.md` §Fase 2.
-> Manda `GOBERNANZA.md` ante cualquier conflicto.
+> Estado: **cerrada** el 2026-09-22. Aprobada en brainstorming el mismo día.
+> Fuente del alcance: `ROADMAP.md` §Fase 2. Manda `GOBERNANZA.md` ante cualquier conflicto.
 
 ## 1. Objetivo y corte
 
