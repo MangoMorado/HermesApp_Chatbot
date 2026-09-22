@@ -1,12 +1,13 @@
 "use client";
 
+import { idempotent } from "@/lib/idempotency";
 import {
   createSimPatient,
   deleteSimPatient,
   listSimPatient,
   updateSimPatient,
 } from "@/sim/default/default";
-import { cell, idempotent, type PageResult, runAction } from "./helpers";
+import { cell, type PageResult, runAction } from "./helpers";
 
 type Props = {
   readonly list: PageResult | null;
@@ -75,7 +76,7 @@ export function PatientsSection(props: Props) {
             onClick={() =>
               runAction(props.setError, async () => {
                 await createSimPatient(
-                  idempotent({
+                  idempotent("patient.create", {
                     identifier_value: props.identifier,
                     document_type: props.docType,
                     document_number: props.docNumber,
@@ -114,7 +115,10 @@ export function PatientsSection(props: Props) {
             type="button"
             onClick={() =>
               runAction(props.setError, async () => {
-                await updateSimPatient(props.editId, idempotent({ given_names: props.editGiven }));
+                await updateSimPatient(
+                  props.editId,
+                  idempotent(`patient.update:${props.editId}`, { given_names: props.editGiven }),
+                );
                 props.setList((await listSimPatient()) as PageResult);
               })
             }
@@ -125,7 +129,10 @@ export function PatientsSection(props: Props) {
             type="button"
             onClick={() =>
               runAction(props.setError, async () => {
-                await deleteSimPatient(props.editId, idempotent({}));
+                await deleteSimPatient(
+                  props.editId,
+                  idempotent(`patient.delete:${props.editId}`, {}),
+                );
                 props.setList((await listSimPatient()) as PageResult);
               })
             }

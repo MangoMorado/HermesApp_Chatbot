@@ -1,6 +1,5 @@
+import { IDEMPOTENCY_HEADER, settleIdempotencyKey } from "./idempotency";
 import { getToken } from "./token";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 
 export type ApiErrorBody = {
   error: {
@@ -23,7 +22,10 @@ export class ApiClientError extends Error {
   }
 }
 
-/** Mutator orval: fetch + Bearer desde sessionStorage. */
+/**
+ * Mutator orval: fetch + Bearer desde sessionStorage. Las URLs son relativas
+ * (`/api/v1/...`): las atiende el proxy same-origin de `app/api/[...path]`.
+ */
 export async function apiFetcher<T>(url: string, options?: RequestInit): Promise<T> {
   const headers = new Headers(options?.headers);
   if (!headers.has("Content-Type") && options?.body) {
@@ -34,7 +36,11 @@ export async function apiFetcher<T>(url: string, options?: RequestInit): Promise
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE}${url}`, { ...options, headers });
+  const response = await fetch(url, { ...options, headers });
+  const idempotencyKey = headers.get(IDEMPOTENCY_HEADER);
+  if (response.ok && idempotencyKey) {
+    settleIdempotencyKey(idempotencyKey);
+  }
   if (response.status === 204) {
     return undefined as T;
   }

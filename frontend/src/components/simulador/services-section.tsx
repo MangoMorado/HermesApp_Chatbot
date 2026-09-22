@@ -1,12 +1,13 @@
 "use client";
 
+import { idempotent } from "@/lib/idempotency";
 import {
   createSimHealthcareService,
   deleteSimHealthcareService,
   listSimHealthcareService,
   updateSimHealthcareService,
 } from "@/sim/default/default";
-import { cell, idempotent, type PageResult, runAction } from "./helpers";
+import { cell, type PageResult, runAction } from "./helpers";
 
 type Props = {
   readonly list: PageResult | null;
@@ -41,7 +42,10 @@ export function ServicesSection(props: Props) {
             onClick={() =>
               runAction(props.setError, async () => {
                 await createSimHealthcareService(
-                  idempotent({ name: props.name, identifier_value: props.identifier }),
+                  idempotent("service.create", {
+                    name: props.name,
+                    identifier_value: props.identifier,
+                  }),
                 );
                 props.setName("");
                 props.setIdentifier("");
@@ -77,7 +81,7 @@ export function ServicesSection(props: Props) {
               runAction(props.setError, async () => {
                 await updateSimHealthcareService(
                   props.editId,
-                  idempotent({ name: props.editName }),
+                  idempotent(`service.update:${props.editId}`, { name: props.editName }),
                 );
                 props.setList((await listSimHealthcareService()) as PageResult);
               })
@@ -89,7 +93,10 @@ export function ServicesSection(props: Props) {
             type="button"
             onClick={() =>
               runAction(props.setError, async () => {
-                await deleteSimHealthcareService(props.editId, idempotent({}));
+                await deleteSimHealthcareService(
+                  props.editId,
+                  idempotent(`service.delete:${props.editId}`, {}),
+                );
                 props.setList((await listSimHealthcareService()) as PageResult);
               })
             }

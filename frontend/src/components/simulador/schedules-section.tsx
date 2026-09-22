@@ -1,12 +1,13 @@
 "use client";
 
+import { idempotent } from "@/lib/idempotency";
 import {
   createSimSchedule,
   deleteSimSchedule,
   listSimSchedule,
   updateSimSchedule,
 } from "@/sim/default/default";
-import { cell, idempotent, type PageResult, runAction } from "./helpers";
+import { cell, type PageResult, runAction } from "./helpers";
 
 type Props = {
   readonly list: PageResult | null;
@@ -48,7 +49,7 @@ export function SchedulesSection(props: Props) {
             onClick={() =>
               runAction(props.setError, async () => {
                 await createSimSchedule(
-                  idempotent({
+                  idempotent("schedule.create", {
                     identifier_value: props.identifier,
                     practitioner_id: props.practitionerId,
                     healthcare_service_id: props.serviceId,
@@ -81,7 +82,10 @@ export function SchedulesSection(props: Props) {
             type="button"
             onClick={() =>
               runAction(props.setError, async () => {
-                await updateSimSchedule(props.editId, idempotent({ active: false }));
+                await updateSimSchedule(
+                  props.editId,
+                  idempotent(`schedule.update:${props.editId}`, { active: false }),
+                );
                 props.setList((await listSimSchedule()) as PageResult);
               })
             }
@@ -92,7 +96,10 @@ export function SchedulesSection(props: Props) {
             type="button"
             onClick={() =>
               runAction(props.setError, async () => {
-                await deleteSimSchedule(props.editId, idempotent({}));
+                await deleteSimSchedule(
+                  props.editId,
+                  idempotent(`schedule.delete:${props.editId}`, {}),
+                );
                 props.setList((await listSimSchedule()) as PageResult);
               })
             }

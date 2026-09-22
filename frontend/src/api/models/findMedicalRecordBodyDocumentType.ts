@@ -6,7 +6,13 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type FindMedicalRecordParams = {
-document_type: string;
-document_number: string;
-};
+export type FindMedicalRecordBodyDocumentType = typeof FindMedicalRecordBodyDocumentType[keyof typeof FindMedicalRecordBodyDocumentType];
+
+
+export const FindMedicalRecordBodyDocumentType = {
+  CC: 'CC',
+  TI: 'TI',
+  CE: 'CE',
+  PA: 'PA',
+  RC: 'RC',
+} as const;

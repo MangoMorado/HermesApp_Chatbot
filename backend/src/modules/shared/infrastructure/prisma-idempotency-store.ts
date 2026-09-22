@@ -53,5 +53,12 @@ export function createPrismaIdempotencyStore(db: PrismaExecutor): IdempotencySto
         throw error;
       }
     },
+
+    async complete(tenantId, key, status, body) {
+      await db.idempotencyKey.update({
+        where: { tenantId_key: { tenantId, key } },
+        data: { responseStatus: status, responseBody: body as Prisma.InputJsonValue },
+      });
+    },
   };
 }

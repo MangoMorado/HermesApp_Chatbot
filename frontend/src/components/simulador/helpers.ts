@@ -3,13 +3,6 @@
 type Row = Record<string, unknown>;
 export type PageResult = { data?: Row[]; next_cursor?: string | null };
 
-export function idempotent(body: unknown) {
-  return {
-    body: JSON.stringify(body),
-    headers: { "Idempotency-Key": crypto.randomUUID() },
-  };
-}
-
 export function cell(row: Row, key: string): string {
   return String(row[key] ?? "");
 }

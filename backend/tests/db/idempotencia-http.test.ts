@@ -105,6 +105,23 @@ describe("idempotencia: escrituras HTTP", () => {
     expect(await prisma.auditEvent.count()).toBe(1);
   });
 
+  it("dos envios concurrentes con la misma clave: uno escribe y el otro repite la respuesta", async () => {
+    const key = "idem-concurrente";
+    const payload = { name: "Dra. Carrera", identifier_value: "PRAC-RACE" };
+    const url = "http://localhost/api/sim/v1/practitioners";
+
+    const responses = await Promise.all([
+      postSimPractitioner(writeRequest(url, token, key, payload, "POST")),
+      postSimPractitioner(writeRequest(url, token, key, payload, "POST")),
+    ]);
+    const bodies = await Promise.all(responses.map((response) => response.json()));
+
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    expect(bodies[0]).toEqual(bodies[1]);
+    expect(await prisma.simPractitioner.count()).toBe(1);
+    expect(await prisma.auditEvent.count()).toBe(1);
+  });
+
   it("POST /api/sim/v1/practitioners: misma clave con cuerpo distinto responde 409", async () => {
     const key = "idem-sim-prac-conflict";
     const url = "http://localhost/api/sim/v1/practitioners";

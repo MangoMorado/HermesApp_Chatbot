@@ -147,7 +147,7 @@ se mezclan**:
 | Líneas por función | ≤ 40 (sin blancos) |
 | Archivo de lógica | ≤ 400 líneas |
 | Ciclos de importación | 0 |
-| `process.env` | Solo en `backend/src/config/env.ts` y en configs de herramientas |
+| `process.env` | Solo en `backend/src/config/env.ts`, `frontend/src/config/env.ts` (solo servidor) y en configs de herramientas |
 | Extracción DRY | Al **tercer** uso real del mismo patrón |
 
 Dos usos parecidos no son duplicación: son coincidencia. Abstraer al segundo uso produce

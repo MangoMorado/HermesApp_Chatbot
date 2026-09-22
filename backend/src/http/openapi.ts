@@ -259,15 +259,28 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           responses: { ...okJson({ $ref: "#/components/schemas/Page" }), ...authErrors },
         },
       },
-      "/medical-records": {
-        get: {
+      "/medical-records/search": {
+        post: {
           operationId: "findMedicalRecord",
+          description:
+            "Busca un expediente por documento. POST para que el documento no viaje en la URL; no escribe.",
           security: [{ bearerAuth: [] }],
-          parameters: [
-            REQUEST_ID_PARAMETER,
-            { name: "document_type", in: "query", required: true, schema: { type: "string" } },
-            { name: "document_number", in: "query", required: true, schema: { type: "string" } },
-          ],
+          parameters: [REQUEST_ID_PARAMETER],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["document_type", "document_number"],
+                  properties: {
+                    document_type: { type: "string", enum: ["CC", "TI", "CE", "PA", "RC"] },
+                    document_number: { type: "string", minLength: 1 },
+                  },
+                },
+              },
+            },
+          },
           responses: { ...okJson({ type: "object" }), ...authErrors },
         },
       },

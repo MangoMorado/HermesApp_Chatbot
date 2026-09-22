@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   findMedicalRecord,
   getTenantSettings,
@@ -9,29 +9,18 @@ import {
   listScheduleSlots,
   listSchedules,
 } from "@/api/default/default";
+import { FindMedicalRecordBodyDocumentType } from "@/api/models";
 import { ErrorBox } from "@/components/error-box";
+import { getToken, subscribeTokenPresence } from "@/lib/token";
 
 type PageResult = { data?: unknown[]; next_cursor?: string | null };
 
-/** Días entre from inclusivo y to exclusivo (fechas YYYY-MM-DD). NaN si inválido. */
-function rangeDays(from: string, to: string): number {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
-    return Number.NaN;
-  }
-  const start = Date.parse(`${from}T00:00:00Z`);
-  const end = Date.parse(`${to}T00:00:00Z`);
-  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
-    return Number.NaN;
-  }
-  return Math.round((end - start) / 86_400_000);
-}
-
 export default function PanelPage() {
-  const [maxDays, setMaxDays] = useState(31);
+  const [maxDays, setMaxDays] = useState<number | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [scheduleId, setScheduleId] = useState("");
-  const [docType, setDocType] = useState("CC");
+  const [docType, setDocType] = useState<FindMedicalRecordBodyDocumentType>("CC");
   const [docNumber, setDocNumber] = useState("");
   const [availability, setAvailability] = useState<PageResult | null>(null);
   const [slots, setSlots] = useState<PageResult | null>(null);
@@ -40,15 +29,33 @@ export default function PanelPage() {
   const [schedules, setSchedules] = useState<PageResult | null>(null);
   const [error, setError] = useState<unknown>(null);
 
-  useEffect(() => {
-    void getTenantSettings()
-      .then((settings) => setMaxDays(settings.max_query_range_days))
-      .catch((err) => setError(err));
-  }, []);
+  const token = useSyncExternalStore(subscribeTokenPresence, getToken, () => null);
 
-  const days = rangeDays(from, to);
-  const rangeTooWide = !Number.isNaN(days) && days > maxDays;
-  const rangeReady = !Number.isNaN(days) && !rangeTooWide;
+  // El tope se relee cada vez que aparece o cambia el token pegado en la barra.
+  useEffect(() => {
+    if (!token) {
+      setMaxDays(null);
+      return;
+    }
+    let cancelled = false;
+    getTenantSettings()
+      .then((settings) => {
+        if (!cancelled) {
+          setMaxDays(settings.max_query_range_days);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  // Solo se exige que haya fechas; el tope y el orden los valida el backend.
+  const rangeReady = Boolean(from && to);
 
   async function loadSchedules() {
     setError(null);
@@ -113,7 +120,7 @@ export default function PanelPage() {
 
       <section>
         <h2>Ajustes del tenant (lectura)</h2>
-        <p className="muted">Tope de rango: {maxDays} días (el backend valida).</p>
+        <p className="muted">Tope de rango: {maxDays ?? "—"} días (el backend valida).</p>
       </section>
 
       <section>
@@ -169,11 +176,6 @@ export default function PanelPage() {
             Ver agenda
           </button>
         </div>
-        {rangeTooWide ? (
-          <p className="muted">
-            El rango supera el tope de {maxDays} días del tenant. Acorta las fechas para buscar.
-          </p>
-        ) : null}
         {availability?.data ? (
           <table>
             <thead>
@@ -221,8 +223,11 @@ export default function PanelPage() {
         <div className="row">
           <label>
             Tipo
-            <select value={docType} onChange={(e) => setDocType(e.target.value)}>
-              {["CC", "TI", "CE", "PA", "RC"].map((type) => (
+            <select
+              value={docType}
+              onChange={(e) => setDocType(e.target.value as FindMedicalRecordBodyDocumentType)}
+            >
+              {Object.values(FindMedicalRecordBodyDocumentType).map((type) => (
                 <option key={type} value={type}>
                   {type}
                 </option>
