@@ -81,7 +81,7 @@ Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-ap
 3. Si tocas FHIR: `/fhir/metadata` y las suites de conformidad alineadas en la misma PR.
 4. Si cambias política: actualiza `GOBERNANZA.md` en la misma PR.
 
-Umbrales de Clean Code: complejidad cognitiva ≤ 15 por función, ≤ 60 líneas por función (sin blancos), ≤ 400 líneas por archivo de lógica, 0 ciclos de importación. `process.env` **solo** en `config/env.ts` (y configs de herramientas). DRY al tercer uso real; no unificar mappers FHIR de recursos distintos.
+Umbrales de Clean Code: complejidad cognitiva ≤ 15 por función, ≤ 40 líneas por función (sin blancos), ≤ 400 líneas por archivo de lógica, 0 ciclos de importación. `process.env` **solo** en `config/env.ts` (y configs de herramientas). DRY al tercer uso real; no unificar mappers FHIR de recursos distintos.
 
 ## Skills instaladas
 
