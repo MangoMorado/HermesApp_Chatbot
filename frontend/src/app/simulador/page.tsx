@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { ErrorBox } from "@/components/error-box";
-import { idempotent, type PageResult, runAction } from "@/components/simulador/helpers";
+import { type PageResult, runAction } from "@/components/simulador/helpers";
 import { PatientsSection } from "@/components/simulador/patients-section";
 import { PractitionersSection } from "@/components/simulador/practitioners-section";
 import { SchedulesSection } from "@/components/simulador/schedules-section";
 import { ServicesSection } from "@/components/simulador/services-section";
+import { idempotent } from "@/lib/idempotency";
 import { generateSimSlots } from "@/sim/default/default";
 
 export default function SimuladorPage() {
@@ -140,7 +141,7 @@ export default function SimuladorPage() {
               runAction(setError, async () => {
                 const result = await generateSimSlots(
                   scheduleId,
-                  idempotent({
+                  idempotent(`schedule.generate-slots:${scheduleId}`, {
                     from,
                     to,
                     duration_minutes: 30,

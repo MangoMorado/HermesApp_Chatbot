@@ -115,7 +115,7 @@ Lectura para `operator` y `admin`; la única escritura es el ajuste del tenant. 
 | `GET /availability` | Cupos `free` en [`from`,`to`); filtros `healthcare_service_id`, `practitioner_id`, `schedule_id`; orden por `start_at` |
 | `GET /schedules/{id}/slots` | Agenda: cupos en todos los estados en el rango |
 | `GET /appointments` | Citas por `schedule_id` y rango |
-| `GET /medical-records` | Búsqueda exacta por `document_type` + `document_number` |
+| `POST /medical-records/search` | Búsqueda exacta por `document_type` + `document_number` en el cuerpo (no en la URL: §12). No escribe, no exige `Idempotency-Key` |
 | `GET /medical-records/{id}` | Detalle del expediente |
 | `GET /medical-records/{id}/appointments` | Historial, orden `start_at` descendente |
 | `GET /tenant-settings` | Ajustes del tenant del token (`operator`, `admin`) |
@@ -143,7 +143,8 @@ respuesta. Repetición con igual `request_hash` (método + ruta + cuerpo) → mi
 sin re-ejecutar. Igual clave con distinto hash → `409 conflict`. Se implementa como
 envoltura HTTP reutilizable (`idempotentRoute`) sobre un puerto `IdempotencyStore` con
 adaptador Prisma; la escritura de negocio y el registro de la clave van en la misma
-transacción.
+transacción. La clave se **reserva al abrir** la transacción, antes de la escritura de
+negocio, y se completa con la respuesta al final (§12).
 
 ### 5.4 Errores
 
@@ -168,9 +169,9 @@ Se añade `conflict` (`409`) a `ERROR_CODES`. El resto del contrato de errores n
   versionado; script `npm --prefix frontend run api:generate`.
 - Pantalla de token: campo para pegar el JWT, guardado en `sessionStorage`, borrable. El
   script `npm --prefix backend run token:dev -- --tenant <id> --role <rol>` lo firma.
-- `/panel`: disponibilidad, agenda de una agenda, búsqueda de expediente e historial. Los
-  selectores de fecha limitan el rango con el tope que devuelve `GET /tenant-settings`
-  (ayuda de forma; el backend decide).
+- `/panel`: disponibilidad, agenda de una agenda, búsqueda de expediente e historial.
+  Muestra el tope que devuelve `GET /tenant-settings` como información; no lo aplica: el
+  rango lo valida el backend y su `validation_failed` se muestra tal cual (§12).
 - `/panel/ajustes` (solo `admin`): edita el tope de rango del tenant.
 - `/simulador`: CRUD de maestros y «generar cupos».
 - Solo validación de forma; ningún cálculo de negocio. Errores mostrados con `message` y
@@ -197,7 +198,11 @@ dedicada. CI añade un servicio Postgres al job del backend.
   `prisma migrate deploy` y luego el servidor.
 - En Easypanel: `HERMES_SIMULATOR_ENABLED=true` en el entorno de pruebas; confirmar que
   existe la base `chatbot_hermes` antes del primer deploy; el seed se lanza a mano.
-- El frontend recibe `NEXT_PUBLIC_API_BASE_URL` como build arg.
+- El frontend no conoce la URL del backend al compilar: un proxy same-origin
+  (`frontend/src/app/api/[...path]`) reenvía `/api/*` a `BACKEND_URL`, leída en runtime
+  (§12). Sin CORS.
+- Ambas imágenes fijan `HOSTNAME=0.0.0.0`: el `server.js` standalone escucha en
+  `HOSTNAME`, y el que pone Docker (ID del contenedor) resuelve a una sola de sus redes.
 
 ## 10. Criterios de aceptación (del roadmap)
 
@@ -210,3 +215,17 @@ dedicada. CI añade un servicio Postgres al job del backend.
 
 Emisión de tokens y login, conversaciones y mensajes, solicitudes y apartado de cupos,
 vencimientos, FHIR y sincronización simulador → chatbot, rate limits, barrido periódico.
+
+## 12. Cierre (2026-09-22)
+
+Ajustes hechos al cerrar la fase, tras revisar lo construido contra los no negociables:
+
+| Hallazgo | Decisión |
+| --- | --- |
+| Dos envíos concurrentes con la misma `Idempotency-Key` devolvían `500`: el `P2002` de la clave abortaba la transacción de Postgres y la relectura fallaba dentro de ella | La clave se reserva al abrir la transacción (el segundo envío queda bloqueado en esa inserción hasta que el primero confirma); `IdempotencyKeyTakenError` sale de la transacción revertida y la respuesta guardada se repite fuera. El puerto gana `complete`. Suite `idempotencia` con un caso concurrente |
+| `GET /medical-records?document_number=…` dejaba el documento en los logs de acceso del proxy (no divulgación) | Se reemplaza por `POST /medical-records/search` con el documento en el cuerpo. Cambio de contrato: OpenAPI, cliente orval y `aislamiento-tenant` en la misma PR |
+| El panel repetía la regla del tope de rango | Se retira; solo se exige que haya fechas |
+| El panel no releía el tope al pegar el token | Se relee cada vez que cambia el token |
+| El simulador generaba una `Idempotency-Key` por clic | Una clave por intento (operación + cuerpo), liberada al recibir respuesta correcta |
+| El panel desplegado no alcanzaba el backend (`NEXT_PUBLIC_*` se hornea en el build sin `ARG`; backend sin CORS) | Proxy same-origin con `BACKEND_URL` en runtime. `process.env` del frontend solo en `frontend/src/config/env.ts` |
+| orval dejaba modelos huérfanos al quitar operaciones | `clean: true` en ambas salidas |

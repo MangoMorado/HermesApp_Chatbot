@@ -27,7 +27,7 @@ import type {
 import type {
   Error,
   FindMedicalRecord200,
-  FindMedicalRecordParams,
+  FindMedicalRecordBody,
   GetMedicalRecord200,
   Health,
   Identity,
@@ -878,29 +878,39 @@ export function useListAppointments<TData = Awaited<ReturnType<typeof listAppoin
 
 
 
-export const getFindMedicalRecordUrl = (params: FindMedicalRecordParams,) => {
-  const normalizedParams = new URLSearchParams();
+export const getFindMedicalRecordUrl = () => {
 
-  Object.entries(params || {}).forEach(([key, value]) => {
 
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
 
-  const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/v1/medical-records?${stringifiedParams}` : `/api/v1/medical-records`
+  return `/api/v1/medical-records/search`
 }
 
-export const findMedicalRecord = async (params: FindMedicalRecordParams, options?: Parameters<typeof apiFetcher>[1]): Promise<FindMedicalRecord200> => {
+/**
+ * Busca un expediente por documento. POST para que el documento no viaje en la URL; no escribe.
+ */
+export const findMedicalRecord = async (findMedicalRecordBody: FindMedicalRecordBody, options?: Parameters<typeof apiFetcher>[1]): Promise<FindMedicalRecord200> => {
 
-  return apiFetcher<FindMedicalRecord200>(getFindMedicalRecordUrl(params),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetcher<FindMedicalRecord200>(getFindMedicalRecordUrl(),
   {
     ...options,
-    method: 'GET'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(findMedicalRecordBody)
   }
 );}
 
@@ -908,78 +918,51 @@ export const findMedicalRecord = async (params: FindMedicalRecordParams, options
 
 
 
-export const getFindMedicalRecordQueryKey = (params?: FindMedicalRecordParams,) => {
-    return [
-    `/api/v1/medical-records`, ...(params ? [params] : [])
-    ] as const;
+export const getFindMedicalRecordMutationKey = () => ['findMedicalRecord'] as const;
+
+export const getFindMedicalRecordMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof findMedicalRecord>>, TError,FindMedicalRecordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof findMedicalRecord>>, TError,FindMedicalRecordMutationVariables, TContext> => {
+
+const mutationKey = getFindMedicalRecordMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof findMedicalRecord>>, FindMedicalRecordMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  findMedicalRecord(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FindMedicalRecordMutationResult = NonNullable<Awaited<ReturnType<typeof findMedicalRecord>>>
+    export type FindMedicalRecordMutationBody = FindMedicalRecordBody
+    export type FindMedicalRecordMutationError = Error
+    export type FindMedicalRecordMutationVariables = {data: FindMedicalRecordBody}
+
+    export const useFindMedicalRecord = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof findMedicalRecord>>, TError,FindMedicalRecordMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof findMedicalRecord>>,
+        TError,
+        FindMedicalRecordMutationVariables,
+        TContext
+      > => {
+      return useMutation(getFindMedicalRecordMutationOptions(options), queryClient);
     }
-
-
-export const getFindMedicalRecordQueryOptions = <TData = Awaited<ReturnType<typeof findMedicalRecord>>, TError = Error>(params: FindMedicalRecordParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof findMedicalRecord>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getFindMedicalRecordQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof findMedicalRecord>>> = ({ signal }) => findMedicalRecord(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof findMedicalRecord>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type FindMedicalRecordQueryResult = NonNullable<Awaited<ReturnType<typeof findMedicalRecord>>>
-export type FindMedicalRecordQueryError = Error
-
-
-export function useFindMedicalRecord<TData = Awaited<ReturnType<typeof findMedicalRecord>>, TError = Error>(
- params: FindMedicalRecordParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof findMedicalRecord>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof findMedicalRecord>>,
-          TError,
-          Awaited<ReturnType<typeof findMedicalRecord>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetcher>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFindMedicalRecord<TData = Awaited<ReturnType<typeof findMedicalRecord>>, TError = Error>(
- params: FindMedicalRecordParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof findMedicalRecord>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof findMedicalRecord>>,
-          TError,
-          Awaited<ReturnType<typeof findMedicalRecord>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetcher>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFindMedicalRecord<TData = Awaited<ReturnType<typeof findMedicalRecord>>, TError = Error>(
- params: FindMedicalRecordParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof findMedicalRecord>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useFindMedicalRecord<TData = Awaited<ReturnType<typeof findMedicalRecord>>, TError = Error>(
- params: FindMedicalRecordParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof findMedicalRecord>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getFindMedicalRecordQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export const getGetMedicalRecordUrl = (id: string,) => {
+    export const getGetMedicalRecordUrl = (id: string,) => {
 
 
 

@@ -5,7 +5,7 @@ import { GET as getAvailability } from "@/app/api/v1/availability/route";
 import { GET as getHealthcareServices } from "@/app/api/v1/healthcare-services/route";
 import { GET as getMedicalRecordAppointments } from "@/app/api/v1/medical-records/[id]/appointments/route";
 import { GET as getMedicalRecord } from "@/app/api/v1/medical-records/[id]/route";
-import { GET as findMedicalRecord } from "@/app/api/v1/medical-records/route";
+import { POST as findMedicalRecord } from "@/app/api/v1/medical-records/search/route";
 import { GET as getPractitioners } from "@/app/api/v1/practitioners/route";
 import { GET as getScheduleSlots } from "@/app/api/v1/schedules/[id]/slots/route";
 import { GET as getSchedules } from "@/app/api/v1/schedules/route";
@@ -70,6 +70,23 @@ async function jsonGetWithParams(
   const response = await handler(authedRequest(url, token), {
     params: Promise.resolve({ id }),
   });
+  const body = await response.json();
+  return { response, body };
+}
+
+async function jsonPost(
+  handler: (req: Request) => Promise<Response>,
+  url: string,
+  token: string,
+  payload: unknown,
+) {
+  const response = await handler(
+    authedRequest(url, token, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }),
+  );
   const body = await response.json();
   return { response, body };
 }
@@ -269,21 +286,23 @@ describe("aislamiento-tenant: rutas /api/v1 no filtran datos ajenos", () => {
     expect(idsOf(body)).toEqual([seedA.appointmentId]);
   });
 
-  it("GET /medical-records por documento ajeno responde 404", async () => {
-    const { response, body } = await jsonGet(
+  it("POST /medical-records/search por documento ajeno responde 404", async () => {
+    const { response, body } = await jsonPost(
       findMedicalRecord,
-      `http://localhost/api/v1/medical-records?document_type=CC&document_number=${seedB.documentNumber}`,
+      "http://localhost/api/v1/medical-records/search",
       tokenA,
+      { document_type: "CC", document_number: seedB.documentNumber },
     );
     expect(response.status).toBe(404);
     expect(body.error.code).toBe("not_found");
   });
 
-  it("GET /medical-records encuentra el del propio tenant", async () => {
-    const { response, body } = await jsonGet(
+  it("POST /medical-records/search encuentra el del propio tenant", async () => {
+    const { response, body } = await jsonPost(
       findMedicalRecord,
-      `http://localhost/api/v1/medical-records?document_type=CC&document_number=${seedA.documentNumber}`,
+      "http://localhost/api/v1/medical-records/search",
       tokenA,
+      { document_type: "CC", document_number: seedA.documentNumber },
     );
     expect(response.status).toBe(200);
     expect(body.id).toBe(seedA.medicalRecordId);

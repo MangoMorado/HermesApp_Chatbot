@@ -88,9 +88,9 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 | `JWT_SECRET` | backend | Secreto HS256 de verificación (obligatorio) |
 | `JWT_ISSUER` / `JWT_AUDIENCE` | backend | Emisor y audiencia esperados |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose | Credenciales del contenedor de Postgres |
-| `NEXT_PUBLIC_API_BASE_URL` | frontend | Base del backend |
+| `BACKEND_URL` | frontend | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio) |
 
-`process.env` solo se lee en `backend/src/config/env.ts` y en configs de herramientas.
+`process.env` solo se lee en `backend/src/config/env.ts`, `frontend/src/config/env.ts` y en configs de herramientas.
 
 ## Mapa del código
 
@@ -107,6 +107,8 @@ backend/
   tests/                      # suites por comportamiento
 frontend/
   src/app/                    # panel y consola; sin reglas de negocio
+  src/app/api/[...path]/      # proxy same-origin hacia BACKEND_URL (sin CORS)
+  src/api/, src/sim/          # clientes orval generados; no se editan a mano
 ```
 
 ## Calidad

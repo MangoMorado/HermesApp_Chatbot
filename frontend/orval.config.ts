@@ -7,6 +7,7 @@ export default defineConfig({
       target: "./src/api/endpoints.ts",
       schemas: "./src/api/models",
       client: "react-query",
+      clean: true,
       mode: "tags-split",
       baseUrl: "/api/v1",
       override: {
@@ -26,6 +27,7 @@ export default defineConfig({
       target: "./src/sim/endpoints.ts",
       schemas: "./src/sim/models",
       client: "react-query",
+      clean: true,
       mode: "tags-split",
       baseUrl: "/api/sim/v1",
       override: {
