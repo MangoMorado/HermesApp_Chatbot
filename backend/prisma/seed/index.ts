@@ -1,9 +1,16 @@
+import { existsSync } from "node:fs";
 import { loadConfig } from "../../src/config/env";
 import { createPrismaClient } from "../../src/modules/shared/infrastructure/prisma-client";
 import { buildSeed } from "./data";
 import { todayIn } from "./time";
 import { writeChatbot } from "./write-chatbot";
 import { writeSimulator } from "./write-simulator";
+
+// Script de herramienta (como prisma.config.ts): la gobernanza permite leer el entorno aqui.
+// El .env local solo se carga si nadie definio DATABASE_URL (p. ej. un shell con las vars ya exportadas).
+if (!process.env.DATABASE_URL && existsSync(".env")) {
+  process.loadEnvFile();
+}
 
 function parseAnchor(args: readonly string[]): string | undefined {
   const index = args.indexOf("--anchor");
