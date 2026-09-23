@@ -6,4 +6,5 @@ Object.assign(process.env, {
   JWT_ISSUER: "chatbot-ingenius-360",
   JWT_AUDIENCE: "chatbot-ingenius-360",
   HERMES_SIMULATOR_ENABLED: "false",
+  PLATFORM_SECRET: "secreto-de-plataforma-de-pruebas-con-32-o-mas",
 });

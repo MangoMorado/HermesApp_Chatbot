@@ -1,6 +1,7 @@
 import type { BotConfigView } from "@/modules/bot-config/application/bot-config";
 import type { WidgetKey } from "@/modules/bot-config/domain/widget-key";
 import type { KnowledgeEntry } from "@/modules/knowledge/domain/knowledge-entry";
+import type { TenantSummary } from "@/modules/platform/domain/tenant-registration";
 
 function widgetKeyJson(key: WidgetKey | null) {
   if (!key) {
@@ -19,6 +20,15 @@ export function botConfigJson(view: BotConfigView) {
     params: view.config.params,
     allowed_origins: view.config.allowedOrigins,
     widget_keys: { current: widgetKeyJson(view.currentKey), grace: widgetKeyJson(view.graceKey) },
+  };
+}
+
+export function tenantJson(tenant: TenantSummary) {
+  return {
+    id: tenant.id,
+    slug: tenant.slug,
+    name: tenant.name,
+    created_at: tenant.createdAt.toISOString(),
   };
 }
 

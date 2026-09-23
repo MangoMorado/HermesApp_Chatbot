@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { POST as issuePlatformToken } from "@/app/api/platform/v1/tokens/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { GET as getPractitioners } from "@/app/api/v1/practitioners/route";
+import { resetContainer } from "@/composition-root";
 import { requireRole, requireSession, requireTenant } from "@/modules/auth/application/authorize";
 import type { Actor } from "@/modules/auth/domain/actor";
 import { AuthError } from "@/modules/auth/domain/auth-error";
@@ -160,5 +162,56 @@ describe("roles: emision de tokens", () => {
       expiresAt: new Date(past.getTime() + 60_000),
     });
     await expect(verifier.verify(token)).rejects.toThrow();
+  });
+});
+
+const PLATFORM_SECRET = "secreto-de-plataforma-de-pruebas-con-32-o-mas";
+
+function platformRequest(authorization: string | null, body: unknown): Request {
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (authorization) {
+    headers.set("Authorization", authorization);
+  }
+  return new Request("http://localhost/api/platform/v1/tokens", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+}
+
+describe("roles: superficie de plataforma", () => {
+  const body = { tenant_id: "tenant-a", role: "widget", subject: "x" };
+
+  it("sin secreto responde 401", async () => {
+    expect((await issuePlatformToken(platformRequest(null, body))).status).toBe(401);
+  });
+
+  it("con secreto incorrecto responde 401", async () => {
+    const response = await issuePlatformToken(platformRequest("Bearer otro-secreto", body));
+    expect(response.status).toBe(401);
+  });
+
+  it("un JWT valido de admin no abre la plataforma", async () => {
+    const token = await signToken({ role: "admin", tenantId: "tenant-a" });
+    expect((await issuePlatformToken(platformRequest(`Bearer ${token}`, body))).status).toBe(401);
+  });
+
+  it("no emite tokens de widget", async () => {
+    const response = await issuePlatformToken(platformRequest(`Bearer ${PLATFORM_SECRET}`, body));
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.details.field).toBe("role");
+  });
+
+  it("sin PLATFORM_SECRET configurado toda la superficie responde 404", async () => {
+    const saved = process.env.PLATFORM_SECRET;
+    delete process.env.PLATFORM_SECRET;
+    resetContainer();
+    try {
+      const response = await issuePlatformToken(platformRequest(`Bearer ${PLATFORM_SECRET}`, body));
+      expect(response.status).toBe(404);
+    } finally {
+      process.env.PLATFORM_SECRET = saved;
+      resetContainer();
+    }
   });
 });

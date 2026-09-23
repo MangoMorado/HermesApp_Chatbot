@@ -6,6 +6,7 @@ import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { ERROR_CODES } from "@/http/error-codes";
 import { errorResponse, toApiError } from "@/http/errors";
 import { buildOpenApiDocument } from "@/http/openapi";
+import { buildPlatformOpenApiDocument } from "@/http/openapi-platform";
 import { buildSimOpenApiDocument } from "@/http/openapi-sim";
 import { REQUEST_ID_HEADER } from "@/http/request-id";
 import { createCheckHealth } from "@/modules/health/application/check-health";
@@ -14,6 +15,7 @@ import { signToken } from "./helpers/token";
 
 const API_DIR = join(process.cwd(), "src", "app", "api", "v1");
 const SIM_DIR = join(process.cwd(), "src", "app", "api", "sim", "v1");
+const PLATFORM_DIR = join(process.cwd(), "src", "app", "api", "platform", "v1");
 
 /** Normaliza `[id]` de App Router a `{id}` de OpenAPI. */
 function normalizePath(path: string): string {
@@ -145,6 +147,20 @@ describe("contrato-api: OpenAPI", () => {
 
     expect(response.status).toBe(200);
     expect(Object.keys(identity?.responses ?? {})).toContain("401");
+  });
+});
+
+describe("contrato-api: OpenAPI de plataforma", () => {
+  it("openapi-platform.json esta al dia con el generador", () => {
+    const onDisk = readFileSync(join(process.cwd(), "openapi-platform.json"), "utf8");
+    expect(JSON.parse(onDisk)).toEqual(buildPlatformOpenApiDocument());
+  });
+
+  it("toda ruta de /api/platform/v1 esta declarada en el contrato de plataforma", () => {
+    const document = buildPlatformOpenApiDocument() as { paths: Record<string, unknown> };
+    const declared = Object.keys(document.paths).map(normalizePath).sort();
+    const onDisk = declaredRoutes(PLATFORM_DIR).map(normalizePath).sort();
+    expect(onDisk).toEqual(declared);
   });
 });
 

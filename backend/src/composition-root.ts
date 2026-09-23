@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { type AppConfig, loadConfig } from "./config/env";
 import { type Authenticate, createAuthenticate } from "./modules/auth/application/authenticate";
+import { createJoseTokenIssuer } from "./modules/auth/infrastructure/jose-token-issuer";
 import { createJoseTokenVerifier } from "./modules/auth/infrastructure/jose-token-verifier";
 import {
   createGetBotConfig,
@@ -40,6 +41,9 @@ import { createGetMedicalRecord } from "./modules/patients/application/get-medic
 import { createListMedicalRecordAppointments } from "./modules/patients/application/list-medical-record-appointments";
 import { createPrismaAppointmentHistory } from "./modules/patients/infrastructure/prisma-appointment-history";
 import { createPrismaMedicalRecordRepository } from "./modules/patients/infrastructure/prisma-medical-record-repository";
+import { createIssueToken, type IssueToken } from "./modules/platform/application/issue-token";
+import { createListTenants, type ListTenants } from "./modules/platform/application/list-tenants";
+import { createPrismaTenantRegistry } from "./modules/platform/infrastructure/prisma-tenant-registry";
 import { createListAppointments } from "./modules/scheduling/application/list-appointments";
 import { createListAvailability } from "./modules/scheduling/application/list-availability";
 import { createListHealthcareServices } from "./modules/scheduling/application/list-healthcare-services";
@@ -123,6 +127,8 @@ export type Container = {
   readonly getBotConfig: GetBotConfig;
   readonly listKnowledgeEntries: ReturnType<typeof createListKnowledgeEntries>;
   readonly getKnowledgeEntry: ReturnType<typeof createGetKnowledgeEntry>;
+  readonly issueToken: IssueToken;
+  readonly listTenants: ListTenants;
   readonly withWriteTransaction: <T>(fn: (ports: WritePorts) => Promise<T>) => Promise<T>;
 };
 
@@ -180,6 +186,19 @@ function knowledgeReads(prisma: PrismaClient) {
   return {
     listKnowledgeEntries: createListKnowledgeEntries(knowledge),
     getKnowledgeEntry: createGetKnowledgeEntry(knowledge),
+  };
+}
+
+function platformReads(prisma: PrismaClient, config: AppConfig) {
+  const registry = createPrismaTenantRegistry(prisma);
+  return {
+    issueToken: createIssueToken({
+      registry,
+      issuer: createJoseTokenIssuer(config.jwt),
+      audit: createPrismaAuditLog(prisma, uuidV7Generator),
+      clock: systemClock,
+    }),
+    listTenants: createListTenants(registry),
   };
 }
 
@@ -278,6 +297,7 @@ export function getContainer(): Container {
       ...simReads(prisma),
       ...botConfigReads(prisma),
       ...knowledgeReads(prisma),
+      ...platformReads(prisma, config),
       withWriteTransaction: (fn) => {
         if (!prisma) {
           throw new Error("Prisma no inicializado");
