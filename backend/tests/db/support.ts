@@ -163,3 +163,22 @@ export async function seedTenantDomain(
     to: "2026-06-16",
   };
 }
+
+export type ChatbotTenantSeed = { readonly tenantId: string; readonly widgetKey: string };
+
+/** Tenant con bot-config vacio y una clave vigente, como lo deja el alta. */
+export async function insertChatbotTenant(
+  prisma: PrismaClient,
+  slug: string,
+  options: { allowedOrigins?: string[] } = {},
+): Promise<ChatbotTenantSeed> {
+  const tenantId = await insertTenant(prisma, slug);
+  const widgetKey = `wk_${slug.repeat(43).slice(0, 43)}`;
+  await prisma.botConfig.create({
+    data: { tenantId, allowedOrigins: options.allowedOrigins ?? [] },
+  });
+  await prisma.widgetKey.create({
+    data: { id: `${tenantId}-key`, tenantId, key: widgetKey, createdAt: new Date() },
+  });
+  return { tenantId, widgetKey };
+}

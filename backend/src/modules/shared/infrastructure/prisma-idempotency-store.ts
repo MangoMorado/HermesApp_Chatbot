@@ -1,10 +1,9 @@
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { IdempotencyKeyTakenError } from "../domain/idempotency";
 import type { IdempotencyStore } from "../domain/ports/idempotency-store";
 import { toTenantId } from "../domain/tenant-id";
 import type { PrismaExecutor } from "./prisma-client";
-
-const UNIQUE_VIOLATION = "P2002";
+import { isUniqueViolation } from "./prisma-errors";
 
 export function createPrismaIdempotencyStore(db: PrismaExecutor): IdempotencyStore {
   return {
@@ -44,10 +43,7 @@ export function createPrismaIdempotencyStore(db: PrismaExecutor): IdempotencySto
           },
         });
       } catch (error) {
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === UNIQUE_VIOLATION
-        ) {
+        if (isUniqueViolation(error)) {
           throw new IdempotencyKeyTakenError();
         }
         throw error;
