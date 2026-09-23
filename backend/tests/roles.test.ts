@@ -4,8 +4,10 @@ import { GET as getPractitioners } from "@/app/api/v1/practitioners/route";
 import { requireRole, requireSession, requireTenant } from "@/modules/auth/application/authorize";
 import type { Actor } from "@/modules/auth/domain/actor";
 import { AuthError } from "@/modules/auth/domain/auth-error";
+import { createJoseTokenIssuer } from "@/modules/auth/infrastructure/jose-token-issuer";
+import { createJoseTokenVerifier } from "@/modules/auth/infrastructure/jose-token-verifier";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
-import { authorized, signToken } from "./helpers/token";
+import { authorized, signToken, TEST_JWT } from "./helpers/token";
 
 const operator: Actor = {
   subject: "u-1",
@@ -112,5 +114,51 @@ describe("roles: ruta autenticada", () => {
       }),
     );
     expect(response.status).toBe(403);
+  });
+});
+
+describe("roles: emision de tokens", () => {
+  const issuer = createJoseTokenIssuer(TEST_JWT);
+  const verifier = createJoseTokenVerifier(TEST_JWT);
+
+  it("un token emitido lo acepta el verificador con los mismos claims", async () => {
+    const now = new Date();
+    const token = await issuer.issue({
+      subject: "ana@clinica",
+      tenantId: "tenant-a",
+      role: "admin",
+      issuedAt: now,
+      expiresAt: new Date(now.getTime() + 60_000),
+    });
+    expect(await verifier.verify(token)).toEqual({
+      subject: "ana@clinica",
+      tenantId: "tenant-a",
+      role: "admin",
+    });
+  });
+
+  it("el token de widget lleva su sesion", async () => {
+    const now = new Date();
+    const token = await issuer.issue({
+      subject: "widget:s-1",
+      tenantId: "tenant-a",
+      role: "widget",
+      sessionId: "s-1",
+      issuedAt: now,
+      expiresAt: new Date(now.getTime() + 60_000),
+    });
+    expect((await verifier.verify(token)).sessionId).toBe("s-1");
+  });
+
+  it("un token ya vencido no se acepta", async () => {
+    const past = new Date(Date.now() - 120_000);
+    const token = await issuer.issue({
+      subject: "ana",
+      tenantId: "tenant-a",
+      role: "operator",
+      issuedAt: past,
+      expiresAt: new Date(past.getTime() + 60_000),
+    });
+    await expect(verifier.verify(token)).rejects.toThrow();
   });
 });
