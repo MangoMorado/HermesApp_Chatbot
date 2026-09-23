@@ -2,6 +2,16 @@ import type { PrismaClient } from "@prisma/client";
 import { type AppConfig, loadConfig } from "./config/env";
 import { type Authenticate, createAuthenticate } from "./modules/auth/application/authenticate";
 import { createJoseTokenVerifier } from "./modules/auth/infrastructure/jose-token-verifier";
+import {
+  createGetBotConfig,
+  createUpdateBotConfig,
+  type GetBotConfig,
+} from "./modules/bot-config/application/bot-config";
+import { createRotateWidgetKey } from "./modules/bot-config/application/widget-keys";
+import type { OriginPolicy } from "./modules/bot-config/domain/allowed-origins";
+import { cryptoWidgetKeyGenerator } from "./modules/bot-config/infrastructure/crypto-widget-key-generator";
+import { createPrismaBotConfigRepository } from "./modules/bot-config/infrastructure/prisma-bot-config-repository";
+import { createPrismaWidgetKeyRepository } from "./modules/bot-config/infrastructure/prisma-widget-key-repository";
 import { type CheckHealth, createCheckHealth } from "./modules/health/application/check-health";
 import { createGenerateSimSlots } from "./modules/hermes-simulator/application/generate-slots";
 import type {
@@ -38,7 +48,10 @@ import type { Clock } from "./modules/shared/domain/ports/clock";
 import type { IdGenerator } from "./modules/shared/domain/ports/id-generator";
 import type { IdempotencyStore } from "./modules/shared/domain/ports/idempotency-store";
 import { createPrismaAuditLog } from "./modules/shared/infrastructure/prisma-audit-log";
-import { createPrismaClient } from "./modules/shared/infrastructure/prisma-client";
+import {
+  createPrismaClient,
+  type PrismaExecutor,
+} from "./modules/shared/infrastructure/prisma-client";
 import { createPrismaIdempotencyStore } from "./modules/shared/infrastructure/prisma-idempotency-store";
 import { systemClock } from "./modules/shared/infrastructure/system-clock";
 import { uuidV7Generator } from "./modules/shared/infrastructure/uuid-v7-generator";
@@ -49,7 +62,7 @@ import {
 import type { TenantSettingsRepository } from "./modules/tenancy/domain/ports/tenant-settings-repository";
 import { createPrismaTenantSettingsRepository } from "./modules/tenancy/infrastructure/prisma-tenant-settings-repository";
 
-export type WritePorts = {
+export type BaseWritePorts = {
   readonly clock: Clock;
   readonly ids: IdGenerator;
   readonly auditLog: AuditLog;
@@ -63,6 +76,10 @@ export type WritePorts = {
   readonly generateSimSlots: ReturnType<typeof createGenerateSimSlots>;
   readonly appTimezone: string;
 };
+
+type BotConfigWritePorts = ReturnType<typeof botConfigWritePorts>;
+
+export type WritePorts = BaseWritePorts & BotConfigWritePorts;
 
 export type Container = {
   readonly config: AppConfig;
@@ -88,16 +105,94 @@ export type Container = {
   readonly getSimSchedule: SimScheduleStore["get"];
   readonly listSimPatients: SimPatientStore["list"];
   readonly getSimPatient: SimPatientStore["get"];
+  readonly getBotConfig: GetBotConfig;
   readonly withWriteTransaction: <T>(fn: (ports: WritePorts) => Promise<T>) => Promise<T>;
 };
 
 let container: Container | undefined;
 let prisma: PrismaClient | undefined;
 
-function buildWritePorts(
-  db: PrismaClient | Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0],
-  appTimezone: string,
-): WritePorts {
+function originPolicyOf(config: AppConfig): OriginPolicy {
+  return { allowLocalhost: config.nodeEnv !== "production" };
+}
+
+function botConfigWritePorts(db: PrismaExecutor, config: AppConfig, auditLog: AuditLog) {
+  const botConfigs = createPrismaBotConfigRepository(db);
+  const widgetKeys = createPrismaWidgetKeyRepository(db);
+  const deps = { configs: botConfigs, keys: widgetKeys, clock: systemClock };
+  return {
+    botConfigs,
+    widgetKeys,
+    updateBotConfig: createUpdateBotConfig({
+      ...deps,
+      audit: auditLog,
+      originPolicy: originPolicyOf(config),
+    }),
+    rotateWidgetKey: createRotateWidgetKey({
+      ...deps,
+      generator: cryptoWidgetKeyGenerator,
+      ids: uuidV7Generator,
+      audit: auditLog,
+    }),
+  };
+}
+
+function botConfigReads(prisma: PrismaClient) {
+  return {
+    getBotConfig: createGetBotConfig({
+      configs: createPrismaBotConfigRepository(prisma),
+      keys: createPrismaWidgetKeyRepository(prisma),
+      clock: systemClock,
+    }),
+  };
+}
+
+function schedulingReads(prisma: PrismaClient) {
+  const tenantSettings = createPrismaTenantSettingsRepository(prisma);
+  const practitioners = createPrismaPractitionerRepository(prisma);
+  const services = createPrismaHealthcareServiceRepository(prisma);
+  const schedules = createPrismaScheduleRepository(prisma);
+  const slots = createPrismaSlotRepository(prisma);
+  const appointments = createPrismaAppointmentRepository(prisma);
+  return {
+    listPractitioners: createListPractitioners(practitioners),
+    listHealthcareServices: createListHealthcareServices(services),
+    listSchedules: createListSchedules(schedules),
+    listAvailability: createListAvailability(slots, tenantSettings),
+    listScheduleSlots: createListScheduleSlots(schedules, slots, tenantSettings),
+    listAppointments: createListAppointments(schedules, appointments, tenantSettings),
+    getTenantSettings: createGetTenantSettings(tenantSettings),
+  };
+}
+
+function patientReads(prisma: PrismaClient) {
+  const medicalRecords = createPrismaMedicalRecordRepository(prisma);
+  const history = createPrismaAppointmentHistory(prisma);
+  return {
+    findMedicalRecord: createFindMedicalRecord(medicalRecords),
+    getMedicalRecord: createGetMedicalRecord(medicalRecords),
+    listMedicalRecordAppointments: createListMedicalRecordAppointments(medicalRecords, history),
+  };
+}
+
+function simReads(prisma: PrismaClient) {
+  const simPractitioners = createPrismaSimPractitionerStore(prisma);
+  const simServices = createPrismaSimHealthcareServiceStore(prisma);
+  const simSchedules = createPrismaSimScheduleStore(prisma);
+  const simPatients = createPrismaSimPatientStore(prisma);
+  return {
+    listSimPractitioners: simPractitioners.list,
+    getSimPractitioner: simPractitioners.get,
+    listSimServices: simServices.list,
+    getSimService: simServices.get,
+    listSimSchedules: simSchedules.list,
+    getSimSchedule: simSchedules.get,
+    listSimPatients: simPatients.list,
+    getSimPatient: simPatients.get,
+  };
+}
+
+function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
   const tenantSettings = createPrismaTenantSettingsRepository(db);
   const auditLog = createPrismaAuditLog(db, uuidV7Generator);
   const idempotencyStore = createPrismaIdempotencyStore(db);
@@ -119,7 +214,8 @@ function buildWritePorts(
       auditLog,
       systemClock,
     ),
-    appTimezone,
+    appTimezone: config.appTimezone,
+    ...botConfigWritePorts(db, config, auditLog),
   };
 }
 
@@ -131,48 +227,22 @@ export function getContainer(): Container {
   if (!container) {
     const config = loadConfig();
     prisma = createPrismaClient(config.databaseUrl);
-    const tenantSettings = createPrismaTenantSettingsRepository(prisma);
-    const practitioners = createPrismaPractitionerRepository(prisma);
-    const services = createPrismaHealthcareServiceRepository(prisma);
-    const schedules = createPrismaScheduleRepository(prisma);
-    const slots = createPrismaSlotRepository(prisma);
-    const appointments = createPrismaAppointmentRepository(prisma);
-    const medicalRecords = createPrismaMedicalRecordRepository(prisma);
-    const history = createPrismaAppointmentHistory(prisma);
-    const simPractitioners = createPrismaSimPractitionerStore(prisma);
-    const simServices = createPrismaSimHealthcareServiceStore(prisma);
-    const simSchedules = createPrismaSimScheduleStore(prisma);
-    const simPatients = createPrismaSimPatientStore(prisma);
 
     container = {
       config,
       checkHealth: createCheckHealth(systemClock),
       authenticate: createAuthenticate(createJoseTokenVerifier(config.jwt)),
       idempotencyStore: createPrismaIdempotencyStore(prisma),
-      listPractitioners: createListPractitioners(practitioners),
-      listHealthcareServices: createListHealthcareServices(services),
-      listSchedules: createListSchedules(schedules),
-      listAvailability: createListAvailability(slots, tenantSettings),
-      listScheduleSlots: createListScheduleSlots(schedules, slots, tenantSettings),
-      listAppointments: createListAppointments(schedules, appointments, tenantSettings),
-      findMedicalRecord: createFindMedicalRecord(medicalRecords),
-      getMedicalRecord: createGetMedicalRecord(medicalRecords),
-      listMedicalRecordAppointments: createListMedicalRecordAppointments(medicalRecords, history),
-      getTenantSettings: createGetTenantSettings(tenantSettings),
       hermesSimulatorEnabled: config.hermesSimulatorEnabled,
-      listSimPractitioners: (filter) => simPractitioners.list(filter),
-      getSimPractitioner: (tenantId, id) => simPractitioners.get(tenantId, id),
-      listSimServices: (filter) => simServices.list(filter),
-      getSimService: (tenantId, id) => simServices.get(tenantId, id),
-      listSimSchedules: (filter) => simSchedules.list(filter),
-      getSimSchedule: (tenantId, id) => simSchedules.get(tenantId, id),
-      listSimPatients: (filter) => simPatients.list(filter),
-      getSimPatient: (tenantId, id) => simPatients.get(tenantId, id),
+      ...schedulingReads(prisma),
+      ...patientReads(prisma),
+      ...simReads(prisma),
+      ...botConfigReads(prisma),
       withWriteTransaction: (fn) => {
         if (!prisma) {
           throw new Error("Prisma no inicializado");
         }
-        return prisma.$transaction((tx) => fn(buildWritePorts(tx, config.appTimezone)));
+        return prisma.$transaction((tx) => fn(buildWritePorts(tx, config)));
       },
     };
   }

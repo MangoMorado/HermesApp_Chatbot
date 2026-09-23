@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { GET as getAppointments } from "@/app/api/v1/appointments/route";
 import { GET as getAvailability } from "@/app/api/v1/availability/route";
+import { GET as getBotConfig, PATCH as patchBotConfig } from "@/app/api/v1/bot-config/route";
 import { GET as getHealthcareServices } from "@/app/api/v1/healthcare-services/route";
 import { GET as getMedicalRecordAppointments } from "@/app/api/v1/medical-records/[id]/appointments/route";
 import { GET as getMedicalRecord } from "@/app/api/v1/medical-records/[id]/route";
@@ -13,6 +14,7 @@ import { GET as getTenantSettings } from "@/app/api/v1/tenant-settings/route";
 import { resetContainer } from "@/composition-root";
 import { authedRequest, signToken } from "../helpers/token";
 import {
+  insertChatbotTenant,
   insertTenant,
   seedTenantDomain,
   type TenantDomainSeed,
@@ -349,5 +351,32 @@ describe("aislamiento-tenant: rutas /api/v1 no filtran datos ajenos", () => {
       tokenB,
     );
     expect(other.body.max_query_range_days).toBe(90);
+  });
+});
+
+describe("aislamiento-tenant: bot-config", () => {
+  beforeEach(async () => {
+    await truncateAll(prisma);
+    resetContainer();
+  });
+
+  it("cada tenant lee y cambia solo su configuracion", async () => {
+    const a = await insertChatbotTenant(prisma, "a");
+    const b = await insertChatbotTenant(prisma, "b");
+    const adminA = await signToken({ role: "admin", tenantId: a.tenantId });
+    const operatorB = await signToken({ role: "operator", tenantId: b.tenantId });
+
+    const patched = await patchBotConfig(
+      authedRequest("http://localhost/api/v1/bot-config", adminA, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Idempotency-Key": "iso-1" },
+        body: JSON.stringify({ texts: { welcome: "Solo A" } }),
+      }),
+    );
+    expect(patched.status).toBe(200);
+
+    const { body } = await jsonGet(getBotConfig, "http://localhost/api/v1/bot-config", operatorB);
+    expect(body.texts.welcome.overridden).toBe(false);
+    expect(body.widget_keys.current.key).toBe(b.widgetKey);
   });
 });

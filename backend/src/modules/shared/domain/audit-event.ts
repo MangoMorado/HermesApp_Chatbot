@@ -14,3 +14,10 @@ export type AuditEvent = {
   readonly requestId: string;
   readonly occurredAt: Date;
 };
+
+/** Quien origina un cambio auditable; los casos de uso lo reciben junto a su entrada. */
+export type AuditActor = {
+  readonly actorSubject: string;
+  readonly actorRole: string;
+  readonly requestId: string;
+};

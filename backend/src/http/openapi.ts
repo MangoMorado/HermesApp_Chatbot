@@ -1,101 +1,32 @@
-import { ERROR_CODES, STATUS_BY_CODE } from "./error-codes";
-import { REQUEST_ID_HEADER } from "./request-id";
+import { CHATBOT_PATHS, CHATBOT_SCHEMAS } from "./openapi-paths-chatbot";
+import {
+  authErrors,
+  ERROR_SCHEMA,
+  errorResponses,
+  IDEMPOTENCY_PARAMETER,
+  okJson,
+  PAGE_SCHEMA,
+  pageParams,
+  REQUEST_ID_PARAMETER,
+  writeErrors,
+} from "./openapi-shared";
 
 /**
  * Fuente unica del contrato REST chatbot. `npm run openapi:generate` la vuelca
  * en `openapi.json`. Toda ruta nueva de /api/v1 se declara aqui en la misma PR.
  */
 
-const REQUEST_ID_PARAMETER = {
-  name: REQUEST_ID_HEADER,
-  in: "header",
-  required: false,
-  description: "Identificador de correlacion. Si no viene, el servicio genera uno.",
-  schema: { type: "string", maxLength: 128 },
-} as const;
-
-const REQUEST_ID_RESPONSE_HEADER = {
-  [REQUEST_ID_HEADER]: {
-    description: "Identificador de correlacion de esta peticion.",
-    schema: { type: "string" },
-  },
-} as const;
-
-const IDEMPOTENCY_PARAMETER = {
-  name: "Idempotency-Key",
-  in: "header",
-  required: true,
-  schema: { type: "string", minLength: 1 },
-} as const;
-
-function errorResponses(codes: readonly string[]): Record<string, unknown> {
-  return Object.fromEntries(
-    codes.map((code) => [
-      String(STATUS_BY_CODE[code as (typeof ERROR_CODES)[number]]),
-      {
-        description: code,
-        headers: REQUEST_ID_RESPONSE_HEADER,
-        content: {
-          "application/json": { schema: { $ref: "#/components/schemas/Error" } },
-        },
-      },
-    ]),
-  );
-}
-
-const pageParams = [
-  {
-    name: "cursor",
-    in: "query",
-    required: false,
-    schema: { type: "string" },
-  },
-  {
-    name: "limit",
-    in: "query",
-    required: false,
-    schema: { type: "integer", minimum: 1, maximum: 200 },
-  },
-] as const;
-
 const rangeParams = [
   { name: "from", in: "query", required: true, schema: { type: "string" } },
   { name: "to", in: "query", required: true, schema: { type: "string" } },
 ] as const;
-
-function okJson(schema: Record<string, unknown>) {
-  return {
-    "200": {
-      description: "OK",
-      headers: REQUEST_ID_RESPONSE_HEADER,
-      content: { "application/json": { schema } },
-    },
-  };
-}
-
-const authErrors = errorResponses([
-  "unauthorized",
-  "forbidden",
-  "not_found",
-  "validation_failed",
-  "internal_error",
-]);
-
-const writeErrors = errorResponses([
-  "unauthorized",
-  "forbidden",
-  "not_found",
-  "validation_failed",
-  "conflict",
-  "internal_error",
-]);
 
 export function buildOpenApiDocument(): Record<string, unknown> {
   return {
     openapi: "3.1.0",
     info: {
       title: "Chatbot Ingenius 360 — API REST",
-      version: "0.2.0",
+      version: "0.3.0",
       description:
         "Superficie REST para widget, panel y chat. La integracion con Hermes vive en /fhir " +
         "y no se describe aqui: usa OperationOutcome, no esta envoltura de errores.",
@@ -106,22 +37,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
       },
       schemas: {
-        Error: {
-          type: "object",
-          required: ["error"],
-          properties: {
-            error: {
-              type: "object",
-              required: ["code", "message", "request_id"],
-              properties: {
-                code: { type: "string", enum: [...ERROR_CODES] },
-                message: { type: "string" },
-                request_id: { type: "string" },
-                details: {},
-              },
-            },
-          },
-        },
+        Error: ERROR_SCHEMA,
         Health: {
           type: "object",
           required: ["status", "checkedAt"],
@@ -140,19 +56,13 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             session_id: { type: "string" },
           },
         },
-        Page: {
-          type: "object",
-          required: ["data", "next_cursor"],
-          properties: {
-            data: { type: "array", items: {} },
-            next_cursor: { type: ["string", "null"] },
-          },
-        },
+        Page: PAGE_SCHEMA,
         TenantSettings: {
           type: "object",
           required: ["max_query_range_days"],
           properties: { max_query_range_days: { type: "integer", minimum: 1, maximum: 366 } },
         },
+        ...CHATBOT_SCHEMAS,
       },
     },
     paths: {
@@ -333,6 +243,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      ...CHATBOT_PATHS,
     },
   };
 }

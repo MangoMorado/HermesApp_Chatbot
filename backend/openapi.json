@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Chatbot Ingenius 360 — API REST",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Superficie REST para widget, panel y chat. La integracion con Hermes vive en /fhir y no se describe aqui: usa OperationOutcome, no esta envoltura de errores."
   },
   "servers": [
@@ -133,6 +133,131 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 366
+          }
+        }
+      },
+      "WidgetKey": {
+        "type": "object",
+        "required": [
+          "key",
+          "created_at",
+          "grace_until"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "grace_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "BotConfig": {
+        "type": "object",
+        "required": [
+          "texts",
+          "params",
+          "allowed_origins",
+          "widget_keys"
+        ],
+        "properties": {
+          "texts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "value",
+                "overridden"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "overridden": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "allowed_origins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "widget_keys": {
+            "type": "object",
+            "required": [
+              "current",
+              "grace"
+            ],
+            "properties": {
+              "current": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/WidgetKey"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "grace": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/WidgetKey"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "BotConfigPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "texts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          "allowed_origins": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string"
+            }
           }
         }
       }
@@ -1958,6 +2083,466 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TenantSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "validation_failed",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bot-config": {
+      "get": {
+        "operationId": "getBotConfig",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Identificador de correlacion. Si no viene, el servicio genera uno.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotConfig"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "validation_failed",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateBotConfig",
+        "description": "Parche parcial. Un texto o param en null vuelve al predeterminado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Identificador de correlacion. Si no viene, el servicio genera uno.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BotConfigPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotConfig"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "validation_failed",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bot-config/widget-keys/rotate": {
+      "post": {
+        "operationId": "rotateWidgetKey",
+        "description": "Crea una clave vigente; la anterior queda en gracia widget_key_grace_hours y la que ya estaba en gracia deja de valer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Identificador de correlacion. Si no viene, el servicio genera uno.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotConfig"
                 }
               }
             }
