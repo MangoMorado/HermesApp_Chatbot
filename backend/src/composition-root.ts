@@ -54,13 +54,17 @@ import { createPrismaSlotRepository } from "./modules/scheduling/infrastructure/
 import type { AuditLog } from "./modules/shared/domain/ports/audit-log";
 import type { Clock } from "./modules/shared/domain/ports/clock";
 import type { IdGenerator } from "./modules/shared/domain/ports/id-generator";
-import type { IdempotencyStore } from "./modules/shared/domain/ports/idempotency-store";
+import type {
+  IdempotencyStore,
+  PlatformIdempotencyStore,
+} from "./modules/shared/domain/ports/idempotency-store";
 import { createPrismaAuditLog } from "./modules/shared/infrastructure/prisma-audit-log";
 import {
   createPrismaClient,
   type PrismaExecutor,
 } from "./modules/shared/infrastructure/prisma-client";
 import { createPrismaIdempotencyStore } from "./modules/shared/infrastructure/prisma-idempotency-store";
+import { createPrismaPlatformIdempotencyStore } from "./modules/shared/infrastructure/prisma-platform-idempotency-store";
 import { systemClock } from "./modules/shared/infrastructure/system-clock";
 import { uuidV7Generator } from "./modules/shared/infrastructure/uuid-v7-generator";
 import {
@@ -75,6 +79,7 @@ export type BaseWritePorts = {
   readonly ids: IdGenerator;
   readonly auditLog: AuditLog;
   readonly idempotencyStore: IdempotencyStore;
+  readonly platformIdempotencyStore: PlatformIdempotencyStore;
   readonly tenantSettings: TenantSettingsRepository;
   readonly updateTenantSettings: ReturnType<typeof createUpdateTenantSettings>;
   readonly simPractitioners: SimPractitionerStore;
@@ -95,6 +100,7 @@ export type Container = {
   readonly checkHealth: CheckHealth;
   readonly authenticate: Authenticate;
   readonly idempotencyStore: IdempotencyStore;
+  readonly platformIdempotencyStore: PlatformIdempotencyStore;
   readonly listPractitioners: ReturnType<typeof createListPractitioners>;
   readonly listHealthcareServices: ReturnType<typeof createListHealthcareServices>;
   readonly listSchedules: ReturnType<typeof createListSchedules>;
@@ -232,6 +238,7 @@ function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
     ids: uuidV7Generator,
     auditLog,
     idempotencyStore,
+    platformIdempotencyStore: createPrismaPlatformIdempotencyStore(db),
     tenantSettings,
     updateTenantSettings: createUpdateTenantSettings(tenantSettings, auditLog, systemClock),
     simPractitioners: createPrismaSimPractitionerStore(db),
@@ -264,6 +271,7 @@ export function getContainer(): Container {
       checkHealth: createCheckHealth(systemClock),
       authenticate: createAuthenticate(createJoseTokenVerifier(config.jwt)),
       idempotencyStore: createPrismaIdempotencyStore(prisma),
+      platformIdempotencyStore: createPrismaPlatformIdempotencyStore(prisma),
       hermesSimulatorEnabled: config.hermesSimulatorEnabled,
       ...schedulingReads(prisma),
       ...patientReads(prisma),

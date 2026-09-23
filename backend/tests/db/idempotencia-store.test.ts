@@ -6,6 +6,7 @@ import {
 } from "@/modules/shared/domain/idempotency";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { createPrismaIdempotencyStore } from "@/modules/shared/infrastructure/prisma-idempotency-store";
+import { createPrismaPlatformIdempotencyStore } from "@/modules/shared/infrastructure/prisma-platform-idempotency-store";
 import { insertTenant, testPrisma, truncateAll } from "./support";
 
 const prisma: PrismaClient = testPrisma();
@@ -56,5 +57,38 @@ describe("idempotencia: almacen de claves", () => {
     await expect(store.save(record("tenant-a", "k-1"))).rejects.toBeInstanceOf(
       IdempotencyKeyTakenError,
     );
+  });
+});
+
+describe("idempotencia: almacen de claves de plataforma", () => {
+  const platformStore = createPrismaPlatformIdempotencyStore(prisma);
+  const record = {
+    key: "p-1",
+    method: "POST",
+    path: "/api/platform/v1/tenants",
+    requestHash: "hash-p",
+    responseStatus: 0,
+    responseBody: {},
+    createdAt: new Date("2026-09-22T12:00:00.000Z"),
+  };
+
+  beforeEach(async () => {
+    await truncateAll(prisma);
+  });
+
+  it("guarda, completa y recupera sin tenant", async () => {
+    await platformStore.save(record);
+    await platformStore.complete("p-1", 201, { tenant: { id: "t-1" } });
+    expect(await platformStore.find("p-1")).toEqual({
+      ...record,
+      responseStatus: 201,
+      responseBody: { tenant: { id: "t-1" } },
+    });
+    expect(await platformStore.find("p-x")).toBeNull();
+  });
+
+  it("repetir la clave lanza IdempotencyKeyTakenError", async () => {
+    await platformStore.save(record);
+    await expect(platformStore.save(record)).rejects.toBeInstanceOf(IdempotencyKeyTakenError);
   });
 });
