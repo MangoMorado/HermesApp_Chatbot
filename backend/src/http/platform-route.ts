@@ -1,10 +1,18 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getContainer } from "@/composition-root";
+import { getContainer, type WritePorts } from "@/composition-root";
 import { unauthorized } from "@/modules/auth/domain/auth-error";
+import { PLATFORM_AUDIT_ACTOR } from "@/modules/platform/domain/platform-actor";
 import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { errorResponse, toApiError } from "./errors";
-import { parseJsonBody } from "./idempotency-core";
+import {
+  type IdempotentOutcome,
+  idempotentJson,
+  parseJsonBody,
+  platformScope,
+  readIdempotentRequest,
+  runIdempotent,
+} from "./idempotency-core";
 import { REQUEST_ID_HEADER, resolveRequestId } from "./request-id";
 
 const BEARER = /^Bearer (.+)$/;
@@ -44,6 +52,33 @@ export function platformRoute(handler: PlatformHandler) {
       return NextResponse.json(await handler({ requestId, request }), {
         headers: { [REQUEST_ID_HEADER]: requestId },
       });
+    } catch (error) {
+      return errorResponse(toApiError(error), requestId);
+    }
+  };
+}
+
+type PlatformWriteHandler = (context: {
+  requestId: string;
+  body: unknown;
+  ports: WritePorts;
+}) => Promise<IdempotentOutcome>;
+
+/** Escritura de plataforma con `Idempotency-Key` en su propio ambito (sin tenant). */
+export function platformIdempotentRoute(handler: PlatformWriteHandler) {
+  return async (request: Request): Promise<NextResponse> => {
+    const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
+    try {
+      const container = getContainer();
+      requirePlatform(request.headers.get("Authorization"), container.config.platformSecret);
+      const idempotent = await readIdempotentRequest(request, PLATFORM_AUDIT_ACTOR.actorSubject);
+      const result = await runIdempotent({
+        request: idempotent,
+        outside: platformScope(container.platformIdempotencyStore),
+        inside: (ports) => platformScope(ports.platformIdempotencyStore),
+        execute: (ports) => handler({ requestId, body: idempotent.body, ports }),
+      });
+      return idempotentJson(result, requestId);
     } catch (error) {
       return errorResponse(toApiError(error), requestId);
     }

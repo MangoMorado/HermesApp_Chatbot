@@ -1,6 +1,8 @@
 import {
+  createdJson,
   ERROR_SCHEMA,
   errorResponses,
+  IDEMPOTENCY_PARAMETER,
   okJson,
   PAGE_SCHEMA,
   pageParams,
@@ -17,6 +19,13 @@ const readErrors = errorResponses([
   "unauthorized",
   "not_found",
   "validation_failed",
+  "internal_error",
+]);
+const writeErrors = errorResponses([
+  "unauthorized",
+  "not_found",
+  "validation_failed",
+  "conflict",
   "internal_error",
 ]);
 
@@ -52,6 +61,23 @@ const SCHEMAS = {
     required: ["token", "expires_at"],
     properties: { token: { type: "string" }, expires_at: { type: "string", format: "date-time" } },
   },
+  TenantRequest: {
+    type: "object",
+    required: ["slug", "name"],
+    properties: {
+      slug: { type: "string", pattern: "^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$" },
+      name: { type: "string", minLength: 1, maxLength: 120 },
+      allowed_origins: { type: "array", maxItems: 20, items: { type: "string" } },
+    },
+  },
+  TenantCreated: {
+    type: "object",
+    required: ["tenant", "widget_key"],
+    properties: {
+      tenant: { $ref: "#/components/schemas/Tenant" },
+      widget_key: { type: "string", description: "Clave publica del widget (va en el HTML)." },
+    },
+  },
 } as const;
 
 export function buildPlatformOpenApiDocument(): Record<string, unknown> {
@@ -76,6 +102,23 @@ export function buildPlatformOpenApiDocument(): Record<string, unknown> {
           security: platformAuth,
           parameters: [REQUEST_ID_PARAMETER, ...pageParams],
           responses: { ...okJson({ $ref: "#/components/schemas/Page" }), ...readErrors },
+        },
+        post: {
+          operationId: "createTenant",
+          description:
+            "Alta con predeterminados: bot-config, KB de ejemplo y primera clave del widget.",
+          security: platformAuth,
+          parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/TenantRequest" } },
+            },
+          },
+          responses: {
+            ...createdJson({ $ref: "#/components/schemas/TenantCreated" }),
+            ...writeErrors,
+          },
         },
       },
       "/tokens": {

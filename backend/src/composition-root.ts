@@ -8,6 +8,7 @@ import {
   createUpdateBotConfig,
   type GetBotConfig,
 } from "./modules/bot-config/application/bot-config";
+import { createProvisionBotConfig } from "./modules/bot-config/application/provisioning";
 import { createRotateWidgetKey } from "./modules/bot-config/application/widget-keys";
 import type { OriginPolicy } from "./modules/bot-config/domain/allowed-origins";
 import { cryptoWidgetKeyGenerator } from "./modules/bot-config/infrastructure/crypto-widget-key-generator";
@@ -33,6 +34,7 @@ import {
   createDeleteKnowledgeEntry,
   createGetKnowledgeEntry,
   createListKnowledgeEntries,
+  createSeedDefaultKnowledge,
   createUpdateKnowledgeEntry,
 } from "./modules/knowledge/application/knowledge-entries";
 import { createPrismaKnowledgeRepository } from "./modules/knowledge/infrastructure/prisma-knowledge-repository";
@@ -43,6 +45,8 @@ import { createPrismaAppointmentHistory } from "./modules/patients/infrastructur
 import { createPrismaMedicalRecordRepository } from "./modules/patients/infrastructure/prisma-medical-record-repository";
 import { createIssueToken, type IssueToken } from "./modules/platform/application/issue-token";
 import { createListTenants, type ListTenants } from "./modules/platform/application/list-tenants";
+import { createRegisterTenant } from "./modules/platform/application/register-tenant";
+import type { TenantProvisioning } from "./modules/platform/domain/ports/provisioning";
 import { createPrismaTenantRegistry } from "./modules/platform/infrastructure/prisma-tenant-registry";
 import { createListAppointments } from "./modules/scheduling/application/list-appointments";
 import { createListAvailability } from "./modules/scheduling/application/list-availability";
@@ -96,8 +100,12 @@ export type BaseWritePorts = {
 
 type BotConfigWritePorts = ReturnType<typeof botConfigWritePorts>;
 type KnowledgeWritePorts = ReturnType<typeof knowledgeWritePorts>;
+type PlatformWritePorts = ReturnType<typeof platformWritePorts>;
 
-export type WritePorts = BaseWritePorts & BotConfigWritePorts & KnowledgeWritePorts;
+export type WritePorts = BaseWritePorts &
+  BotConfigWritePorts &
+  KnowledgeWritePorts &
+  PlatformWritePorts;
 
 export type Container = {
   readonly config: AppConfig;
@@ -189,6 +197,32 @@ function knowledgeReads(prisma: PrismaClient) {
   };
 }
 
+function platformWritePorts(db: PrismaExecutor, config: AppConfig, auditLog: AuditLog) {
+  const provisioning: TenantProvisioning = {
+    provisionBotConfig: createProvisionBotConfig({
+      configs: createPrismaBotConfigRepository(db),
+      keys: createPrismaWidgetKeyRepository(db),
+      generator: cryptoWidgetKeyGenerator,
+      ids: uuidV7Generator,
+      clock: systemClock,
+      originPolicy: originPolicyOf(config),
+    }),
+    seedKnowledge: createSeedDefaultKnowledge({
+      repo: createPrismaKnowledgeRepository(db),
+      ids: uuidV7Generator,
+    }),
+  };
+  return {
+    registerTenant: createRegisterTenant({
+      registry: createPrismaTenantRegistry(db),
+      provisioning,
+      ids: uuidV7Generator,
+      audit: auditLog,
+      clock: systemClock,
+    }),
+  };
+}
+
 function platformReads(prisma: PrismaClient, config: AppConfig) {
   const registry = createPrismaTenantRegistry(prisma);
   return {
@@ -273,6 +307,7 @@ function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
     appTimezone: config.appTimezone,
     ...botConfigWritePorts(db, config, auditLog),
     ...knowledgeWritePorts(db, auditLog),
+    ...platformWritePorts(db, config, auditLog),
   };
 }
 

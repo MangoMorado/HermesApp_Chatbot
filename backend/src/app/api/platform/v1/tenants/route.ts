@@ -1,5 +1,5 @@
 import { getContainer } from "@/composition-root";
-import { platformRoute } from "@/http/platform-route";
+import { platformIdempotentRoute, platformRoute } from "@/http/platform-route";
 import { pageJson } from "@/http/serializers";
 import { tenantJson } from "@/http/serializers-chatbot";
 
@@ -12,4 +12,9 @@ export const GET = platformRoute(async ({ request }) => {
     limitRaw: url.searchParams.get("limit"),
   });
   return pageJson(page, tenantJson);
+});
+
+export const POST = platformIdempotentRoute(async ({ requestId, body, ports }) => {
+  const { tenant, widgetKey } = await ports.registerTenant({ raw: body, requestId });
+  return { status: 201, body: { tenant: tenantJson(tenant), widget_key: widgetKey } };
 });
