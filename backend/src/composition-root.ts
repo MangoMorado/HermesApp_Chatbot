@@ -27,6 +27,14 @@ import {
   createPrismaSimScheduleStore,
   createPrismaSimSlotGenerator,
 } from "./modules/hermes-simulator/infrastructure/prisma-stores";
+import {
+  createCreateKnowledgeEntry,
+  createDeleteKnowledgeEntry,
+  createGetKnowledgeEntry,
+  createListKnowledgeEntries,
+  createUpdateKnowledgeEntry,
+} from "./modules/knowledge/application/knowledge-entries";
+import { createPrismaKnowledgeRepository } from "./modules/knowledge/infrastructure/prisma-knowledge-repository";
 import { createFindMedicalRecord } from "./modules/patients/application/find-medical-record";
 import { createGetMedicalRecord } from "./modules/patients/application/get-medical-record";
 import { createListMedicalRecordAppointments } from "./modules/patients/application/list-medical-record-appointments";
@@ -78,8 +86,9 @@ export type BaseWritePorts = {
 };
 
 type BotConfigWritePorts = ReturnType<typeof botConfigWritePorts>;
+type KnowledgeWritePorts = ReturnType<typeof knowledgeWritePorts>;
 
-export type WritePorts = BaseWritePorts & BotConfigWritePorts;
+export type WritePorts = BaseWritePorts & BotConfigWritePorts & KnowledgeWritePorts;
 
 export type Container = {
   readonly config: AppConfig;
@@ -106,6 +115,8 @@ export type Container = {
   readonly listSimPatients: SimPatientStore["list"];
   readonly getSimPatient: SimPatientStore["get"];
   readonly getBotConfig: GetBotConfig;
+  readonly listKnowledgeEntries: ReturnType<typeof createListKnowledgeEntries>;
+  readonly getKnowledgeEntry: ReturnType<typeof createGetKnowledgeEntry>;
   readonly withWriteTransaction: <T>(fn: (ports: WritePorts) => Promise<T>) => Promise<T>;
 };
 
@@ -144,6 +155,25 @@ function botConfigReads(prisma: PrismaClient) {
       keys: createPrismaWidgetKeyRepository(prisma),
       clock: systemClock,
     }),
+  };
+}
+
+function knowledgeWritePorts(db: PrismaExecutor, auditLog: AuditLog) {
+  const knowledge = createPrismaKnowledgeRepository(db);
+  const deps = { repo: knowledge, audit: auditLog, clock: systemClock };
+  return {
+    knowledge,
+    createKnowledgeEntry: createCreateKnowledgeEntry({ ...deps, ids: uuidV7Generator }),
+    updateKnowledgeEntry: createUpdateKnowledgeEntry(deps),
+    deleteKnowledgeEntry: createDeleteKnowledgeEntry(deps),
+  };
+}
+
+function knowledgeReads(prisma: PrismaClient) {
+  const knowledge = createPrismaKnowledgeRepository(prisma);
+  return {
+    listKnowledgeEntries: createListKnowledgeEntries(knowledge),
+    getKnowledgeEntry: createGetKnowledgeEntry(knowledge),
   };
 }
 
@@ -216,6 +246,7 @@ function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
     ),
     appTimezone: config.appTimezone,
     ...botConfigWritePorts(db, config, auditLog),
+    ...knowledgeWritePorts(db, auditLog),
   };
 }
 
@@ -238,6 +269,7 @@ export function getContainer(): Container {
       ...patientReads(prisma),
       ...simReads(prisma),
       ...botConfigReads(prisma),
+      ...knowledgeReads(prisma),
       withWriteTransaction: (fn) => {
         if (!prisma) {
           throw new Error("Prisma no inicializado");

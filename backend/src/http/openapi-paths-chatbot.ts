@@ -1,7 +1,9 @@
 import {
   authErrors,
+  createdJson,
   IDEMPOTENCY_PARAMETER,
   okJson,
+  pageParams,
   REQUEST_ID_PARAMETER,
   writeErrors,
 } from "./openapi-shared";
@@ -9,6 +11,12 @@ import {
 /** Rutas de /api/v1 de la Fase 3 (config del bot, KB y sesiones del widget). */
 const bearer = [{ bearerAuth: [] }];
 const nullableKey = { oneOf: [{ $ref: "#/components/schemas/WidgetKey" }, { type: "null" }] };
+const ID_PARAMETER = {
+  name: "id",
+  in: "path",
+  required: true,
+  schema: { type: "string" },
+} as const;
 
 export const CHATBOT_SCHEMAS = {
   WidgetKey: {
@@ -50,6 +58,32 @@ export const CHATBOT_SCHEMAS = {
       allowed_origins: { type: "array", maxItems: 20, items: { type: "string" } },
     },
   },
+  KnowledgeEntry: {
+    type: "object",
+    required: ["id", "category", "question", "answer", "detail", "keywords", "position", "active"],
+    properties: {
+      id: { type: "string" },
+      category: { type: "string", maxLength: 60 },
+      question: { type: "string", maxLength: 200 },
+      answer: { type: "string", maxLength: 1000 },
+      detail: { type: ["string", "null"], maxLength: 4000 },
+      keywords: { type: "array", maxItems: 20, items: { type: "string" } },
+      position: { type: "integer", minimum: 0 },
+      active: { type: "boolean" },
+    },
+  },
+  KnowledgeEntryInput: {
+    type: "object",
+    properties: {
+      category: { type: "string", minLength: 1, maxLength: 60 },
+      question: { type: "string", minLength: 1, maxLength: 200 },
+      answer: { type: "string", minLength: 1, maxLength: 1000 },
+      detail: { type: ["string", "null"], maxLength: 4000 },
+      keywords: { type: "array", items: { type: "string" } },
+      position: { type: "integer", minimum: 0 },
+      active: { type: "boolean" },
+    },
+  },
 } as const;
 
 const botConfigOk = okJson({ $ref: "#/components/schemas/BotConfig" });
@@ -85,6 +119,64 @@ export const CHATBOT_PATHS = {
       security: bearer,
       parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
       responses: { ...botConfigOk, ...writeErrors },
+    },
+  },
+  "/knowledge-entries": {
+    get: {
+      operationId: "listKnowledgeEntries",
+      security: bearer,
+      parameters: [
+        REQUEST_ID_PARAMETER,
+        ...pageParams,
+        { name: "category", in: "query", schema: { type: "string" } },
+        { name: "active", in: "query", schema: { type: "boolean" } },
+      ],
+      responses: { ...okJson({ $ref: "#/components/schemas/Page" }), ...authErrors },
+    },
+    post: {
+      operationId: "createKnowledgeEntry",
+      description: "category, question y answer son obligatorios. Maximo 500 entradas por tenant.",
+      security: bearer,
+      parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": { schema: { $ref: "#/components/schemas/KnowledgeEntryInput" } },
+        },
+      },
+      responses: {
+        ...createdJson({ $ref: "#/components/schemas/KnowledgeEntry" }),
+        ...writeErrors,
+      },
+    },
+  },
+  "/knowledge-entries/{id}": {
+    get: {
+      operationId: "getKnowledgeEntry",
+      security: bearer,
+      parameters: [REQUEST_ID_PARAMETER, ID_PARAMETER],
+      responses: { ...okJson({ $ref: "#/components/schemas/KnowledgeEntry" }), ...authErrors },
+    },
+    patch: {
+      operationId: "updateKnowledgeEntry",
+      security: bearer,
+      parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER, ID_PARAMETER],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": { schema: { $ref: "#/components/schemas/KnowledgeEntryInput" } },
+        },
+      },
+      responses: { ...okJson({ $ref: "#/components/schemas/KnowledgeEntry" }), ...writeErrors },
+    },
+    delete: {
+      operationId: "deleteKnowledgeEntry",
+      security: bearer,
+      parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER, ID_PARAMETER],
+      responses: {
+        ...okJson({ type: "object", properties: { deleted: { type: "boolean" } } }),
+        ...writeErrors,
+      },
     },
   },
 };

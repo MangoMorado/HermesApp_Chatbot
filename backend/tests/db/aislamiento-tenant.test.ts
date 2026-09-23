@@ -4,6 +4,12 @@ import { GET as getAppointments } from "@/app/api/v1/appointments/route";
 import { GET as getAvailability } from "@/app/api/v1/availability/route";
 import { GET as getBotConfig, PATCH as patchBotConfig } from "@/app/api/v1/bot-config/route";
 import { GET as getHealthcareServices } from "@/app/api/v1/healthcare-services/route";
+import {
+  DELETE as deleteKnowledgeEntry,
+  GET as getKnowledgeEntry,
+  PATCH as patchKnowledgeEntry,
+} from "@/app/api/v1/knowledge-entries/[id]/route";
+import { GET as listKnowledgeEntries } from "@/app/api/v1/knowledge-entries/route";
 import { GET as getMedicalRecordAppointments } from "@/app/api/v1/medical-records/[id]/appointments/route";
 import { GET as getMedicalRecord } from "@/app/api/v1/medical-records/[id]/route";
 import { POST as findMedicalRecord } from "@/app/api/v1/medical-records/search/route";
@@ -378,5 +384,50 @@ describe("aislamiento-tenant: bot-config", () => {
     const { body } = await jsonGet(getBotConfig, "http://localhost/api/v1/bot-config", operatorB);
     expect(body.texts.welcome.overridden).toBe(false);
     expect(body.widget_keys.current.key).toBe(b.widgetKey);
+  });
+});
+
+describe("aislamiento-tenant: base de conocimiento", () => {
+  beforeEach(async () => {
+    await truncateAll(prisma);
+    resetContainer();
+  });
+
+  it("una entrada ajena responde 404 al leer, cambiar y borrar, y no aparece en la lista", async () => {
+    const a = await insertChatbotTenant(prisma, "a");
+    const b = await insertChatbotTenant(prisma, "b");
+    await prisma.knowledgeEntry.create({
+      data: { id: "entry-b", tenantId: b.tenantId, category: "C", question: "Q", answer: "A" },
+    });
+    const adminA = await signToken({ role: "admin", tenantId: a.tenantId });
+    const url = "http://localhost/api/v1/knowledge-entries/entry-b";
+    const ctx = { params: Promise.resolve({ id: "entry-b" }) };
+    const writeInit = (method: string, key: string, body?: unknown) => ({
+      method,
+      headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+
+    expect((await getKnowledgeEntry(authedRequest(url, adminA), ctx)).status).toBe(404);
+    expect(
+      (
+        await patchKnowledgeEntry(
+          authedRequest(url, adminA, writeInit("PATCH", "iso-p", { answer: "x" })),
+          ctx,
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (await deleteKnowledgeEntry(authedRequest(url, adminA, writeInit("DELETE", "iso-d")), ctx))
+        .status,
+    ).toBe(404);
+
+    const { body } = await jsonGet(
+      listKnowledgeEntries,
+      "http://localhost/api/v1/knowledge-entries",
+      adminA,
+    );
+    expect(idsOf(body)).toEqual([]);
+    expect(await prisma.knowledgeEntry.count({ where: { id: "entry-b", answer: "A" } })).toBe(1);
   });
 });
