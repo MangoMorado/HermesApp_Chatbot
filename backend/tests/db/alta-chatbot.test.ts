@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { POST as createTenant, GET as listTenants } from "@/app/api/platform/v1/tenants/route";
 import { POST as issueToken } from "@/app/api/platform/v1/tokens/route";
 import { GET as getBotConfig } from "@/app/api/v1/bot-config/route";
+import { POST as openWidgetSession } from "@/app/api/v1/widget/sessions/route";
 import { resetContainer } from "@/composition-root";
 import { authedRequest } from "../helpers/token";
 import { insertChatbotTenant, testPrisma, truncateAll } from "./support";
@@ -192,5 +194,28 @@ describe("alta-chatbot: POST /tenants", () => {
       await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", token))
     ).json();
     expect(config.allowed_origins).toEqual(["https://nueva.test"]);
+  });
+});
+
+describe("alta-chatbot: la primera clave abre sesion", () => {
+  beforeEach(async () => {
+    await truncateAll(prisma);
+    resetContainer();
+  });
+
+  it("la clave devuelta por el alta abre una sesion desde un origen permitido", async () => {
+    const { widget_key } = await (await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-w"))).json();
+    const response = await openWidgetSession(
+      new Request("http://localhost/api/v1/widget/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://nueva.test",
+          "Idempotency-Key": randomUUID(),
+        },
+        body: JSON.stringify({ widget_key }),
+      }),
+    );
+    expect(response.status).toBe(201);
   });
 });

@@ -16,6 +16,7 @@ export type AppConfig = {
     readonly audience: string;
   };
   readonly platformSecret: string | null;
+  readonly trustProxy: boolean;
 };
 
 function required(name: string): string {
@@ -63,5 +64,6 @@ export function loadConfig(): AppConfig {
       audience: optional("JWT_AUDIENCE", "chatbot-ingenius-360"),
     },
     platformSecret: platformSecret(),
+    trustProxy: optional("TRUST_PROXY", "false") === "true",
   };
 }
