@@ -8,12 +8,11 @@ export const dynamic = "force-dynamic";
 
 export const GET = privateRoute(["operator", "admin"], async ({ actor, request }) => {
   const url = new URL(request.url);
-  const activeRaw = url.searchParams.get("active");
   const category = url.searchParams.get("category");
   const page = await getContainer().listKnowledgeEntries({
     tenantId: actor.tenantId,
     ...(category === null ? {} : { category }),
-    ...(activeRaw === null ? {} : { active: activeRaw === "true" }),
+    activeRaw: url.searchParams.get("active"),
     cursor: url.searchParams.get("cursor"),
     limitRaw: url.searchParams.get("limit"),
   });

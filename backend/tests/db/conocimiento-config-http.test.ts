@@ -93,6 +93,20 @@ describe("conocimiento-config: /bot-config", () => {
     expect((await response.json()).allowed_origins).toEqual(["https://clinica-a.test"]);
   });
 
+  it("idempotencia: PATCH repetido con la misma clave y cuerpo no duplica auditoria", async () => {
+    const payload = { texts: { welcome: "Hola de nuevo" } };
+    const first = await (
+      await patchBotConfig(write(CONFIG_URL, admin, payload, "cfg-same"))
+    ).json();
+    const again = await (
+      await patchBotConfig(write(CONFIG_URL, admin, payload, "cfg-same"))
+    ).json();
+    expect(again).toEqual(first);
+    expect((await prisma.auditEvent.findMany()).map((e) => e.action)).toEqual([
+      "bot_config.updated",
+    ]);
+  });
+
   it.each([
     [{ texts: { despedida: "Chao" } }, "texts.despedida"],
     [{ params: { kb_max_results: 0 } }, "params.kb_max_results"],
@@ -155,6 +169,21 @@ describe("conocimiento-config: /bot-config", () => {
     expect(again).toEqual(first);
     expect(await prisma.widgetKey.count()).toBe(2);
     expect(await prisma.auditEvent.count()).toBe(1);
+  });
+
+  it("tenant con bot_config y sin claves: rotar crea la primera clave vigente", async () => {
+    const tenantId = "tenant-sin-clave";
+    await prisma.tenant.create({ data: { id: tenantId, slug: "sin-clave", name: "Sin Clave" } });
+    await prisma.botConfig.create({ data: { tenantId, allowedOrigins: [] } });
+    const token = await signToken({ role: "admin", tenantId });
+
+    const response = await rotateKey(write(ROTATE_URL, token, undefined, "rot-first", "POST"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.widget_keys.current.key).toMatch(/^wk_[A-Za-z0-9_-]{43}$/);
+    expect(body.widget_keys.grace).toBeNull();
+    expect(await prisma.widgetKey.count({ where: { tenantId } })).toBe(1);
   });
 
   it("dos rotaciones concurrentes nunca dejan dos claves vigentes", async () => {
@@ -247,6 +276,13 @@ describe("conocimiento-config: /knowledge-entries", () => {
     expect(response.status).toBe(422);
   });
 
+  it("GET con active invalido responde 422 con el campo", async () => {
+    const response = await listEntries(authedRequest(`${KB_URL}?active=maybe`, operator));
+    const body = await response.json();
+    expect(response.status).toBe(422);
+    expect(body.error.details.field).toBe("active");
+  });
+
   it("PATCH cambia solo lo que trae; invalido responde 422", async () => {
     const { body: created } = await create();
     const patched = await patchEntry(
@@ -264,6 +300,47 @@ describe("conocimiento-config: /knowledge-entries", () => {
       withId(created.id),
     );
     expect(invalid.status).toBe(422);
+  });
+
+  it("idempotencia: PATCH repetido con la misma clave y cuerpo no duplica auditoria", async () => {
+    const { body: created } = await create();
+    const payload = { active: false };
+    const first = await (
+      await patchEntry(
+        write(`${KB_URL}/${created.id}`, admin, payload, "kb-patch-same"),
+        withId(created.id),
+      )
+    ).json();
+    const again = await (
+      await patchEntry(
+        write(`${KB_URL}/${created.id}`, admin, payload, "kb-patch-same"),
+        withId(created.id),
+      )
+    ).json();
+    expect(again).toEqual(first);
+    expect((await prisma.auditEvent.findMany()).map((e) => e.action)).toEqual([
+      "knowledge_entry.created",
+      "knowledge_entry.updated",
+    ]);
+  });
+
+  it("idempotencia: DELETE repetido con la misma clave no duplica auditoria ni efecto", async () => {
+    const { body: created } = await create();
+    const first = await deleteEntry(
+      write(`${KB_URL}/${created.id}`, admin, undefined, "kb-del-same", "DELETE"),
+      withId(created.id),
+    );
+    const again = await deleteEntry(
+      write(`${KB_URL}/${created.id}`, admin, undefined, "kb-del-same", "DELETE"),
+      withId(created.id),
+    );
+    expect(first.status).toBe(200);
+    expect(again.status).toBe(200);
+    expect(await prisma.knowledgeEntry.count()).toBe(0);
+    expect((await prisma.auditEvent.findMany()).map((e) => e.action)).toEqual([
+      "knowledge_entry.created",
+      "knowledge_entry.deleted",
+    ]);
   });
 
   it("DELETE borra; un segundo DELETE con otra clave responde 404", async () => {

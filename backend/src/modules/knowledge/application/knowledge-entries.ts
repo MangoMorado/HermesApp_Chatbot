@@ -42,18 +42,36 @@ async function audit(
 export type ListKnowledgeInput = {
   readonly tenantId: TenantId;
   readonly category?: string;
-  readonly active?: boolean;
+  readonly activeRaw?: string | null;
   readonly cursor?: string | null;
   readonly limitRaw?: string | null;
 };
 
+/** `null`/`undefined` = sin filtro; cualquier otro valor debe ser "true" o "false". */
+function parseActiveFilter(raw: string | null | undefined): boolean | undefined {
+  if (raw === null || raw === undefined) {
+    return undefined;
+  }
+  if (raw === "true" || raw === "false") {
+    return raw === "true";
+  }
+  throw new ValidationError('active debe ser "true" o "false"', { field: "active" });
+}
+
 export function createListKnowledgeEntries(repo: KnowledgeRepository) {
   return async (input: ListKnowledgeInput): Promise<Page<KnowledgeEntry>> => {
     const limit = parseLimit(input.limitRaw);
+    const active = parseActiveFilter(input.activeRaw);
     if (input.cursor) {
       decodeCursor(input.cursor);
     }
-    return repo.list({ ...input, limit });
+    return repo.list({
+      tenantId: input.tenantId,
+      ...(input.category !== undefined ? { category: input.category } : {}),
+      ...(active !== undefined ? { active } : {}),
+      cursor: input.cursor,
+      limit,
+    });
   };
 }
 
