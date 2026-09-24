@@ -10,6 +10,8 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 
 **Fase 2 cerrada** (spec en `docs/superpowers/specs/2026-09-22-fase-2-dominio-persistido-design.md`): esquema `public` + `hermes_sim`, casos de uso de lectura de agenda/historial, ajustes del tenant, simulador CRUD, seed simétrico, panel y simulador en frontend con clientes orval, suites `dominio`, `aislamiento-tenant` (HTTP), `idempotencia` (HTTP), `simetria-seed` y `test:db` en CI. La emisión de tokens y el chat son de la Fase 3; hoy los JWT se firman con `token:dev` y se pegan en el panel.
 
+**Fase 3 en curso**: 3.1 (tenant listo para chatear) en la rama `fase-3-1-tenant-listo`; spec en `docs/superpowers/specs/2026-09-22-fase-3-1-tenant-listo-design.md`.
+
 Lo que aún no existe está descrito como destino, no como hecho. Verifica antes de asumir que un archivo o comando está.
 
 `ROADMAP.md` es la fuente del plan: cinco fases en orden estricto (1→2→3→4→5), sin abrir una sin cerrar los criterios de aceptación de la anterior. Tanto `ROADMAP.md` como `GOBERNANZA.md` (Fase 1) viven en la raíz.
@@ -72,7 +74,7 @@ Detalles de instalación que muerden: npm 12 bloquea los scripts de instalación
 Si `biome` no produce salida, el binario se bajó truncado: borra `node_modules/@biomejs`
 y reinstala (el `.exe` correcto pesa ~76 MB).
 
-Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`.
+Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`.
 
 ## Puertas de calidad por PR
 
