@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Chatbot Ingenius 360 — API REST
  * Superficie REST para widget, panel y chat. La integracion con Hermes vive en /fhir y no se describe aqui: usa OperationOutcome, no esta envoltura de errores.
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.3.0
  */
 import {
   useMutation,
@@ -25,21 +25,29 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BotConfig,
+  BotConfigPatch,
+  DeleteKnowledgeEntry200,
   Error,
   FindMedicalRecord200,
   FindMedicalRecordBody,
   GetMedicalRecord200,
   Health,
   Identity,
+  KnowledgeEntry,
+  KnowledgeEntryInput,
   ListAppointmentsParams,
   ListAvailabilityParams,
   ListHealthcareServicesParams,
+  ListKnowledgeEntriesParams,
   ListMedicalRecordAppointmentsParams,
   ListPractitionersParams,
   ListScheduleSlotsParams,
   ListSchedulesParams,
   Page,
-  TenantSettings
+  TenantSettings,
+  WidgetSession,
+  WidgetSessionRequest
 } from '../models';
 
 import { apiFetcher } from '../../lib/api-fetcher';
@@ -1339,4 +1347,834 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getUpdateTenantSettingsMutationOptions(options), queryClient);
+    }
+    export const getGetBotConfigUrl = () => {
+
+
+
+
+  return `/api/v1/bot-config`
+}
+
+export const getBotConfig = async ( options?: Parameters<typeof apiFetcher>[1]): Promise<BotConfig> => {
+
+  return apiFetcher<BotConfig>(getGetBotConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBotConfigQueryKey = () => {
+    return [
+    `/api/v1/bot-config`
+    ] as const;
+    }
+
+
+export const getGetBotConfigQueryOptions = <TData = Awaited<ReturnType<typeof getBotConfig>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotConfig>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBotConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBotConfig>>> = ({ signal }) => getBotConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBotConfig>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetBotConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getBotConfig>>>
+export type GetBotConfigQueryError = Error
+
+
+export function useGetBotConfig<TData = Awaited<ReturnType<typeof getBotConfig>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotConfig>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBotConfig>>,
+          TError,
+          Awaited<ReturnType<typeof getBotConfig>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetBotConfig<TData = Awaited<ReturnType<typeof getBotConfig>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotConfig>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBotConfig>>,
+          TError,
+          Awaited<ReturnType<typeof getBotConfig>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetBotConfig<TData = Awaited<ReturnType<typeof getBotConfig>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotConfig>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetBotConfig<TData = Awaited<ReturnType<typeof getBotConfig>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotConfig>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetBotConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getUpdateBotConfigUrl = () => {
+
+
+
+
+  return `/api/v1/bot-config`
+}
+
+/**
+ * Parche parcial. Un texto o param en null vuelve al predeterminado.
+ */
+export const updateBotConfig = async (botConfigPatch: BotConfigPatch, options?: Parameters<typeof apiFetcher>[1]): Promise<BotConfig> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetcher<BotConfig>(getUpdateBotConfigUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(botConfigPatch)
+  }
+);}
+
+
+
+
+
+export const getUpdateBotConfigMutationKey = () => ['updateBotConfig'] as const;
+
+export const getUpdateBotConfigMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBotConfig>>, TError,UpdateBotConfigMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBotConfig>>, TError,UpdateBotConfigMutationVariables, TContext> => {
+
+const mutationKey = getUpdateBotConfigMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBotConfig>>, UpdateBotConfigMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateBotConfig(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBotConfigMutationResult = NonNullable<Awaited<ReturnType<typeof updateBotConfig>>>
+    export type UpdateBotConfigMutationBody = BotConfigPatch
+    export type UpdateBotConfigMutationError = Error
+    export type UpdateBotConfigMutationVariables = {data: BotConfigPatch}
+
+    export const useUpdateBotConfig = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBotConfig>>, TError,UpdateBotConfigMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateBotConfig>>,
+        TError,
+        UpdateBotConfigMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateBotConfigMutationOptions(options), queryClient);
+    }
+    export const getRotateWidgetKeyUrl = () => {
+
+
+
+
+  return `/api/v1/bot-config/widget-keys/rotate`
+}
+
+/**
+ * Crea una clave vigente; la anterior queda en gracia widget_key_grace_hours y la que ya estaba en gracia deja de valer.
+ */
+export const rotateWidgetKey = async ( options?: Parameters<typeof apiFetcher>[1]): Promise<BotConfig> => {
+
+  return apiFetcher<BotConfig>(getRotateWidgetKeyUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRotateWidgetKeyMutationKey = () => ['rotateWidgetKey'] as const;
+
+export const getRotateWidgetKeyMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rotateWidgetKey>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof rotateWidgetKey>>, TError,void, TContext> => {
+
+const mutationKey = getRotateWidgetKeyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rotateWidgetKey>>, void> = () => {
+
+
+          return  rotateWidgetKey(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RotateWidgetKeyMutationResult = NonNullable<Awaited<ReturnType<typeof rotateWidgetKey>>>
+
+    export type RotateWidgetKeyMutationError = Error
+
+
+    export const useRotateWidgetKey = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rotateWidgetKey>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rotateWidgetKey>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRotateWidgetKeyMutationOptions(options), queryClient);
+    }
+    export const getListKnowledgeEntriesUrl = (params?: ListKnowledgeEntriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/knowledge-entries?${stringifiedParams}` : `/api/v1/knowledge-entries`
+}
+
+export const listKnowledgeEntries = async (params?: ListKnowledgeEntriesParams, options?: Parameters<typeof apiFetcher>[1]): Promise<Page> => {
+
+  return apiFetcher<Page>(getListKnowledgeEntriesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListKnowledgeEntriesQueryKey = (params?: ListKnowledgeEntriesParams,) => {
+    return [
+    `/api/v1/knowledge-entries`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListKnowledgeEntriesQueryOptions = <TData = Awaited<ReturnType<typeof listKnowledgeEntries>>, TError = Error>(params?: ListKnowledgeEntriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeEntries>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListKnowledgeEntriesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listKnowledgeEntries>>> = ({ signal }) => listKnowledgeEntries(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeEntries>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListKnowledgeEntriesQueryResult = NonNullable<Awaited<ReturnType<typeof listKnowledgeEntries>>>
+export type ListKnowledgeEntriesQueryError = Error
+
+
+export function useListKnowledgeEntries<TData = Awaited<ReturnType<typeof listKnowledgeEntries>>, TError = Error>(
+ params: undefined |  ListKnowledgeEntriesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeEntries>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKnowledgeEntries>>,
+          TError,
+          Awaited<ReturnType<typeof listKnowledgeEntries>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListKnowledgeEntries<TData = Awaited<ReturnType<typeof listKnowledgeEntries>>, TError = Error>(
+ params?: ListKnowledgeEntriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeEntries>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKnowledgeEntries>>,
+          TError,
+          Awaited<ReturnType<typeof listKnowledgeEntries>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListKnowledgeEntries<TData = Awaited<ReturnType<typeof listKnowledgeEntries>>, TError = Error>(
+ params?: ListKnowledgeEntriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeEntries>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListKnowledgeEntries<TData = Awaited<ReturnType<typeof listKnowledgeEntries>>, TError = Error>(
+ params?: ListKnowledgeEntriesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeEntries>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListKnowledgeEntriesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getCreateKnowledgeEntryUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge-entries`
+}
+
+/**
+ * category, question y answer son obligatorios. Maximo 500 entradas por tenant.
+ */
+export const createKnowledgeEntry = async (knowledgeEntryInput: KnowledgeEntryInput, options?: Parameters<typeof apiFetcher>[1]): Promise<KnowledgeEntry> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetcher<KnowledgeEntry>(getCreateKnowledgeEntryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(knowledgeEntryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateKnowledgeEntryMutationKey = () => ['createKnowledgeEntry'] as const;
+
+export const getCreateKnowledgeEntryMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKnowledgeEntry>>, TError,CreateKnowledgeEntryMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof createKnowledgeEntry>>, TError,CreateKnowledgeEntryMutationVariables, TContext> => {
+
+const mutationKey = getCreateKnowledgeEntryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createKnowledgeEntry>>, CreateKnowledgeEntryMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createKnowledgeEntry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateKnowledgeEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createKnowledgeEntry>>>
+    export type CreateKnowledgeEntryMutationBody = KnowledgeEntryInput
+    export type CreateKnowledgeEntryMutationError = Error
+    export type CreateKnowledgeEntryMutationVariables = {data: KnowledgeEntryInput}
+
+    export const useCreateKnowledgeEntry = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKnowledgeEntry>>, TError,CreateKnowledgeEntryMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createKnowledgeEntry>>,
+        TError,
+        CreateKnowledgeEntryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateKnowledgeEntryMutationOptions(options), queryClient);
+    }
+    export const getGetKnowledgeEntryUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/knowledge-entries/${id}`
+}
+
+export const getKnowledgeEntry = async (id: string, options?: Parameters<typeof apiFetcher>[1]): Promise<KnowledgeEntry> => {
+
+  return apiFetcher<KnowledgeEntry>(getGetKnowledgeEntryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKnowledgeEntryQueryKey = (id: string,) => {
+    return [
+    `/api/v1/knowledge-entries/${id}`
+    ] as const;
+    }
+
+
+export const getGetKnowledgeEntryQueryOptions = <TData = Awaited<ReturnType<typeof getKnowledgeEntry>>, TError = Error>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeEntry>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKnowledgeEntryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKnowledgeEntry>>> = ({ signal }) => getKnowledgeEntry(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeEntry>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetKnowledgeEntryQueryResult = NonNullable<Awaited<ReturnType<typeof getKnowledgeEntry>>>
+export type GetKnowledgeEntryQueryError = Error
+
+
+export function useGetKnowledgeEntry<TData = Awaited<ReturnType<typeof getKnowledgeEntry>>, TError = Error>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeEntry>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeEntry>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeEntry>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeEntry<TData = Awaited<ReturnType<typeof getKnowledgeEntry>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeEntry>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKnowledgeEntry>>,
+          TError,
+          Awaited<ReturnType<typeof getKnowledgeEntry>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetKnowledgeEntry<TData = Awaited<ReturnType<typeof getKnowledgeEntry>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeEntry>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetKnowledgeEntry<TData = Awaited<ReturnType<typeof getKnowledgeEntry>>, TError = Error>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeEntry>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetKnowledgeEntryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getUpdateKnowledgeEntryUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/knowledge-entries/${id}`
+}
+
+export const updateKnowledgeEntry = async (id: string,
+    knowledgeEntryInput: KnowledgeEntryInput, options?: Parameters<typeof apiFetcher>[1]): Promise<KnowledgeEntry> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetcher<KnowledgeEntry>(getUpdateKnowledgeEntryUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(knowledgeEntryInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateKnowledgeEntryMutationKey = () => ['updateKnowledgeEntry'] as const;
+
+export const getUpdateKnowledgeEntryMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateKnowledgeEntry>>, TError,UpdateKnowledgeEntryMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateKnowledgeEntry>>, TError,UpdateKnowledgeEntryMutationVariables, TContext> => {
+
+const mutationKey = getUpdateKnowledgeEntryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateKnowledgeEntry>>, UpdateKnowledgeEntryMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateKnowledgeEntry(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateKnowledgeEntryMutationResult = NonNullable<Awaited<ReturnType<typeof updateKnowledgeEntry>>>
+    export type UpdateKnowledgeEntryMutationBody = KnowledgeEntryInput
+    export type UpdateKnowledgeEntryMutationError = Error
+    export type UpdateKnowledgeEntryMutationVariables = {id: string;data: KnowledgeEntryInput}
+
+    export const useUpdateKnowledgeEntry = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateKnowledgeEntry>>, TError,UpdateKnowledgeEntryMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateKnowledgeEntry>>,
+        TError,
+        UpdateKnowledgeEntryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateKnowledgeEntryMutationOptions(options), queryClient);
+    }
+    export const getDeleteKnowledgeEntryUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/knowledge-entries/${id}`
+}
+
+export const deleteKnowledgeEntry = async (id: string, options?: Parameters<typeof apiFetcher>[1]): Promise<DeleteKnowledgeEntry200> => {
+
+  return apiFetcher<DeleteKnowledgeEntry200>(getDeleteKnowledgeEntryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteKnowledgeEntryMutationKey = () => ['deleteKnowledgeEntry'] as const;
+
+export const getDeleteKnowledgeEntryMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteKnowledgeEntry>>, TError,DeleteKnowledgeEntryMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteKnowledgeEntry>>, TError,DeleteKnowledgeEntryMutationVariables, TContext> => {
+
+const mutationKey = getDeleteKnowledgeEntryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteKnowledgeEntry>>, DeleteKnowledgeEntryMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteKnowledgeEntry(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteKnowledgeEntryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteKnowledgeEntry>>>
+
+    export type DeleteKnowledgeEntryMutationError = Error
+    export type DeleteKnowledgeEntryMutationVariables = {id: string}
+
+    export const useDeleteKnowledgeEntry = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteKnowledgeEntry>>, TError,DeleteKnowledgeEntryMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteKnowledgeEntry>>,
+        TError,
+        DeleteKnowledgeEntryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteKnowledgeEntryMutationOptions(options), queryClient);
+    }
+    export const getOpenWidgetSessionUrl = () => {
+
+
+
+
+  return `/api/v1/widget/sessions`
+}
+
+/**
+ * Publica: la clave del widget resuelve el tenant. Exige cabecera Origin permitida e Idempotency-Key de al menos 32 caracteres (secreto del cliente: no se registra).
+ */
+export const openWidgetSession = async (widgetSessionRequest: WidgetSessionRequest, options?: Parameters<typeof apiFetcher>[1]): Promise<WidgetSession> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetcher<WidgetSession>(getOpenWidgetSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(widgetSessionRequest)
+  }
+);}
+
+
+
+
+
+export const getOpenWidgetSessionMutationKey = () => ['openWidgetSession'] as const;
+
+export const getOpenWidgetSessionMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openWidgetSession>>, TError,OpenWidgetSessionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof openWidgetSession>>, TError,OpenWidgetSessionMutationVariables, TContext> => {
+
+const mutationKey = getOpenWidgetSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof openWidgetSession>>, OpenWidgetSessionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  openWidgetSession(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OpenWidgetSessionMutationResult = NonNullable<Awaited<ReturnType<typeof openWidgetSession>>>
+    export type OpenWidgetSessionMutationBody = WidgetSessionRequest
+    export type OpenWidgetSessionMutationError = Error
+    export type OpenWidgetSessionMutationVariables = {data: WidgetSessionRequest}
+
+    export const useOpenWidgetSession = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof openWidgetSession>>, TError,OpenWidgetSessionMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof openWidgetSession>>,
+        TError,
+        OpenWidgetSessionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getOpenWidgetSessionMutationOptions(options), queryClient);
+    }
+    export const getRefreshWidgetSessionUrl = () => {
+
+
+
+
+  return `/api/v1/widget/sessions/refresh`
+}
+
+/**
+ * Solo rol widget: renueva la sesion de su propio token.
+ */
+export const refreshWidgetSession = async ( options?: Parameters<typeof apiFetcher>[1]): Promise<WidgetSession> => {
+
+  return apiFetcher<WidgetSession>(getRefreshWidgetSessionUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRefreshWidgetSessionMutationKey = () => ['refreshWidgetSession'] as const;
+
+export const getRefreshWidgetSessionMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshWidgetSession>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof refreshWidgetSession>>, TError,void, TContext> => {
+
+const mutationKey = getRefreshWidgetSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshWidgetSession>>, void> = () => {
+
+
+          return  refreshWidgetSession(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RefreshWidgetSessionMutationResult = NonNullable<Awaited<ReturnType<typeof refreshWidgetSession>>>
+
+    export type RefreshWidgetSessionMutationError = Error
+
+
+    export const useRefreshWidgetSession = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshWidgetSession>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof refreshWidgetSession>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRefreshWidgetSessionMutationOptions(options), queryClient);
     }

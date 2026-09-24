@@ -10,6 +10,8 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 
 **Fase 2 cerrada** (spec en `docs/superpowers/specs/2026-09-22-fase-2-dominio-persistido-design.md`): esquema `public` + `hermes_sim`, casos de uso de lectura de agenda/historial, ajustes del tenant, simulador CRUD, seed simétrico, panel y simulador en frontend con clientes orval, suites `dominio`, `aislamiento-tenant` (HTTP), `idempotencia` (HTTP), `simetria-seed` y `test:db` en CI. La emisión de tokens y el chat son de la Fase 3; hoy los JWT se firman con `token:dev` y se pegan en el panel.
 
+**Fase 3 en curso**: 3.1 (tenant listo para chatear) en la rama `fase-3-1-tenant-listo`; spec en `docs/superpowers/specs/2026-09-22-fase-3-1-tenant-listo-design.md`.
+
 Lo que aún no existe está descrito como destino, no como hecho. Verifica antes de asumir que un archivo o comando está.
 
 `ROADMAP.md` es la fuente del plan: cinco fases en orden estricto (1→2→3→4→5), sin abrir una sin cerrar los criterios de aceptación de la anterior. Tanto `ROADMAP.md` como `GOBERNANZA.md` (Fase 1) viven en la raíz.
@@ -72,7 +74,7 @@ Detalles de instalación que muerden: npm 12 bloquea los scripts de instalación
 Si `biome` no produce salida, el binario se bajó truncado: borra `node_modules/@biomejs`
 y reinstala (el `.exe` correcto pesa ~76 MB).
 
-Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`.
+Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`.
 
 ## Puertas de calidad por PR
 
@@ -81,26 +83,27 @@ Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-ap
 3. Si tocas FHIR: `/fhir/metadata` y las suites de conformidad alineadas en la misma PR.
 4. Si cambias política: actualiza `GOBERNANZA.md` en la misma PR.
 
-Umbrales de Clean Code: complejidad cognitiva ≤ 15 por función, ≤ 60 líneas por función (sin blancos), ≤ 400 líneas por archivo de lógica, 0 ciclos de importación. `process.env` **solo** en `config/env.ts` (y configs de herramientas). DRY al tercer uso real; no unificar mappers FHIR de recursos distintos.
+Umbrales de Clean Code: complejidad cognitiva ≤ 15 por función, ≤ 40 líneas por función (sin blancos), ≤ 400 líneas por archivo de lógica, 0 ciclos de importación. `process.env` **solo** en `config/env.ts` (y configs de herramientas). DRY al tercer uso real; no unificar mappers FHIR de recursos distintos.
 
 ## Skills instaladas
 
-En `.agents/skills/` (espejo en `.claude/skills/`) y fijadas en `skills-lock.json`, vía [skills.sh](https://skills.sh). El inventario canónico y los conflictos con la política del repo están en `GOBERNANZA.md` §6.
+En `.agents/skills/` (espejo en `.claude/skills/` y, para Copilot, `.github/skills/`) y fijadas en `skills-lock.json`, vía [skills.sh](https://skills.sh). El inventario canónico y los conflictos con la política del repo están en `GOBERNANZA.md` §6.
 
 | Skill | Origen | Uso |
 | --- | --- | --- |
 | `dry-refactoring` | `kucherenko/jscpd` | Eliminar duplicación detectada por jscpd |
 | `fhir-developer-skill` | `anthropics/healthcare` | R4: recursos, value sets, `OperationOutcome`, búsqueda |
 | `find-skills` | `vercel-labs/skills` | Descubrir e instalar skills del ecosistema |
-| `frontend-design` | `anthropics/skills` | Dirección visual distintiva al construir UI |
+| `frontend-design` | `anthropics/skills` | Dirección visual distintiva (ligera) al construir UI |
 | `grilling` | `mattpocock/skills` | Stress-test de planes y decisiones |
 | `hexagonal-architecture` | `lexler/skill-factory` | Regla I/O vs. núcleo al trazar fronteras de capa |
+| `impeccable` | `pbakaus/impeccable` | Diseño UI de producción: craft, critique, audit, polish, DESIGN.md |
 | `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI |
 | `security-best-practices` | `openai/skills` | Revisión de seguridad (JS/TS, Next.js) |
 
-Actualizar: `npx skills update`. Reinstalar desde el lock: `npx skills experimental_install`.
+Actualizar: `npx skills update`. Reinstalar desde el lock: `npx skills experimental_install`. Refresco de Impeccable: `npx impeccable update`.
 
-**Las skills orientan; gana la gobernanza.** En concreto: la skill hexagonal habla de una capa «adapters» — aquí esa capa se llama `infrastructure` y el árbol es `domain`/`application`/`infrastructure`. La skill FHIR asume escenarios clínicos genéricos; el alcance real lo fija el roadmap (Fase 4) y `/fhir/metadata` debe declarar exactamente lo implementado, ni más ni menos.
+**Las skills orientan; gana la gobernanza.** En concreto: la skill hexagonal habla de una capa «adapters» — aquí esa capa se llama `infrastructure` y el árbol es `domain`/`application`/`infrastructure`. La skill FHIR asume escenarios clínicos genéricos; el alcance real lo fija el roadmap (Fase 4) y `/fhir/metadata` debe declarar exactamente lo implementado, ni más ni menos. Para UI, `impeccable` es la skill primaria de diseño; `frontend-design` es guía breve y cede ante `impeccable` (y ambas ante esta gobernanza: sin reglas de negocio en el frontend).
 
 ## SDD (Superpowers)
 

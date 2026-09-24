@@ -15,6 +15,8 @@ export type AppConfig = {
     readonly issuer: string;
     readonly audience: string;
   };
+  readonly platformSecret: string | null;
+  readonly trustProxy: boolean;
 };
 
 function required(name: string): string {
@@ -36,6 +38,20 @@ function parseEnvironment(value: string): Environment {
   throw new Error(`NODE_ENV invalido: ${value}`);
 }
 
+const MIN_PLATFORM_SECRET_LENGTH = 32;
+
+/** Sin secreto, la superficie de plataforma queda apagada (404). */
+function platformSecret(): string | null {
+  const value = process.env.PLATFORM_SECRET;
+  if (!value) {
+    return null;
+  }
+  if (value.length < MIN_PLATFORM_SECRET_LENGTH) {
+    throw new Error(`PLATFORM_SECRET debe tener al menos ${MIN_PLATFORM_SECRET_LENGTH} caracteres`);
+  }
+  return value;
+}
+
 export function loadConfig(): AppConfig {
   return {
     nodeEnv: parseEnvironment(optional("NODE_ENV", "development")),
@@ -47,5 +63,7 @@ export function loadConfig(): AppConfig {
       issuer: optional("JWT_ISSUER", "chatbot-ingenius-360"),
       audience: optional("JWT_AUDIENCE", "chatbot-ingenius-360"),
     },
+    platformSecret: platformSecret(),
+    trustProxy: optional("TRUST_PROXY", "false") === "true",
   };
 }

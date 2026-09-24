@@ -13,6 +13,9 @@ export type IdempotencyRecord = {
   readonly createdAt: Date;
 };
 
+/** Clave de la superficie de plataforma: sin tenant (el alta lo crea) y con actor fijo. */
+export type PlatformIdempotencyRecord = Omit<IdempotencyRecord, "tenantId" | "actorSubject">;
+
 /** Otra peticion ya reservo la clave (p. ej. dos envios concurrentes). */
 export class IdempotencyKeyTakenError extends Error {
   constructor() {

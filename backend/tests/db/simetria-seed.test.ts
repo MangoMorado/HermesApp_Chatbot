@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildSeed } from "../../prisma/seed/data";
 import { writeChatbot } from "../../prisma/seed/write-chatbot";
 import { writeSimulator } from "../../prisma/seed/write-simulator";
+import { WIDGET_KEY_PATTERN } from "../../src/modules/bot-config/domain/widget-key";
 import { testPrisma, truncateAll } from "./support";
 
 const prisma: PrismaClient = testPrisma();
@@ -127,5 +128,56 @@ describe("simetria-seed: el simulador y el chatbot parten de los mismos datos", 
     expect(byIdentifier(simAppointments)).toEqual(
       byIdentifier(await prisma.appointment.findMany()),
     );
+  });
+});
+
+describe("simetria-seed: cada tenant sale listo para chatear", () => {
+  beforeAll(async () => {
+    await truncateAll(prisma);
+    await writeChatbot(prisma, seed);
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it("cada tenant tiene bot_config, una clave vigente y 3 entradas de KB", async () => {
+    for (const tenant of seed) {
+      const botConfig = await prisma.botConfig.findUnique({ where: { tenantId: tenant.id } });
+      expect(botConfig).not.toBeNull();
+      expect(botConfig?.allowedOrigins).toEqual(["http://localhost:3000"]);
+
+      const currentKeys = await prisma.widgetKey.findMany({
+        where: { tenantId: tenant.id, retiredAt: null },
+      });
+      expect(currentKeys).toHaveLength(1);
+      expect(currentKeys[0]?.key).toMatch(WIDGET_KEY_PATTERN);
+
+      const entries = await prisma.knowledgeEntry.findMany({ where: { tenantId: tenant.id } });
+      expect(entries).toHaveLength(3);
+    }
+  });
+
+  it("la clave del widget es fija entre corridas (determinista por slug)", async () => {
+    const [tenant] = seed;
+    if (!tenant) throw new Error("seed vacio");
+    const before = await prisma.widgetKey.findFirst({ where: { tenantId: tenant.id } });
+
+    await writeChatbot(prisma, seed);
+
+    const after = await prisma.widgetKey.findFirst({ where: { tenantId: tenant.id } });
+    expect(after?.key).toBe(before?.key);
+    expect(after?.id).toBe(before?.id);
+  });
+
+  it("volver a sembrar no duplica bot_config, clave ni entradas de KB", async () => {
+    await writeChatbot(prisma, seed);
+    await writeChatbot(prisma, seed);
+
+    for (const tenant of seed) {
+      expect(await prisma.botConfig.count({ where: { tenantId: tenant.id } })).toBe(1);
+      expect(await prisma.widgetKey.count({ where: { tenantId: tenant.id } })).toBe(1);
+      expect(await prisma.knowledgeEntry.count({ where: { tenantId: tenant.id } })).toBe(3);
+    }
   });
 });

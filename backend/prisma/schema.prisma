@@ -68,6 +68,10 @@ model Tenant {
   appointments       Appointment[]
   auditEvents        AuditEvent[]
   idempotencyKeys    IdempotencyKey[]
+  botConfig          BotConfig?
+  widgetKeys         WidgetKey[]
+  knowledgeEntries   KnowledgeEntry[]
+  widgetSessions     WidgetSession[]
 
   @@map("tenants")
   @@schema("public")
@@ -244,6 +248,88 @@ model IdempotencyKey {
 
   @@id([tenantId, key])
   @@map("idempotency_keys")
+  @@schema("public")
+}
+
+// Configuracion del bot por tenant. Solo guarda lo que el tenant sobrescribe:
+// los predeterminados viven en el dominio (modules/bot-config/domain/bot-config.ts).
+model BotConfig {
+  tenantId       String   @id @map("tenant_id")
+  texts          Json     @default("{}")
+  params         Json     @default("{}")
+  allowedOrigins String[] @default([]) @map("allowed_origins")
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("bot_configs")
+  @@schema("public")
+}
+
+// Clave publica del widget. Una sola vigente por tenant (indice unico parcial en la migracion).
+model WidgetKey {
+  id         String    @id
+  tenantId   String    @map("tenant_id")
+  key        String    @unique
+  createdAt  DateTime  @map("created_at") @db.Timestamptz(3)
+  retiredAt  DateTime? @map("retired_at") @db.Timestamptz(3)
+  graceUntil DateTime? @map("grace_until") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@map("widget_keys")
+  @@schema("public")
+}
+
+model KnowledgeEntry {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  category  String
+  question  String
+  answer    String
+  detail    String?
+  keywords  String[] @default([])
+  position  Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, id])
+  @@index([tenantId, category, position])
+  @@map("knowledge_entries")
+  @@schema("public")
+}
+
+// Sesion del widget. Sin IP: solo vive en memoria para el rate limit.
+model WidgetSession {
+  id         String   @id
+  tenantId   String   @map("tenant_id")
+  origin     String
+  createdAt  DateTime @map("created_at") @db.Timestamptz(3)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  lastSeenAt DateTime @map("last_seen_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, id])
+  @@map("widget_sessions")
+  @@schema("public")
+}
+
+// Idempotencia de la superficie de plataforma: sin tenant, porque el alta lo crea.
+model PlatformIdempotencyKey {
+  key            String   @id
+  method         String
+  path           String
+  requestHash    String   @map("request_hash")
+  responseStatus Int      @map("response_status")
+  responseBody   Json     @map("response_body")
+  createdAt      DateTime @map("created_at") @db.Timestamptz(3)
+
+  @@map("platform_idempotency_keys")
   @@schema("public")
 }
 

@@ -34,10 +34,20 @@ que el recurso existe.
 Todo repositorio, caso de uso y consulta recibe el tenant como parámetro explícito. No hay
 variables globales ni de contexto implícito para el tenant.
 
+**Superficie de plataforma.** `/api/platform/v1` es de un tercer actor, la plataforma, que
+no pertenece a ningún tenant: da de alta tenants y emite tokens de panel y de servicio. Se
+autentica con `PLATFORM_SECRET` (comparado en tiempo constante; sin él la superficie responde
+`404`) y es la **única** superficie donde el tenant viaja en el cuerpo. La regla de esta
+sección sigue intacta en `/api/v1` y `/fhir`. Se audita con `actor_subject = platform`.
+
 ### 1.4 Alcance del widget
 
 El rol `widget` alcanza únicamente el chat de su propia sesión. Nunca datos de dominio,
 nunca `/fhir`, nunca otra sesión. Los roles son `widget` · `operator` · `admin` · `service`.
+
+La clave del widget es **pública** (va en el HTML de la clínica): solo identifica al tenant y
+abre sesiones desde los `allowed_origins` del tenant. Se guarda en claro y se rota con gracia.
+El token del widget sale de una sesión (`POST /api/v1/widget/sessions`) y expira con ella.
 
 ### 1.5 No divulgación
 
@@ -45,11 +55,25 @@ No se persisten respuestas de verificación de identidad ni datos clínicos en m
 auditoría ni logs. Cuando haya que registrar que algo pasó, se registra el hecho y el
 resultado, no el contenido.
 
+El `subject` de un token emitido (p. ej. el correo de un operador) se guarda como
+`audit_events.resource_id` de `token.issued`: identifica a quién actúa, no es un dato de
+verificación ni clínico, así que no rompe la regla de registrar el hecho y no el contenido.
+
 ### 1.6 Idempotencia
 
 Toda escritura acepta `Idempotency-Key` y la persiste en base de datos (no en memoria).
 Repetir la misma petición con la misma clave produce el mismo resultado sin duplicar
 efectos.
+
+Excepciones y matices: emitir un token (`POST /api/platform/v1/tokens`) no escribe dominio y
+no lleva `Idempotency-Key`, así ningún JWT queda persistido. Cuando la respuesta de una
+escritura lleva una credencial (sesión del widget), se persiste solo la referencia
+(`session_id`) y la repetición vuelve a firmar el token. En la apertura anónima de sesión la
+`Idempotency-Key` actúa como secreto del cliente: mínimo 32 caracteres y nunca se registra en
+logs ni en auditoría.
+Por ser un secreto tiene que ser aleatoria y con al menos 128 bits de entropía (p. ej.
+`crypto.randomUUID()`, no un contador ni un valor previsible); se guarda en
+`idempotency_keys` como cualquier otra clave.
 
 ### 1.7 Dos componentes separados
 
@@ -124,6 +148,7 @@ se mezclan**:
 | --- | --- | --- |
 | REST `/api/v1` | widget, panel, chat | `{ error: { code, message, request_id, details } }` + cabecera `X-Request-Id` |
 | FHIR R4 `/fhir` | Hermes (solo rol `service` para escrituras) | `OperationOutcome` con `application/fhir+json` |
+| Plataforma `/api/platform/v1` | Operación (alta de tenants, tokens) | Misma envoltura que REST `/api/v1` |
 
 ### 3.1 Reglas FHIR
 
@@ -175,29 +200,34 @@ código, o se cambia la regla en una PR aparte que argumente el cambio.
 
 Se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`,
 `dominio`, `simetria-seed`, `aislamiento-tenant`, `flujo`, `verificacion`, `pre-agenda`,
-`conocimiento-config`, `alta-chatbot`, `idempotencia`, `sin-ia`, `fhir-conformance`,
-`hermes-simulador`, `carga-basica`.
+`conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`,
+`fhir-conformance`, `hermes-simulador`, `carga-basica`.
 
 ---
 
 ## 6. Skills
 
-Instaladas en `.agents/skills/` (espejo en `.claude/skills/` para Claude Code) y fijadas
-en `skills-lock.json`, vía el CLI de [skills.sh](https://skills.sh):
+Instaladas en `.agents/skills/` (espejo en `.claude/skills/` para Claude Code y, cuando
+aplica, en `.github/skills/` para GitHub Copilot) y fijadas en `skills-lock.json`, vía el
+CLI de [skills.sh](https://skills.sh):
 
 | Skill | Origen | Para qué |
 | --- | --- | --- |
 | `dry-refactoring` | `kucherenko/jscpd` | Eliminar duplicación detectada por jscpd |
 | `fhir-developer-skill` | `anthropics/healthcare` | R4: recursos, value sets, `OperationOutcome` |
 | `find-skills` | `vercel-labs/skills` | Descubrir e instalar skills del ecosistema |
-| `frontend-design` | `anthropics/skills` | Dirección visual distintiva al construir UI |
+| `frontend-design` | `anthropics/skills` | Dirección visual distintiva (ligera) al construir UI |
 | `grilling` | `mattpocock/skills` | Stress-test de planes y decisiones |
 | `hexagonal-architecture` | `lexler/skill-factory` | Decidir fronteras de capa |
+| `impeccable` | `pbakaus/impeccable` | Diseño UI de producción: craft, critique, audit, polish, DESIGN.md |
 | `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI |
 | `security-best-practices` | `openai/skills` | Revisión de seguridad (JS/TS, Next.js) |
 
 `hexagonal-architecture` y `fhir-developer-skill` viven hoy en `.claude/skills/`; el resto
-está en ambas carpetas. El inventario canónico es `skills-lock.json`.
+del inventario compartido está en `.agents/skills/` y `.claude/skills/`. `impeccable`
+también se replica en `.github/skills/` (y trae agentes auxiliares bajo `.claude/agents/`
+y `.github/agents/`, más el hook de detector en `.github/hooks/impeccable.json`). El
+inventario canónico es `skills-lock.json`.
 
 **Las skills orientan; gana la gobernanza.** Conflictos conocidos y cómo se resuelven:
 
@@ -208,8 +238,15 @@ está en ambas carpetas. El inventario canónico es `skills-lock.json`.
 - La skill `dry-refactoring` elimina clones de jscpd → los clones exactos sí se
   refactorizan; dos bloques parecidos sin ser copia no se abstraen hasta el tercer uso
   (sección 4).
+- Para trabajo de diseño UI, `impeccable` es la skill primaria (comandos `/impeccable`,
+  `PRODUCT.md` / `DESIGN.md`, detector de anti-patrones). `frontend-design` queda como
+  guía breve de dirección visual; si chocan, manda `impeccable` y, sobre ambas, esta
+  gobernanza (el frontend no lleva reglas de negocio; no inventar claims de producto ni
+  flujos clínicos fuera del roadmap). `nielsen-usability-heuristics` complementa el modo
+  critique de `impeccable`, no lo sustituye.
 
 Actualizar: `npx skills update`. Reproducir desde el lock: `npx skills experimental_install`.
+Para refrescar solo Impeccable (scripts/binarios/hooks): `npx impeccable update`.
 
 ---
 

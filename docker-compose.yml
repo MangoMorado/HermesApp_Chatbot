@@ -25,6 +25,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en tu .env}
       JWT_ISSUER: ${JWT_ISSUER:-chatbot-ingenius-360}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-chatbot-ingenius-360}
+      PLATFORM_SECRET: ${PLATFORM_SECRET:-}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
     ports:
       - "3001:3001"
     depends_on:

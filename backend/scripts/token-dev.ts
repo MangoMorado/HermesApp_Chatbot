@@ -29,6 +29,12 @@ async function main(): Promise<void> {
   }
 
   const config = loadConfig();
+  if (config.nodeEnv === "production") {
+    process.stderr.write(
+      "token:dev no se usa en produccion: emite tokens con POST /api/platform/v1/tokens\n",
+    );
+    process.exit(1);
+  }
   const claims: Record<string, string> = {
     tenant_id: tenant,
     role: roleRaw,

@@ -16,5 +16,6 @@ export const ErrorErrorCode = {
   validation_failed: 'validation_failed',
   conflict: 'conflict',
   method_not_allowed: 'method_not_allowed',
+  rate_limited: 'rate_limited',
   internal_error: 'internal_error',
 } as const;

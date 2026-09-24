@@ -232,7 +232,7 @@ primera versión.
 | Regla | Umbral |
 | --- | --- |
 | Complejidad cognitiva por función | ≤ 15 |
-| Líneas por función | ≤ 60 (sin blancos) |
+| Líneas por función | ≤ 40 (sin blancos) |
 | Archivo de lógica | ≤ 400 líneas |
 | Ciclos de importación | 0 |
 | `process.env` | Solo en `config/env.ts` (y configs de herramientas) |
