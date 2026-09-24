@@ -6,6 +6,7 @@ import {
   okJson,
   pageParams,
   REQUEST_ID_PARAMETER,
+  REQUEST_ID_RESPONSE_HEADER,
   writeErrors,
 } from "./openapi-shared";
 
@@ -218,9 +219,21 @@ export const CHATBOT_PATHS = {
           "forbidden",
           "validation_failed",
           "conflict",
-          "rate_limited",
           "internal_error",
         ]),
+        "429": {
+          description: "rate_limited",
+          headers: {
+            ...REQUEST_ID_RESPONSE_HEADER,
+            "Retry-After": {
+              description: "Segundos a esperar antes de reintentar.",
+              schema: { type: "integer" },
+            },
+          },
+          content: {
+            "application/json": { schema: { $ref: "#/components/schemas/Error" } },
+          },
+        },
       },
     },
   },

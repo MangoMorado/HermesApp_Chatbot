@@ -69,7 +69,8 @@ Excepciones y matices: emitir un token (`POST /api/platform/v1/tokens`) no escri
 no lleva `Idempotency-Key`, así ningún JWT queda persistido. Cuando la respuesta de una
 escritura lleva una credencial (sesión del widget), se persiste solo la referencia
 (`session_id`) y la repetición vuelve a firmar el token. En la apertura anónima de sesión la
-`Idempotency-Key` actúa como secreto del cliente: mínimo 32 caracteres y nunca se registra.
+`Idempotency-Key` actúa como secreto del cliente: mínimo 32 caracteres y nunca se registra en
+logs ni en auditoría.
 Por ser un secreto tiene que ser aleatoria y con al menos 128 bits de entropía (p. ej.
 `crypto.randomUUID()`, no un contador ni un valor previsible); se guarda en
 `idempotency_keys` como cualquier otra clave.

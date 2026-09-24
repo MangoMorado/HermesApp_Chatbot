@@ -204,3 +204,17 @@ backend. La migración corre sola en el arranque (`prisma migrate deploy`).
 
 Chat y mensajes, motor de flujo, verificación, solicitudes y apartado de cupos, bandeja,
 handoff-tickets, páginas de frontend, store compartido de rate limit, usuarios con contraseña.
+
+## 11. Pendiente para 3.3/3.4
+
+Ningún navegador puede abrir hoy una sesión de widget: el backend no envía cabeceras CORS y
+el proxy del frontend no reenvía `Origin` ni `X-Forwarded-For` hacia `POST /widget/sessions`
+(ni hacia el refresh y el chat que vendrán en 3.4). La 3.1 no lo implementa; queda como
+requisito de entrada de la siguiente fase que toque el widget, con una decisión por tomar
+entre dos caminos:
+
+- CORS en el backend para `POST /widget/sessions` (+ refresh y chat): responder
+  `Access-Control-Allow-Origin` con el origen admitido del tenant (validado contra
+  `allowed_origins`), no un comodín.
+- Que el proxy del frontend reenvíe `Origin` y `X-Forwarded-For` tal cual los recibió, y el
+  backend siga resolviendo el origen desde esas cabeceras como hoy.

@@ -106,7 +106,9 @@ export function buildPlatformOpenApiDocument(): Record<string, unknown> {
         post: {
           operationId: "createTenant",
           description:
-            "Alta con predeterminados: bot-config, KB de ejemplo y primera clave del widget.",
+            "Alta con predeterminados: bot-config, KB de ejemplo y primera clave del widget. " +
+            "Una repeticion con la misma Idempotency-Key devuelve la respuesta original, con la " +
+            "widget_key emitida en el alta aunque despues se haya rotado.",
           security: platformAuth,
           parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
           requestBody: {
