@@ -96,4 +96,19 @@ describe("fronteras de capas", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("los modulos de la Fase 3 solo importan shared y auth de otros modulos", () => {
+    const phase3 = ["bot-config", "knowledge", "widget", "platform"];
+    const offenders = phase3.flatMap((mod) => {
+      const allowed = new Set([mod, "shared", "auth"]);
+      return listFiles(join(MODULES_DIR, mod)).flatMap((file) =>
+        importsOf(file)
+          .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
+          .filter(({ module }) => module !== undefined && !allowed.has(module))
+          .map(({ specifier }) => `${file} -> ${specifier}`),
+      );
+    });
+
+    expect(offenders).toEqual([]);
+  });
 });
