@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { widgetReads, widgetWritePorts } from "./composition/widget-wiring";
 import { type AppConfig, loadConfig } from "./config/env";
 import { type Authenticate, createAuthenticate } from "./modules/auth/application/authenticate";
 import { createJoseTokenIssuer } from "./modules/auth/infrastructure/jose-token-issuer";
@@ -66,6 +67,7 @@ import type {
   IdempotencyStore,
   PlatformIdempotencyStore,
 } from "./modules/shared/domain/ports/idempotency-store";
+import type { TenantId } from "./modules/shared/domain/tenant-id";
 import { createPrismaAuditLog } from "./modules/shared/infrastructure/prisma-audit-log";
 import {
   createPrismaClient,
@@ -81,6 +83,9 @@ import {
 } from "./modules/tenancy/application/tenant-settings";
 import type { TenantSettingsRepository } from "./modules/tenancy/domain/ports/tenant-settings-repository";
 import { createPrismaTenantSettingsRepository } from "./modules/tenancy/infrastructure/prisma-tenant-settings-repository";
+import type { AdmitWidget } from "./modules/widget/application/admit-widget";
+import type { SessionToken } from "./modules/widget/application/widget-sessions";
+import type { WidgetSession } from "./modules/widget/domain/widget-session";
 
 export type BaseWritePorts = {
   readonly clock: Clock;
@@ -101,11 +106,13 @@ export type BaseWritePorts = {
 type BotConfigWritePorts = ReturnType<typeof botConfigWritePorts>;
 type KnowledgeWritePorts = ReturnType<typeof knowledgeWritePorts>;
 type PlatformWritePorts = ReturnType<typeof platformWritePorts>;
+type WidgetWritePorts = ReturnType<typeof widgetWritePorts>;
 
 export type WritePorts = BaseWritePorts &
   BotConfigWritePorts &
   KnowledgeWritePorts &
-  PlatformWritePorts;
+  PlatformWritePorts &
+  WidgetWritePorts;
 
 export type Container = {
   readonly config: AppConfig;
@@ -137,6 +144,12 @@ export type Container = {
   readonly getKnowledgeEntry: ReturnType<typeof createGetKnowledgeEntry>;
   readonly issueToken: IssueToken;
   readonly listTenants: ListTenants;
+  readonly admitWidget: AdmitWidget;
+  readonly issueSessionToken: (session: WidgetSession) => Promise<SessionToken>;
+  readonly getActiveWidgetSession: (
+    tenantId: TenantId,
+    sessionId: string,
+  ) => Promise<WidgetSession>;
   readonly withWriteTransaction: <T>(fn: (ports: WritePorts) => Promise<T>) => Promise<T>;
 };
 
@@ -308,6 +321,7 @@ function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
     ...botConfigWritePorts(db, config, auditLog),
     ...knowledgeWritePorts(db, auditLog),
     ...platformWritePorts(db, config, auditLog),
+    ...widgetWritePorts(db),
   };
 }
 
@@ -333,6 +347,7 @@ export function getContainer(): Container {
       ...botConfigReads(prisma),
       ...knowledgeReads(prisma),
       ...platformReads(prisma, config),
+      ...widgetReads(prisma, config),
       withWriteTransaction: (fn) => {
         if (!prisma) {
           throw new Error("Prisma no inicializado");

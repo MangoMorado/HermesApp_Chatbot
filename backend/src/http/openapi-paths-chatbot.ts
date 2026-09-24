@@ -1,6 +1,7 @@
 import {
   authErrors,
   createdJson,
+  errorResponses,
   IDEMPOTENCY_PARAMETER,
   okJson,
   pageParams,
@@ -82,6 +83,20 @@ export const CHATBOT_SCHEMAS = {
       keywords: { type: "array", items: { type: "string" } },
       position: { type: "integer", minimum: 0 },
       active: { type: "boolean" },
+    },
+  },
+  WidgetSessionRequest: {
+    type: "object",
+    required: ["widget_key"],
+    properties: { widget_key: { type: "string" } },
+  },
+  WidgetSession: {
+    type: "object",
+    required: ["session_id", "token", "expires_at"],
+    properties: {
+      session_id: { type: "string" },
+      token: { type: "string" },
+      expires_at: { type: "string", format: "date-time" },
     },
   },
 } as const;
@@ -177,6 +192,45 @@ export const CHATBOT_PATHS = {
         ...okJson({ type: "object", properties: { deleted: { type: "boolean" } } }),
         ...writeErrors,
       },
+    },
+  },
+  "/widget/sessions": {
+    post: {
+      operationId: "openWidgetSession",
+      description:
+        "Publica: la clave del widget resuelve el tenant. Exige cabecera Origin permitida e " +
+        "Idempotency-Key de al menos 32 caracteres (secreto del cliente: no se registra).",
+      security: [],
+      parameters: [
+        REQUEST_ID_PARAMETER,
+        { ...IDEMPOTENCY_PARAMETER, schema: { type: "string", minLength: 32 } },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": { schema: { $ref: "#/components/schemas/WidgetSessionRequest" } },
+        },
+      },
+      responses: {
+        ...createdJson({ $ref: "#/components/schemas/WidgetSession" }),
+        ...errorResponses([
+          "unauthorized",
+          "forbidden",
+          "validation_failed",
+          "conflict",
+          "rate_limited",
+          "internal_error",
+        ]),
+      },
+    },
+  },
+  "/widget/sessions/refresh": {
+    post: {
+      operationId: "refreshWidgetSession",
+      description: "Solo rol widget: renueva la sesion de su propio token.",
+      security: bearer,
+      parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
+      responses: { ...okJson({ $ref: "#/components/schemas/WidgetSession" }), ...writeErrors },
     },
   },
 };

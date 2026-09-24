@@ -351,6 +351,37 @@
             "type": "boolean"
           }
         }
+      },
+      "WidgetSessionRequest": {
+        "type": "object",
+        "required": [
+          "widget_key"
+        ],
+        "properties": {
+          "widget_key": {
+            "type": "string"
+          }
+        }
+      },
+      "WidgetSession": {
+        "type": "object",
+        "required": [
+          "session_id",
+          "token",
+          "expires_at"
+        ],
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     }
   },
@@ -3451,6 +3482,332 @@
                       "type": "boolean"
                     }
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "validation_failed",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/widget/sessions": {
+      "post": {
+        "operationId": "openWidgetSession",
+        "description": "Publica: la clave del widget resuelve el tenant. Exige cabecera Origin permitida e Idempotency-Key de al menos 32 caracteres (secreto del cliente: no se registra).",
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Identificador de correlacion. Si no viene, el servicio genera uno.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 32
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Creado",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "validation_failed",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/widget/sessions/refresh": {
+      "post": {
+        "operationId": "refreshWidgetSession",
+        "description": "Solo rol widget: renueva la sesion de su propio token.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Identificador de correlacion. Si no viene, el servicio genera uno.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetSession"
                 }
               }
             }
