@@ -108,7 +108,8 @@ const TEMPLATES: TenantTemplate[] = [
 
 const SERVICES = ["Medicina general", "Odontología"];
 
-const seedId = (name: string): string => uuidv5(name, SEED_NAMESPACE);
+/** IDs deterministas: mismo nombre logico -> mismo UUID, sin depender de un contador externo. */
+export const seedId = (name: string): string => uuidv5(name, SEED_NAMESPACE);
 const pad = (value: number): string => String(value).padStart(3, "0");
 
 function weekdaysBetween(anchor: string, from: number, to: number): string[] {

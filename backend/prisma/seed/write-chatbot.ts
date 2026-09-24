@@ -1,7 +1,12 @@
+import { createHash } from "node:crypto";
 import type { Prisma, PrismaClient } from "@prisma/client";
-import { type SeedTenant, IDENTIFIER_SYSTEMS as SYS } from "./data";
+import { DEFAULT_KNOWLEDGE_ENTRIES } from "../../src/modules/knowledge/domain/default-entries";
+import { type SeedTenant, IDENTIFIER_SYSTEMS as SYS, seedId } from "./data";
 
 type Tx = Prisma.TransactionClient;
+
+/** Origen que el panel local usa para abrir sesiones de widget contra el seed. */
+const LOCAL_WIDGET_ORIGIN = "http://localhost:3000";
 
 /**
  * Borra lo que ya exista de estos tenants antes de volver a insertar. Sin esto, sembrar
@@ -50,6 +55,53 @@ async function writeMasters(tx: Tx, t: SeedTenant): Promise<void> {
     };
     await tx.schedule.upsert({ where: { id: s.id }, create: data, update: data });
   }
+}
+
+/** `wk_` + 43 base64url deterministas por slug: mismo tenant, misma clave entre corridas. */
+function widgetKeyFor(slug: string): string {
+  const digest = createHash("sha256").update(`widget-key:${slug}`).digest();
+  return `wk_${digest.toString("base64url")}`;
+}
+
+/**
+ * Deja al tenant listo para chatear: bot-config con predeterminados, una clave de widget
+ * vigente y la KB de ejemplo. Idempotente por `createMany` + `skipDuplicates`: en Postgres
+ * eso inserta con `ON CONFLICT DO NOTHING` sin fijar un target, asi que respeta tanto el id
+ * como el indice unico parcial "una clave vigente por tenant" sin pisar nada que ya exista
+ * (una personalizacion del panel, una rotacion hecha a mano).
+ */
+async function writeBotConfig(tx: Tx, t: SeedTenant): Promise<void> {
+  await tx.botConfig.createMany({
+    data: [{ tenantId: t.id, allowedOrigins: [LOCAL_WIDGET_ORIGIN], updatedAt: new Date() }],
+    skipDuplicates: true,
+  });
+  await tx.widgetKey.createMany({
+    data: [
+      {
+        id: seedId(`${t.slug}:widget-key:current`),
+        tenantId: t.id,
+        key: widgetKeyFor(t.slug),
+        createdAt: new Date(),
+        retiredAt: null,
+        graceUntil: null,
+      },
+    ],
+    skipDuplicates: true,
+  });
+  await tx.knowledgeEntry.createMany({
+    data: DEFAULT_KNOWLEDGE_ENTRIES.map((entry, index) => ({
+      id: seedId(`${t.slug}:knowledge-entry:${index}`),
+      tenantId: t.id,
+      category: entry.category,
+      question: entry.question,
+      answer: entry.answer,
+      detail: entry.detail,
+      keywords: [...entry.keywords],
+      position: entry.position,
+      active: entry.active,
+    })),
+    skipDuplicates: true,
+  });
 }
 
 async function writeAgenda(tx: Tx, t: SeedTenant): Promise<void> {
@@ -116,6 +168,7 @@ export async function writeChatbot(
         await tx.tenant.upsert({ where: { id: t.id }, create: data, update: data });
         await writeMasters(tx, t);
         await writeAgenda(tx, t);
+        await writeBotConfig(tx, t);
       }
     },
     { timeout: 120_000 },
