@@ -9,6 +9,8 @@
       "!**/dist",
       "!**/coverage",
       "!**/.claude/skills",
+      "!**/.agents/skills",
+      "!**/.github/skills",
       "!**/frontend/src/api",
       "!**/frontend/src/sim",
       "!**/openapi.json",
