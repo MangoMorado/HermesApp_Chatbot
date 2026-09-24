@@ -204,7 +204,9 @@ describe("alta-chatbot: la primera clave abre sesion", () => {
   });
 
   it("la clave devuelta por el alta abre una sesion desde un origen permitido", async () => {
-    const { widget_key } = await (await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-w"))).json();
+    const { widget_key } = await (
+      await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-w"))
+    ).json();
     const response = await openWidgetSession(
       new Request("http://localhost/api/v1/widget/sessions", {
         method: "POST",

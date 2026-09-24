@@ -97,7 +97,10 @@ describe("conocimiento-config: busqueda por tokens", () => {
   ];
 
   it("ordena por coincidencias, luego posicion y luego id; excluye inactivas", () => {
-    expect(searchEntries(entries, "Quiero agendar una cita", 3).map((e) => e.id)).toEqual(["b", "a"]);
+    expect(searchEntries(entries, "Quiero agendar una cita", 3).map((e) => e.id)).toEqual([
+      "b",
+      "a",
+    ]);
   });
 
   it("respeta el maximo de resultados", () => {

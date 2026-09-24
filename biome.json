@@ -13,6 +13,7 @@
       "!**/frontend/src/sim",
       "!**/openapi.json",
       "!**/openapi-sim.json",
+      "!**/openapi-platform.json",
       "!skills-lock.json"
     ]
   },

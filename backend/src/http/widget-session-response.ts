@@ -41,5 +41,8 @@ export async function rebuildSessionResponse(
   }
   const container = getContainer();
   const session = await container.getActiveWidgetSession(tenantId, sessionId);
-  return { status: stored.status, body: sessionTokenJson(session, await container.issueSessionToken(session)) };
+  return {
+    status: stored.status,
+    body: sessionTokenJson(session, await container.issueSessionToken(session)),
+  };
 }

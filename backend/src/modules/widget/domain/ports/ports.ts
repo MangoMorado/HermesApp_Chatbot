@@ -11,7 +11,9 @@ export type WidgetAccess = {
 
 export type WidgetKeyResolver = (key: string, now: Date) => Promise<WidgetAccess | null>;
 
-export type WidgetSettingsReader = (tenantId: TenantId) => Promise<{ readonly sessionTtlMinutes: number }>;
+export type WidgetSettingsReader = (
+  tenantId: TenantId,
+) => Promise<{ readonly sessionTtlMinutes: number }>;
 
 export type WidgetSessionRepository = {
   create(session: WidgetSession): Promise<void>;

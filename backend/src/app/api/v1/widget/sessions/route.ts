@@ -1,7 +1,12 @@
 import { getContainer } from "@/composition-root";
 import { clientIp } from "@/http/client-ip";
 import { errorResponse, toApiError } from "@/http/errors";
-import { idempotentJson, readIdempotentRequest, runIdempotent, tenantScope } from "@/http/idempotency-core";
+import {
+  idempotentJson,
+  readIdempotentRequest,
+  runIdempotent,
+  tenantScope,
+} from "@/http/idempotency-core";
 import { REQUEST_ID_HEADER, resolveRequestId } from "@/http/request-id";
 import { rebuildSessionResponse, sessionTokenJson } from "@/http/widget-session-response";
 import {
@@ -12,7 +17,9 @@ import {
 export const dynamic = "force-dynamic";
 
 function widgetKeyOf(body: unknown): unknown {
-  return typeof body === "object" && body !== null ? (body as { widget_key?: unknown }).widget_key : undefined;
+  return typeof body === "object" && body !== null
+    ? (body as { widget_key?: unknown }).widget_key
+    : undefined;
 }
 
 /** Apertura anonima: la clave publica resuelve el tenant; el cliente nunca lo elige. */
@@ -38,7 +45,11 @@ export async function POST(request: Request): Promise<Response> {
       execute: async (ports) => {
         const session = await ports.startWidgetSession({ access, origin });
         const issued = await container.issueSessionToken(session);
-        return { status: 201, body: sessionTokenJson(session, issued), stored: { session_id: session.id } };
+        return {
+          status: 201,
+          body: sessionTokenJson(session, issued),
+          stored: { session_id: session.id },
+        };
       },
       rebuild: (stored) => rebuildSessionResponse(stored, access.tenantId),
     });

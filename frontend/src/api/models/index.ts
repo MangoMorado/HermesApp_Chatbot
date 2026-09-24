@@ -3,9 +3,17 @@
  * Do not edit manually.
  * Chatbot Ingenius 360 — API REST
  * Superficie REST para widget, panel y chat. La integracion con Hermes vive en /fhir y no se describe aqui: usa OperationOutcome, no esta envoltura de errores.
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.3.0
  */
 
+export * from './botConfig';
+export * from './botConfigParams';
+export * from './botConfigPatch';
+export * from './botConfigPatchParams';
+export * from './botConfigPatchTexts';
+export * from './botConfigTexts';
+export * from './botConfigWidgetKeys';
+export * from './deleteKnowledgeEntry200';
 export * from './error';
 export * from './errorError';
 export * from './errorErrorCode';
@@ -17,12 +25,18 @@ export * from './health';
 export * from './healthStatus';
 export * from './identity';
 export * from './identityRole';
+export * from './knowledgeEntry';
+export * from './knowledgeEntryInput';
 export * from './listAppointmentsParams';
 export * from './listAvailabilityParams';
 export * from './listHealthcareServicesParams';
+export * from './listKnowledgeEntriesParams';
 export * from './listMedicalRecordAppointmentsParams';
 export * from './listPractitionersParams';
 export * from './listScheduleSlotsParams';
 export * from './listSchedulesParams';
 export * from './page';
 export * from './tenantSettings';
+export * from './widgetKey';
+export * from './widgetSession';
+export * from './widgetSessionRequest';

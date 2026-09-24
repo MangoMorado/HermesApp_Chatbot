@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Chatbot Ingenius 360 — API REST
  * Superficie REST para widget, panel y chat. La integracion con Hermes vive en /fhir y no se describe aqui: usa OperationOutcome, no esta envoltura de errores.
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.3.0
  */
 import type { FindMedicalRecordBodyDocumentType } from './findMedicalRecordBodyDocumentType';
 

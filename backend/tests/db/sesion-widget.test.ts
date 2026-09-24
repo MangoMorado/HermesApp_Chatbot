@@ -20,14 +20,21 @@ function open(widgetKey: unknown, headers: Record<string, string> = {}) {
   return openSession(
     new Request(SESSIONS_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: ORIGIN, "Idempotency-Key": randomUUID(), ...headers },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: ORIGIN,
+        "Idempotency-Key": randomUUID(),
+        ...headers,
+      },
       body: JSON.stringify({ widget_key: widgetKey }),
     }),
   );
 }
 
 function refresh(token: string, key = randomUUID()) {
-  return refreshSession(authedRequest(REFRESH_URL, token, { method: "POST", headers: { "Idempotency-Key": key } }));
+  return refreshSession(
+    authedRequest(REFRESH_URL, token, { method: "POST", headers: { "Idempotency-Key": key } }),
+  );
 }
 
 describe("sesion-widget: apertura", () => {
@@ -60,7 +67,9 @@ describe("sesion-widget: apertura", () => {
     });
     const expiresAt = new Date(body.expires_at).getTime();
     expect(expiresAt).toBeGreaterThanOrEqual(before + 30 * 60_000);
-    expect(await prisma.widgetSession.findUniqueOrThrow({ where: { id: body.session_id } })).toMatchObject({
+    expect(
+      await prisma.widgetSession.findUniqueOrThrow({ where: { id: body.session_id } }),
+    ).toMatchObject({
       tenantId: seed.tenantId,
       origin: ORIGIN,
     });
@@ -80,7 +89,10 @@ describe("sesion-widget: apertura", () => {
     });
     expect((await open(retired)).status).toBe(201);
 
-    await prisma.widgetKey.update({ where: { id: "k-grace" }, data: { graceUntil: new Date(Date.now() - 1) } });
+    await prisma.widgetKey.update({
+      where: { id: "k-grace" },
+      data: { graceUntil: new Date(Date.now() - 1) },
+    });
     expect((await open(retired)).status).toBe(401);
     expect((await open(`wk_${"u".repeat(43)}`)).status).toBe(401);
     expect((await open("no-es-una-clave")).status).toBe(401);
@@ -211,7 +223,11 @@ describe("sesion-widget: renovacion y alcance", () => {
   it("operator no renueva sesiones y el widget no alcanza config ni KB", async () => {
     const operator = await signToken({ role: "operator", tenantId: seed.tenantId });
     expect((await refresh(operator)).status).toBe(403);
-    expect((await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", token))).status).toBe(403);
-    expect((await listEntries(authedRequest("http://localhost/api/v1/knowledge-entries", token))).status).toBe(403);
+    expect(
+      (await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", token))).status,
+    ).toBe(403);
+    expect(
+      (await listEntries(authedRequest("http://localhost/api/v1/knowledge-entries", token))).status,
+    ).toBe(403);
   });
 });

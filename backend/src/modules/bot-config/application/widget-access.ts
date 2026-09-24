@@ -28,7 +28,11 @@ export function createResolveWidgetKey(deps: {
       return null;
     }
     const config = effectiveConfig(overrides);
-    return { tenantId: found.tenantId, allowedOrigins: config.allowedOrigins, params: config.params };
+    return {
+      tenantId: found.tenantId,
+      allowedOrigins: config.allowedOrigins,
+      params: config.params,
+    };
   };
 }
 

@@ -22,7 +22,13 @@ export const POST = idempotentRoute(
       sessionId: sessionIdOf(actor),
     });
     const issued = await getContainer().issueSessionToken(session);
-    return { status: 200, body: sessionTokenJson(session, issued), stored: { session_id: session.id } };
+    return {
+      status: 200,
+      body: sessionTokenJson(session, issued),
+      stored: { session_id: session.id },
+    };
   },
-  { rebuild: (stored, actor) => rebuildSessionResponse(stored, actor.tenantId, sessionIdOf(actor)) },
+  {
+    rebuild: (stored, actor) => rebuildSessionResponse(stored, actor.tenantId, sessionIdOf(actor)),
+  },
 );

@@ -1,6 +1,6 @@
 # Fase 3.1 — Tenant listo para chatear (diseño)
 
-> Estado: **en revisión**. Aprobado en brainstorming el 2026-09-22.
+> Estado: **implementada** en la rama `fase-3-1-tenant-listo` (pendiente de merge por el usuario).
 > Fuente del alcance: `ROADMAP.md` §Fase 3, entregables 1, 2 y 7. Manda `GOBERNANZA.md` ante cualquier conflicto.
 
 ## 1. Objetivo y corte

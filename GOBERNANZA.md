@@ -34,10 +34,20 @@ que el recurso existe.
 Todo repositorio, caso de uso y consulta recibe el tenant como parámetro explícito. No hay
 variables globales ni de contexto implícito para el tenant.
 
+**Superficie de plataforma.** `/api/platform/v1` es de un tercer actor, la plataforma, que
+no pertenece a ningún tenant: da de alta tenants y emite tokens de panel y de servicio. Se
+autentica con `PLATFORM_SECRET` (comparado en tiempo constante; sin él la superficie responde
+`404`) y es la **única** superficie donde el tenant viaja en el cuerpo. La regla de esta
+sección sigue intacta en `/api/v1` y `/fhir`. Se audita con `actor_subject = platform`.
+
 ### 1.4 Alcance del widget
 
 El rol `widget` alcanza únicamente el chat de su propia sesión. Nunca datos de dominio,
 nunca `/fhir`, nunca otra sesión. Los roles son `widget` · `operator` · `admin` · `service`.
+
+La clave del widget es **pública** (va en el HTML de la clínica): solo identifica al tenant y
+abre sesiones desde los `allowed_origins` del tenant. Se guarda en claro y se rota con gracia.
+El token del widget sale de una sesión (`POST /api/v1/widget/sessions`) y expira con ella.
 
 ### 1.5 No divulgación
 
@@ -45,11 +55,24 @@ No se persisten respuestas de verificación de identidad ni datos clínicos en m
 auditoría ni logs. Cuando haya que registrar que algo pasó, se registra el hecho y el
 resultado, no el contenido.
 
+El `subject` de un token emitido (p. ej. el correo de un operador) se guarda como
+`audit_events.resource_id` de `token.issued`: identifica a quién actúa, no es un dato de
+verificación ni clínico, así que no rompe la regla de registrar el hecho y no el contenido.
+
 ### 1.6 Idempotencia
 
 Toda escritura acepta `Idempotency-Key` y la persiste en base de datos (no en memoria).
 Repetir la misma petición con la misma clave produce el mismo resultado sin duplicar
 efectos.
+
+Excepciones y matices: emitir un token (`POST /api/platform/v1/tokens`) no escribe dominio y
+no lleva `Idempotency-Key`, así ningún JWT queda persistido. Cuando la respuesta de una
+escritura lleva una credencial (sesión del widget), se persiste solo la referencia
+(`session_id`) y la repetición vuelve a firmar el token. En la apertura anónima de sesión la
+`Idempotency-Key` actúa como secreto del cliente: mínimo 32 caracteres y nunca se registra.
+Por ser un secreto tiene que ser aleatoria y con al menos 128 bits de entropía (p. ej.
+`crypto.randomUUID()`, no un contador ni un valor previsible); se guarda en
+`idempotency_keys` como cualquier otra clave.
 
 ### 1.7 Dos componentes separados
 
@@ -124,6 +147,7 @@ se mezclan**:
 | --- | --- | --- |
 | REST `/api/v1` | widget, panel, chat | `{ error: { code, message, request_id, details } }` + cabecera `X-Request-Id` |
 | FHIR R4 `/fhir` | Hermes (solo rol `service` para escrituras) | `OperationOutcome` con `application/fhir+json` |
+| Plataforma `/api/platform/v1` | Operación (alta de tenants, tokens) | Misma envoltura que REST `/api/v1` |
 
 ### 3.1 Reglas FHIR
 
@@ -175,8 +199,8 @@ código, o se cambia la regla en una PR aparte que argumente el cambio.
 
 Se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`,
 `dominio`, `simetria-seed`, `aislamiento-tenant`, `flujo`, `verificacion`, `pre-agenda`,
-`conocimiento-config`, `alta-chatbot`, `idempotencia`, `sin-ia`, `fhir-conformance`,
-`hermes-simulador`, `carga-basica`.
+`conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`,
+`fhir-conformance`, `hermes-simulador`, `carga-basica`.
 
 ---
 

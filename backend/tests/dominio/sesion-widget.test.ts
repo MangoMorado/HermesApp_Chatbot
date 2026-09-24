@@ -5,7 +5,11 @@ import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { createAdmitWidget } from "@/modules/widget/application/admit-widget";
 import type { WidgetAccess } from "@/modules/widget/domain/ports/ports";
-import { isSessionActive, originAllowed, sessionExpiry } from "@/modules/widget/domain/widget-session";
+import {
+  isSessionActive,
+  originAllowed,
+  sessionExpiry,
+} from "@/modules/widget/domain/widget-session";
 import { createInMemoryRateLimiter } from "@/modules/widget/infrastructure/in-memory-rate-limiter";
 
 const NOW = new Date("2026-09-22T12:00:00.000Z");
@@ -74,7 +78,9 @@ describe("sesion-widget: admision", () => {
   const input = { widgetKey: "wk_ok", origin: "https://clinica-a.test", clientIp: "1.1.1.1" };
 
   it("clave desconocida o ausente → unauthorized", async () => {
-    await expect(admit({ ...input, widgetKey: "wk_no" })).rejects.toMatchObject({ reason: "unauthorized" });
+    await expect(admit({ ...input, widgetKey: "wk_no" })).rejects.toMatchObject({
+      reason: "unauthorized",
+    });
     await expect(admit({ ...input, widgetKey: 42 })).rejects.toBeInstanceOf(AuthError);
   });
 

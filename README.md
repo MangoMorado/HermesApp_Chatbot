@@ -66,7 +66,11 @@ JWT HS256 en `Authorization: Bearer <token>`. Claims: `sub`, `tenant_id`, `role`
 (`widget` · `operator` · `admin` · `service`) y `session_id` para el widget.
 
 El `tenant_id` sale **solo** del claim. Un recurso de otro tenant responde `404`, nunca
-`403`. La emisión de tokens llega en la Fase 3; por ahora se firman a mano para pruebas.
+`403`. Los tokens de panel (`operator`, `admin`) y de servicio los emite
+`POST /api/platform/v1/tokens` con `Authorization: Bearer <PLATFORM_SECRET>`; el alta de
+tenants es `POST /api/platform/v1/tenants`. El widget obtiene su token abriendo una sesión en
+`POST /api/v1/widget/sessions` con la clave pública del tenant. `token:dev` sigue disponible
+en desarrollo y aborta con `NODE_ENV=production`.
 
 ## Docker
 
@@ -87,6 +91,8 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 | `APP_TIMEZONE` | backend | Zona de referencia para agenda y búsquedas FHIR |
 | `JWT_SECRET` | backend | Secreto HS256 de verificación (obligatorio) |
 | `JWT_ISSUER` / `JWT_AUDIENCE` | backend | Emisor y audiencia esperados |
+| `PLATFORM_SECRET` | backend | Secreto de la superficie de plataforma (≥ 32 caracteres). Sin él, `/api/platform/v1` responde 404 |
+| `TRUST_PROXY` | backend | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose | Credenciales del contenedor de Postgres |
 | `BACKEND_URL` | frontend | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio) |
 
@@ -99,6 +105,7 @@ backend/
   prisma/schema.prisma        # modelos del chatbot (schema public) y del simulador (hermes_sim)
   prisma.config.ts            # URL de conexion (Prisma 7 la saco del schema)
   openapi.json                # contrato REST generado; no se edita a mano
+  openapi-platform.json       # contrato de /api/platform/v1; generado
   src/app/                    # adaptadores de entrada HTTP (route handlers)
   src/http/                   # envoltura de errores, X-Request-Id, fuente del OpenAPI
   src/composition-root.ts     # unico punto que ensambla adaptadores con casos de uso
@@ -133,7 +140,11 @@ con `-t "<nombre>"`.
 | `dominio` | Reglas compartidas: tenant id, paginación por cursor, ajustes del tenant, datos del seed |
 | `aislamiento-tenant` | La base impide referencias entre tenants; ajustes del tenant aislados |
 | `simetria-seed` | El simulador y el chatbot parten de los mismos datos deterministas |
-| `idempotencia` | Almacén de claves de idempotencia persistido por tenant |
+| `conocimiento-config` | Esquema de `bot-config`, rotación de claves, KB y búsqueda por tokens |
+| `alta-chatbot` | Alta de tenant con predeterminados y emisión de tokens de plataforma |
+| `sesion-widget` | Clave pública, `Origin`, límite por IP, renovación e idempotencia sin JWT persistido |
+| `idempotencia` | Repetición sin efectos duplicados en todas las escrituras |
+| `sin-ia` | Ninguna dependencia ni import de IA o n8n |
 
 Las demás (`flujo`, `verificacion`, `fhir-conformance`…) llegan con sus fases; están
 listadas en `GOBERNANZA.md`.
