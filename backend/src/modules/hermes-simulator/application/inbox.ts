@@ -40,7 +40,7 @@ async function bookInHermes(
   patientId: string,
 ): Promise<InboxResolution> {
   const slot = request.slot ? await deps.store.lockSlot(tenantId, request.slot.identifier) : null;
-  if (!slot || slot.status !== "free") {
+  if (slot?.status !== "free") {
     return { outcome: "rejected", reason: "slot_unavailable" };
   }
   if (request.appointment) {
