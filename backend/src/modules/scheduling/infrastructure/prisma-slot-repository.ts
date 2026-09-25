@@ -3,7 +3,7 @@ import { afterCursorAsc, pageByStartAtAsc } from "@/modules/shared/infrastructur
 import type { Slot, SlotStatus } from "../domain/entities";
 import type { SlotRepository } from "../domain/ports/repositories";
 
-function mapSlot(row: {
+export function mapSlot(row: {
   id: string;
   tenantId: string;
   identifierSystem: string;

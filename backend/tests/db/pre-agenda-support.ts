@@ -1,5 +1,15 @@
 import type { PrismaClient } from "@prisma/client";
+import {
+  type CreateAppointmentRequestCommand,
+  createCreateAppointmentRequest,
+} from "@/modules/scheduling/application/create-appointment-request";
+import type { PreAgendaPolicyValues } from "@/modules/scheduling/domain/ports/pre-agenda";
+import { createPrismaPreAgendaStore } from "@/modules/scheduling/infrastructure/prisma-pre-agenda-store";
+import type { Clock } from "@/modules/shared/domain/ports/clock";
 import { type TenantId, toTenantId } from "@/modules/shared/domain/tenant-id";
+import { createPrismaAuditLog } from "@/modules/shared/infrastructure/prisma-audit-log";
+import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
+import { uuidV7Generator } from "@/modules/shared/infrastructure/uuid-v7-generator";
 import { HERMES_SYSTEM, insertTenant } from "./support";
 
 export const HOUR_MS = 3_600_000;
@@ -253,4 +263,46 @@ export async function extraPatients(
     ids.push(id);
   }
   return ids;
+}
+
+export const DEFAULT_POLICY: PreAgendaPolicyValues = { holdMinutes: 240, maxPendingHolds: 2 };
+export const ACTOR = { actorSubject: "chat-prueba", actorRole: "widget", requestId: "req-prueba" };
+/** Holgura para transacciones concurrentes en las pruebas de carrera. */
+export const TX_OPTIONS = { maxWait: 10_000, timeout: 10_000 };
+
+export type MutableClock = Clock & { set(at: Date): void };
+
+export function clockAt(at: Date): MutableClock {
+  let current = at;
+  return {
+    now: () => current,
+    set: (next) => {
+      current = next;
+    },
+  };
+}
+
+export function preAgendaDeps(db: PrismaExecutor, clock: Clock) {
+  return {
+    store: createPrismaPreAgendaStore(db),
+    ids: uuidV7Generator,
+    clock,
+    audit: createPrismaAuditLog(db, uuidV7Generator),
+  };
+}
+
+export function createRequest(
+  prisma: PrismaClient,
+  clock: Clock,
+  command: CreateAppointmentRequestCommand,
+  policy: PreAgendaPolicyValues = DEFAULT_POLICY,
+) {
+  return prisma.$transaction(
+    (tx) =>
+      createCreateAppointmentRequest({
+        ...preAgendaDeps(tx, clock),
+        policy: { read: async () => policy },
+      })(command),
+    TX_OPTIONS,
+  );
 }
