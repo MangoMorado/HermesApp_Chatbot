@@ -1,5 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
-import { type PreAgendaReads, preAgendaReads } from "./composition/pre-agenda-wiring";
+import {
+  type PreAgendaReads,
+  preAgendaReads,
+  preAgendaWritePorts,
+} from "./composition/pre-agenda-wiring";
 import { widgetReads, widgetWritePorts } from "./composition/widget-wiring";
 import { type AppConfig, loadConfig } from "./config/env";
 import { type Authenticate, createAuthenticate } from "./modules/auth/application/authenticate";
@@ -109,12 +113,14 @@ type BotConfigWritePorts = ReturnType<typeof botConfigWritePorts>;
 type KnowledgeWritePorts = ReturnType<typeof knowledgeWritePorts>;
 type PlatformWritePorts = ReturnType<typeof platformWritePorts>;
 type WidgetWritePorts = ReturnType<typeof widgetWritePorts>;
+type PreAgendaWritePorts = ReturnType<typeof preAgendaWritePorts>;
 
 export type WritePorts = BaseWritePorts &
   BotConfigWritePorts &
   KnowledgeWritePorts &
   PlatformWritePorts &
-  WidgetWritePorts;
+  WidgetWritePorts &
+  PreAgendaWritePorts;
 
 export type Container = {
   readonly config: AppConfig;
@@ -123,6 +129,7 @@ export type Container = {
   readonly idempotencyStore: IdempotencyStore;
   readonly platformIdempotencyStore: PlatformIdempotencyStore;
   readonly expireDueRequests: PreAgendaReads["expireDueRequests"];
+  readonly listInbox: PreAgendaReads["listInbox"];
   readonly listPractitioners: ReturnType<typeof createListPractitioners>;
   readonly listHealthcareServices: ReturnType<typeof createListHealthcareServices>;
   readonly listSchedules: ReturnType<typeof createListSchedules>;
@@ -325,6 +332,7 @@ function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
     ...knowledgeWritePorts(db, auditLog),
     ...platformWritePorts(db, config, auditLog),
     ...widgetWritePorts(db),
+    ...preAgendaWritePorts(db, auditLog),
   };
 }
 

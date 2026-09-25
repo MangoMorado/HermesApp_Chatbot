@@ -14,6 +14,7 @@ import { type TenantId, toTenantId } from "@/modules/shared/domain/tenant-id";
 import { createPrismaAuditLog } from "@/modules/shared/infrastructure/prisma-audit-log";
 import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
 import { uuidV7Generator } from "@/modules/shared/infrastructure/uuid-v7-generator";
+import { authedRequest } from "../helpers/token";
 import { HERMES_SYSTEM, insertTenant } from "./support";
 
 export const HOUR_MS = 3_600_000;
@@ -320,4 +321,14 @@ export function resolveRequest(
     (tx) => createResolveAppointmentRequest(preAgendaDeps(tx, clock))(input),
     TX_OPTIONS,
   );
+}
+
+let inboxKeyCounter = 0;
+
+/** POST a la bandeja con una `Idempotency-Key` nueva salvo que se pase una. */
+export function inboxPost(path: string, token: string, key = `inbox-${inboxKeyCounter++}`) {
+  return authedRequest(`http://localhost/api/sim/v1/inbox/${path}`, token, {
+    method: "POST",
+    headers: { "Idempotency-Key": key },
+  });
 }
