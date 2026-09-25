@@ -15,6 +15,8 @@ export const PARAM_SPECS = {
   widget_sessions_per_ip_per_minute: { default: 10, min: 1, max: 100 },
   widget_key_grace_hours: { default: 24, min: 0, max: 168 },
   kb_max_results: { default: 3, min: 1, max: 10 },
+  request_hold_minutes: { default: 240, min: 15, max: 4320 },
+  max_pending_requests_per_patient: { default: 2, min: 1, max: 5 },
 } as const;
 
 export type ParamKey = keyof typeof PARAM_SPECS;
