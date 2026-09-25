@@ -136,14 +136,142 @@ function crudPaths(resource: string, operationBase: string): Record<string, unkn
   };
 }
 
+const IDENTIFIER_SCHEMA = {
+  type: "object",
+  required: ["system", "value"],
+  properties: { system: { type: "string" }, value: { type: "string" } },
+} as const;
+
+const REF_SCHEMA = {
+  type: ["object", "null"],
+  required: ["identifier", "start_at", "end_at"],
+  properties: {
+    identifier: IDENTIFIER_SCHEMA,
+    start_at: { type: "string", format: "date-time" },
+    end_at: { type: "string", format: "date-time" },
+  },
+} as const;
+
+const INBOX_REQUEST_SCHEMA = {
+  type: "object",
+  required: [
+    "id",
+    "kind",
+    "status",
+    "created_at",
+    "expires_at",
+    "resolution_reason",
+    "patient",
+    "slot",
+    "appointment",
+    "resulting_appointment",
+  ],
+  properties: {
+    id: { type: "string" },
+    kind: { type: "string", enum: ["book", "reschedule", "cancel"] },
+    status: { type: "string", enum: ["pending", "approved", "rejected", "expired"] },
+    created_at: { type: "string", format: "date-time" },
+    expires_at: { type: "string", format: "date-time" },
+    resolution_reason: { type: ["string", "null"], enum: ["slot_unavailable", "declined", null] },
+    patient: {
+      type: "object",
+      required: ["identifier", "document_type", "document_number", "given_names", "family_names"],
+      properties: {
+        identifier: IDENTIFIER_SCHEMA,
+        document_type: { type: "string" },
+        document_number: { type: "string" },
+        given_names: { type: "string" },
+        family_names: { type: "string" },
+      },
+    },
+    slot: REF_SCHEMA,
+    appointment: REF_SCHEMA,
+    resulting_appointment: {
+      type: ["object", "null"],
+      required: ["identifier"],
+      properties: { identifier: IDENTIFIER_SCHEMA },
+    },
+  },
+} as const;
+
+function inboxDecision(operationId: string, summary: string) {
+  return {
+    post: {
+      operationId,
+      summary,
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        REQUEST_ID_PARAMETER,
+        IDEMPOTENCY_PARAMETER,
+        { name: "id", in: "path", required: true, schema: { type: "string" } },
+      ],
+      responses: {
+        "200": {
+          description: "Solicitud resuelta",
+          headers: REQUEST_ID_RESPONSE_HEADER,
+          content: {
+            "application/json": { schema: { $ref: "#/components/schemas/InboxRequest" } },
+          },
+        },
+        ...writeErrors,
+      },
+    },
+  };
+}
+
+const INBOX_PATHS = {
+  "/inbox": {
+    get: {
+      operationId: "listSimInbox",
+      summary: "Solicitudes pendientes y vivas del tenant (vence las caducadas antes de responder)",
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        REQUEST_ID_PARAMETER,
+        { name: "cursor", in: "query", required: false, schema: { type: "string" } },
+        {
+          name: "limit",
+          in: "query",
+          required: false,
+          schema: { type: "integer", minimum: 1, maximum: 200 },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "OK",
+          headers: REQUEST_ID_RESPONSE_HEADER,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["data", "next_cursor"],
+                properties: {
+                  data: { type: "array", items: { $ref: "#/components/schemas/InboxRequest" } },
+                  next_cursor: { type: ["string", "null"] },
+                },
+              },
+            },
+          },
+        },
+        ...readErrors,
+      },
+    },
+  },
+  "/inbox/{id}/approve": inboxDecision(
+    "approveSimInboxRequest",
+    "Hermes aprueba: reserva si su cupo sigue libre; si no, rechaza por slot_unavailable",
+  ),
+  "/inbox/{id}/reject": inboxDecision("rejectSimInboxRequest", "Hermes rechaza (declined)"),
+} as const;
+
 /** Contrato del simulador Hermes (`/api/sim/v1`). */
 export function buildSimOpenApiDocument(): Record<string, unknown> {
   return {
     openapi: "3.1.0",
     info: {
       title: "Chatbot Ingenius 360 — Simulador Hermes",
-      version: "0.2.0",
-      description: "CRUD de maestros del simulador. Apagable con HERMES_SIMULATOR_ENABLED.",
+      version: "0.3.0",
+      description:
+        "CRUD de maestros y bandeja de solicitudes del simulador. Apagable con HERMES_SIMULATOR_ENABLED.",
     },
     servers: [{ url: "/api/sim/v1" }],
     components: {
@@ -167,6 +295,7 @@ export function buildSimOpenApiDocument(): Record<string, unknown> {
             },
           },
         },
+        InboxRequest: INBOX_REQUEST_SCHEMA,
       },
     },
     paths: {
@@ -202,6 +331,7 @@ export function buildSimOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      ...INBOX_PATHS,
     },
   };
 }

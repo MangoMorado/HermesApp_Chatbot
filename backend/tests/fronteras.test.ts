@@ -111,4 +111,14 @@ describe("fronteras de capas", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("scheduling no importa bot-config ni hermes-simulator", () => {
+    const offenders = listFiles(join(MODULES_DIR, "scheduling")).flatMap((file) =>
+      importsOf(file)
+        .filter((specifier) => /modules\/(bot-config|hermes-simulator)(\/|$)/.test(specifier))
+        .map((specifier) => `${file} -> ${specifier}`),
+    );
+
+    expect(offenders).toEqual([]);
+  });
 });
