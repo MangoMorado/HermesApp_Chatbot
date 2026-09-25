@@ -1,4 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
+import {
+  type PreAgendaReads,
+  preAgendaReads,
+  preAgendaWritePorts,
+} from "./composition/pre-agenda-wiring";
 import { widgetReads, widgetWritePorts } from "./composition/widget-wiring";
 import { type AppConfig, loadConfig } from "./config/env";
 import { type Authenticate, createAuthenticate } from "./modules/auth/application/authenticate";
@@ -49,6 +54,7 @@ import { createListTenants, type ListTenants } from "./modules/platform/applicat
 import { createRegisterTenant } from "./modules/platform/application/register-tenant";
 import type { TenantProvisioning } from "./modules/platform/domain/ports/provisioning";
 import { createPrismaTenantRegistry } from "./modules/platform/infrastructure/prisma-tenant-registry";
+import type { ExpireDueRequests } from "./modules/scheduling/application/appointment-request-queries";
 import { createListAppointments } from "./modules/scheduling/application/list-appointments";
 import { createListAvailability } from "./modules/scheduling/application/list-availability";
 import { createListHealthcareServices } from "./modules/scheduling/application/list-healthcare-services";
@@ -107,12 +113,14 @@ type BotConfigWritePorts = ReturnType<typeof botConfigWritePorts>;
 type KnowledgeWritePorts = ReturnType<typeof knowledgeWritePorts>;
 type PlatformWritePorts = ReturnType<typeof platformWritePorts>;
 type WidgetWritePorts = ReturnType<typeof widgetWritePorts>;
+type PreAgendaWritePorts = ReturnType<typeof preAgendaWritePorts>;
 
 export type WritePorts = BaseWritePorts &
   BotConfigWritePorts &
   KnowledgeWritePorts &
   PlatformWritePorts &
-  WidgetWritePorts;
+  WidgetWritePorts &
+  PreAgendaWritePorts;
 
 export type Container = {
   readonly config: AppConfig;
@@ -120,6 +128,8 @@ export type Container = {
   readonly authenticate: Authenticate;
   readonly idempotencyStore: IdempotencyStore;
   readonly platformIdempotencyStore: PlatformIdempotencyStore;
+  readonly expireDueRequests: PreAgendaReads["expireDueRequests"];
+  readonly listInbox: PreAgendaReads["listInbox"];
   readonly listPractitioners: ReturnType<typeof createListPractitioners>;
   readonly listHealthcareServices: ReturnType<typeof createListHealthcareServices>;
   readonly listSchedules: ReturnType<typeof createListSchedules>;
@@ -249,7 +259,7 @@ function platformReads(prisma: PrismaClient, config: AppConfig) {
   };
 }
 
-function schedulingReads(prisma: PrismaClient) {
+function schedulingReads(prisma: PrismaClient, expire: ExpireDueRequests) {
   const tenantSettings = createPrismaTenantSettingsRepository(prisma);
   const practitioners = createPrismaPractitionerRepository(prisma);
   const services = createPrismaHealthcareServiceRepository(prisma);
@@ -260,8 +270,8 @@ function schedulingReads(prisma: PrismaClient) {
     listPractitioners: createListPractitioners(practitioners),
     listHealthcareServices: createListHealthcareServices(services),
     listSchedules: createListSchedules(schedules),
-    listAvailability: createListAvailability(slots, tenantSettings),
-    listScheduleSlots: createListScheduleSlots(schedules, slots, tenantSettings),
+    listAvailability: createListAvailability(slots, tenantSettings, expire),
+    listScheduleSlots: createListScheduleSlots(schedules, slots, tenantSettings, expire),
     listAppointments: createListAppointments(schedules, appointments, tenantSettings),
     getTenantSettings: createGetTenantSettings(tenantSettings),
   };
@@ -322,6 +332,7 @@ function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
     ...knowledgeWritePorts(db, auditLog),
     ...platformWritePorts(db, config, auditLog),
     ...widgetWritePorts(db),
+    ...preAgendaWritePorts(db, auditLog),
   };
 }
 
@@ -333,6 +344,7 @@ export function getContainer(): Container {
   if (!container) {
     const config = loadConfig();
     prisma = createPrismaClient(config.databaseUrl);
+    const preAgenda = preAgendaReads(prisma);
 
     container = {
       config,
@@ -341,7 +353,8 @@ export function getContainer(): Container {
       idempotencyStore: createPrismaIdempotencyStore(prisma),
       platformIdempotencyStore: createPrismaPlatformIdempotencyStore(prisma),
       hermesSimulatorEnabled: config.hermesSimulatorEnabled,
-      ...schedulingReads(prisma),
+      ...preAgenda,
+      ...schedulingReads(prisma, preAgenda.expireDueRequests),
       ...patientReads(prisma),
       ...simReads(prisma),
       ...botConfigReads(prisma),

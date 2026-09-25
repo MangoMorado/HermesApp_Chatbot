@@ -1,5 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { POST as approveInbox } from "@/app/api/sim/v1/inbox/[id]/approve/route";
+import { POST as rejectInbox } from "@/app/api/sim/v1/inbox/[id]/reject/route";
+import { GET as listSimInbox } from "@/app/api/sim/v1/inbox/route";
 import { GET as getAppointments } from "@/app/api/v1/appointments/route";
 import { GET as getAvailability } from "@/app/api/v1/availability/route";
 import { GET as getBotConfig, PATCH as patchBotConfig } from "@/app/api/v1/bot-config/route";
@@ -19,6 +22,15 @@ import { GET as getSchedules } from "@/app/api/v1/schedules/route";
 import { GET as getTenantSettings } from "@/app/api/v1/tenant-settings/route";
 import { resetContainer } from "@/composition-root";
 import { authedRequest, signToken } from "../helpers/token";
+import {
+  ACTOR,
+  clockAt,
+  createRequest,
+  HOUR_MS,
+  inboxPost,
+  seedWorld,
+  slotAt,
+} from "./pre-agenda-support";
 import {
   insertChatbotTenant,
   insertTenant,
@@ -429,5 +441,42 @@ describe("aislamiento-tenant: base de conocimiento", () => {
     );
     expect(idsOf(body)).toEqual([]);
     expect(await prisma.knowledgeEntry.count({ where: { id: "entry-b", answer: "A" } })).toBe(1);
+  });
+});
+
+describe("aislamiento-tenant: bandeja del simulador", () => {
+  beforeEach(async () => {
+    await truncateAll(prisma);
+    resetContainer();
+  });
+
+  it("la bandeja de B no ve ni resuelve solicitudes de A", async () => {
+    const start = new Date(Date.now() + 48 * HOUR_MS);
+    start.setUTCMinutes(0, 0, 0);
+    const a = await seedWorld(prisma, "a", start);
+    const b = await seedWorld(prisma, "b", start);
+    const request = await createRequest(prisma, clockAt(new Date()), {
+      kind: "book",
+      tenantId: a.tenantId,
+      medicalRecordId: a.medicalRecordId,
+      slotId: slotAt(a, 0),
+      actor: ACTOR,
+    });
+    const tokenB = await signToken({ role: "admin", tenantId: b.tenantId });
+
+    const list = await listSimInbox(authedRequest("http://localhost/api/sim/v1/inbox", tokenB));
+    expect((await list.json()).data).toEqual([]);
+
+    const context = { params: Promise.resolve({ id: request.id }) };
+    expect((await approveInbox(inboxPost(`${request.id}/approve`, tokenB), context)).status).toBe(
+      404,
+    );
+    const context2 = { params: Promise.resolve({ id: request.id }) };
+    expect((await rejectInbox(inboxPost(`${request.id}/reject`, tokenB), context2)).status).toBe(
+      404,
+    );
+    expect(
+      (await prisma.appointmentRequest.findUniqueOrThrow({ where: { id: request.id } })).status,
+    ).toBe("pending");
   });
 });

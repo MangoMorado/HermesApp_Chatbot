@@ -12,6 +12,7 @@ import { ValidationError } from "@/modules/shared/domain/validation-error";
 import type { TenantSettingsRepository } from "@/modules/tenancy/domain/ports/tenant-settings-repository";
 
 const tenant = toTenantId("tenant-a");
+const noExpiry = async () => {};
 
 function fakePractitioners(rows: Practitioner[]): PractitionerRepository {
   return {
@@ -76,7 +77,7 @@ describe("dominio: disponibilidad", () => {
       listAvailability: async () => ({ data: [], nextCursor: null }),
       listBySchedule: async () => ({ data: [], nextCursor: null }),
     };
-    const list = createListAvailability(slots, settings);
+    const list = createListAvailability(slots, settings, noExpiry);
     await expect(
       list({
         tenantId: tenant,
@@ -108,6 +109,7 @@ describe("dominio: disponibilidad", () => {
     const page = await createListAvailability(
       slots,
       settings,
+      noExpiry,
     )({
       tenantId: tenant,
       fromRaw: "2026-03-01",

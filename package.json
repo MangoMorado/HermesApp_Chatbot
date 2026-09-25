@@ -12,7 +12,8 @@
     "typecheck": "npm --prefix backend run typecheck && npm --prefix frontend run typecheck",
     "test": "npm --prefix backend test && npm --prefix frontend test",
     "doctor": "npm --prefix frontend run doctor",
-    "install:all": "npm --prefix backend install && npm --prefix frontend install"
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "demo": "npm --prefix backend run demo --"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14"

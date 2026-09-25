@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { POST as issuePlatformToken } from "@/app/api/platform/v1/tokens/route";
+import { GET as getSimInbox } from "@/app/api/sim/v1/inbox/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { GET as getPractitioners } from "@/app/api/v1/practitioners/route";
 import { resetContainer } from "@/composition-root";
@@ -213,5 +214,26 @@ describe("roles: superficie de plataforma", () => {
       process.env.PLATFORM_SECRET = saved;
       resetContainer();
     }
+  });
+});
+
+describe("roles: bandeja del simulador", () => {
+  it("operator y widget reciben 403", async () => {
+    for (const role of ["operator", "widget"] as const) {
+      const token = await signToken({
+        role,
+        tenantId: "tenant-a",
+        sessionId: role === "widget" ? "s-1" : undefined,
+      });
+      const response = await getSimInbox(authorized(token));
+      expect(response.status).toBe(403);
+    }
+  });
+
+  it("con el simulador apagado, admin recibe 404", async () => {
+    resetContainer();
+    const token = await signToken({ role: "admin", tenantId: "tenant-a" });
+    const response = await getSimInbox(authorized(token));
+    expect(response.status).toBe(404);
   });
 });

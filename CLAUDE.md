@@ -8,9 +8,15 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 
 **Fase 1 cerrada.** Docker se verificó desplegando backend y frontend en Easypanel (VPS, proyecto `mango`): health 200, `/me` 401 sin token y 200 con token válido. Easypanel levanta cada Dockerfile por separado, así que `docker-compose.yml` sigue sin ejecutarse de punta a punta; se dio por bueno. Están en pie: monorepo, hexágono con composition root, auth JWT con roles, contrato REST con envoltura de errores y `X-Request-Id`, OpenAPI generado, Biome + CI, Dockerfiles y compose, `AGENTS.md` y las skills del inventario.
 
-**Fase 2 cerrada** (spec en `docs/superpowers/specs/2026-09-22-fase-2-dominio-persistido-design.md`): esquema `public` + `hermes_sim`, casos de uso de lectura de agenda/historial, ajustes del tenant, simulador CRUD, seed simétrico, panel y simulador en frontend con clientes orval, suites `dominio`, `aislamiento-tenant` (HTTP), `idempotencia` (HTTP), `simetria-seed` y `test:db` en CI. La emisión de tokens y el chat son de la Fase 3; hoy los JWT se firman con `token:dev` y se pegan en el panel.
+**Fase 2 cerrada** (spec en `docs/superpowers/specs/2026-09-22-fase-2-dominio-persistido-design.md`): esquema `public` + `hermes_sim`, casos de uso de lectura de agenda/historial, ajustes del tenant, simulador CRUD, seed simétrico, panel y simulador en frontend con clientes orval, suites `dominio`, `aislamiento-tenant` (HTTP), `idempotencia` (HTTP), `simetria-seed` y `test:db` en CI. Desde la 3.1 los tokens los emite el servidor (`/api/platform/v1`); `token:dev` queda solo como atajo local.
 
-**Fase 3 en curso**: 3.1 (tenant listo para chatear) en la rama `fase-3-1-tenant-listo`; spec en `docs/superpowers/specs/2026-09-22-fase-3-1-tenant-listo-design.md`.
+**Fase 3 en curso**, en cuatro sub-proyectos (corte en la §1 de la spec de la 3.1):
+
+- **3.1 tenant listo para chatear — cerrada** y en `main` (PR #3). Spec en `docs/superpowers/specs/2026-09-22-fase-3-1-tenant-listo-design.md`: emisión de tokens por `/api/platform/v1`, sesiones del widget con rate limit in-memory, `bot-config` con rotación de clave y base de conocimiento CRUD.
+- **3.2 pre-agenda — implementada** en la rama `fase-3-2-pre-agenda` (spec en `docs/superpowers/specs/2026-09-25-fase-3-2-pre-agenda-design.md`): tabla `appointment_requests`, apartado atómico `free` → `busy_tentative`, tope por paciente, vencimiento al leer y bandeja del simulador (`/api/sim/v1/inbox`) que resuelve en proceso vía `ChatbotRequestsGateway`. El motor de la 3.3 consume `createAppointmentRequest` (en `WritePorts`).
+- 3.3 motor conversacional y 3.4 frontend (`/chat`, bandeja, KB, config): pendientes. Requisito de entrada de la primera que toque el widget: resolver CORS/proxy (§11 de la spec de la 3.1).
+
+Fuera del plan de fases, `main` incluye el rediseño del panel operativo (tablero oscuro; sistema visual en `DESIGN.md`).
 
 Lo que aún no existe está descrito como destino, no como hecho. Verifica antes de asumir que un archivo o comando está.
 

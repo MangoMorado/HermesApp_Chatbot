@@ -3,7 +3,7 @@ import { afterCursorAsc, pageByStartAtAsc } from "@/modules/shared/infrastructur
 import type { Appointment, AppointmentStatus } from "../domain/entities";
 import type { AppointmentRepository } from "../domain/ports/repositories";
 
-function mapAppointment(row: {
+export function mapAppointment(row: {
   id: string;
   tenantId: string;
   identifierSystem: string;

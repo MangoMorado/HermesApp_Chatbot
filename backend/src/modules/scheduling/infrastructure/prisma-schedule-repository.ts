@@ -3,7 +3,7 @@ import { afterIdCursor, pageByIdAsc } from "@/modules/shared/infrastructure/pris
 import type { Schedule } from "../domain/entities";
 import type { ScheduleRepository } from "../domain/ports/repositories";
 
-function mapSchedule(row: {
+export function mapSchedule(row: {
   id: string;
   tenantId: string;
   identifierSystem: string;

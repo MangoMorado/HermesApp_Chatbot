@@ -15,6 +15,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed/index.ts",
+    "demo": "tsx scripts/demo.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "token:dev": "tsx scripts/token-dev.ts"
   },

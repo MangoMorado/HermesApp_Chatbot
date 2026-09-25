@@ -52,6 +52,33 @@ enum DocumentType {
   @@schema("public")
 }
 
+enum AppointmentRequestKind {
+  book
+  reschedule
+  cancel
+
+  @@map("appointment_request_kind")
+  @@schema("public")
+}
+
+enum AppointmentRequestStatus {
+  pending
+  approved
+  rejected
+  expired
+
+  @@map("appointment_request_status")
+  @@schema("public")
+}
+
+enum ResolutionReason {
+  slot_unavailable
+  declined
+
+  @@map("resolution_reason")
+  @@schema("public")
+}
+
 model Tenant {
   id                String   @id
   slug              String   @unique
@@ -60,18 +87,19 @@ model Tenant {
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  practitioners      Practitioner[]
-  healthcareServices HealthcareService[]
-  schedules          Schedule[]
-  slots              Slot[]
-  medicalRecords     MedicalRecord[]
-  appointments       Appointment[]
-  auditEvents        AuditEvent[]
-  idempotencyKeys    IdempotencyKey[]
-  botConfig          BotConfig?
-  widgetKeys         WidgetKey[]
-  knowledgeEntries   KnowledgeEntry[]
-  widgetSessions     WidgetSession[]
+  practitioners       Practitioner[]
+  healthcareServices  HealthcareService[]
+  schedules           Schedule[]
+  slots               Slot[]
+  medicalRecords      MedicalRecord[]
+  appointments        Appointment[]
+  appointmentRequests AppointmentRequest[]
+  auditEvents         AuditEvent[]
+  idempotencyKeys     IdempotencyKey[]
+  botConfig           BotConfig?
+  widgetKeys          WidgetKey[]
+  knowledgeEntries    KnowledgeEntry[]
+  widgetSessions      WidgetSession[]
 
   @@map("tenants")
   @@schema("public")
@@ -150,9 +178,10 @@ model Slot {
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  schedule     Schedule      @relation(fields: [tenantId, scheduleId], references: [tenantId, id])
-  appointments Appointment[]
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  schedule            Schedule             @relation(fields: [tenantId, scheduleId], references: [tenantId, id])
+  appointments        Appointment[]
+  appointmentRequests AppointmentRequest[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, identifierSystem, identifierValue])
@@ -178,8 +207,9 @@ model MedicalRecord {
   createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  appointments Appointment[]
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  appointments        Appointment[]
+  appointmentRequests AppointmentRequest[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, identifierSystem, identifierValue])
@@ -207,10 +237,43 @@ model Appointment {
   schedule      Schedule      @relation(fields: [tenantId, scheduleId], references: [tenantId, id])
   slot          Slot          @relation(fields: [tenantId, slotId], references: [tenantId, id])
 
+  changeRequests AppointmentRequest[] @relation("RequestTarget")
+  originRequests AppointmentRequest[] @relation("RequestResult")
+
+  @@unique([tenantId, id])
   @@unique([tenantId, identifierSystem, identifierValue])
   @@index([tenantId, medicalRecordId, startAt])
   @@index([tenantId, scheduleId, startAt])
   @@map("appointments")
+  @@schema("public")
+}
+
+// Solicitud de agenda originada por el chatbot. La resuelve Hermes; el chatbot nunca
+// confirma por su cuenta. CHECK de forma e indices unicos parciales en la migracion.
+model AppointmentRequest {
+  id                     String                   @id
+  tenantId               String                   @map("tenant_id")
+  kind                   AppointmentRequestKind
+  status                 AppointmentRequestStatus @default(pending)
+  medicalRecordId        String                   @map("medical_record_id")
+  slotId                 String?                  @map("slot_id")
+  appointmentId          String?                  @map("appointment_id")
+  expiresAt              DateTime                 @map("expires_at") @db.Timestamptz(3)
+  resolutionReason       ResolutionReason?        @map("resolution_reason")
+  resultingAppointmentId String?                  @map("resulting_appointment_id")
+  createdAt              DateTime                 @map("created_at") @db.Timestamptz(3)
+  resolvedAt             DateTime?                @map("resolved_at") @db.Timestamptz(3)
+
+  tenant               Tenant        @relation(fields: [tenantId], references: [id])
+  medicalRecord        MedicalRecord @relation(fields: [tenantId, medicalRecordId], references: [tenantId, id])
+  slot                 Slot?         @relation(fields: [tenantId, slotId], references: [tenantId, id], onDelete: Restrict)
+  appointment          Appointment?  @relation("RequestTarget", fields: [tenantId, appointmentId], references: [tenantId, id], onDelete: Restrict)
+  resultingAppointment Appointment?  @relation("RequestResult", fields: [tenantId, resultingAppointmentId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, id])
+  @@index([tenantId, status, expiresAt])
+  @@index([tenantId, medicalRecordId, status])
+  @@map("appointment_requests")
   @@schema("public")
 }
 

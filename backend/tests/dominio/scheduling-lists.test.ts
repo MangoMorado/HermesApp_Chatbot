@@ -22,6 +22,7 @@ import { ValidationError } from "@/modules/shared/domain/validation-error";
 import type { TenantSettingsRepository } from "@/modules/tenancy/domain/ports/tenant-settings-repository";
 
 const tenant = toTenantId("tenant-a");
+const noExpiry = async () => {};
 
 const schedule: Schedule = {
   id: "sch-1",
@@ -118,7 +119,7 @@ describe("dominio: cupos y citas por agenda", () => {
       listAvailability: async () => ({ data: [], nextCursor: null }),
       listBySchedule: async () => ({ data: [], nextCursor: null }),
     };
-    const list = createListScheduleSlots(fakeSchedules([schedule]), slots, settings);
+    const list = createListScheduleSlots(fakeSchedules([schedule]), slots, settings, noExpiry);
     await expect(
       list({
         tenantId: tenant,
@@ -135,7 +136,7 @@ describe("dominio: cupos y citas por agenda", () => {
       listAvailability: async () => ({ data: [], nextCursor: null }),
       listBySchedule: async () => ({ data: [], nextCursor: null }),
     };
-    const list = createListScheduleSlots(fakeSchedules([schedule]), slots, settings);
+    const list = createListScheduleSlots(fakeSchedules([schedule]), slots, settings, noExpiry);
     await expect(
       list({
         tenantId: tenant,
@@ -165,6 +166,7 @@ describe("dominio: cupos y citas por agenda", () => {
       fakeSchedules([schedule]),
       slots,
       settings,
+      noExpiry,
     )({
       tenantId: tenant,
       scheduleId: "sch-1",

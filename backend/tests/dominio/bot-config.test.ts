@@ -23,6 +23,8 @@ describe("conocimiento-config: bot-config efectivo", () => {
       widget_sessions_per_ip_per_minute: 10,
       widget_key_grace_hours: 24,
       kb_max_results: 3,
+      request_hold_minutes: 240,
+      max_pending_requests_per_patient: 2,
     });
     expect(config.allowedOrigins).toEqual([]);
   });
@@ -82,6 +84,11 @@ describe("conocimiento-config: parche de bot-config", () => {
     [{ params: { kb_max_results: 2.5 } }, "params.kb_max_results"],
     [{ params: { desconocido: 1 } }, "params.desconocido"],
     [{ texts: ["welcome"] }, "texts"],
+    [{ params: { request_hold_minutes: 14 } }, "params.request_hold_minutes"],
+    [
+      { params: { max_pending_requests_per_patient: 6 } },
+      "params.max_pending_requests_per_patient",
+    ],
   ])("rechaza %j", (patch, field) => {
     try {
       applyPatch(EMPTY_OVERRIDES, patch, DEV);
@@ -99,6 +106,8 @@ describe("conocimiento-config: parche de bot-config", () => {
       min: 1,
       max: 100,
     });
+    expect(PARAM_SPECS.request_hold_minutes).toEqual({ default: 240, min: 15, max: 4320 });
+    expect(PARAM_SPECS.max_pending_requests_per_patient).toEqual({ default: 2, min: 1, max: 5 });
   });
 });
 

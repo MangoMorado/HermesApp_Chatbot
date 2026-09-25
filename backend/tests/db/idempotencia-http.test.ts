@@ -1,9 +1,21 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { POST as approveInbox } from "@/app/api/sim/v1/inbox/[id]/approve/route";
+import { POST as rejectInbox } from "@/app/api/sim/v1/inbox/[id]/reject/route";
+import { GET as listSimInbox } from "@/app/api/sim/v1/inbox/route";
 import { POST as postSimPractitioner } from "@/app/api/sim/v1/practitioners/route";
 import { PATCH as patchTenantSettings } from "@/app/api/v1/tenant-settings/route";
 import { resetContainer } from "@/composition-root";
 import { authedRequest, signToken } from "../helpers/token";
+import {
+  ACTOR,
+  clockAt,
+  createRequest,
+  HOUR_MS,
+  inboxPost,
+  seedWorld,
+  slotAt,
+} from "./pre-agenda-support";
 import { insertTenant, testPrisma, truncateAll } from "./support";
 
 const prisma: PrismaClient = testPrisma();
@@ -138,5 +150,62 @@ describe("idempotencia: escrituras HTTP", () => {
     expect(conflict.status).toBe(409);
     expect(body.error.code).toBe("conflict");
     expect(await prisma.simPractitioner.count()).toBe(1);
+  });
+});
+
+describe("idempotencia: bandeja del simulador", () => {
+  beforeEach(async () => {
+    await truncateAll(prisma);
+    resetContainer();
+  });
+
+  async function pendingBook() {
+    const start = new Date(Date.now() + 48 * HOUR_MS);
+    start.setUTCMinutes(0, 0, 0);
+    const world = await seedWorld(prisma, "a", start);
+    const request = await createRequest(prisma, clockAt(new Date()), {
+      kind: "book",
+      tenantId: world.tenantId,
+      medicalRecordId: world.medicalRecordId,
+      slotId: slotAt(world, 0),
+      actor: ACTOR,
+    });
+    const token = await signToken({
+      role: "admin",
+      tenantId: world.tenantId,
+      subject: "admin-a",
+    });
+    return { request, token };
+  }
+
+  it("aprobar dos veces con la misma clave: misma respuesta y una sola cita nueva", async () => {
+    const { request, token } = await pendingBook();
+    const ctx = () => ({ params: Promise.resolve({ id: request.id }) });
+    const first = await approveInbox(inboxPost(`${request.id}/approve`, token, "k-approve"), ctx());
+    const second = await approveInbox(
+      inboxPost(`${request.id}/approve`, token, "k-approve"),
+      ctx(),
+    );
+    expect(second.status).toBe(200);
+    expect(await second.json()).toEqual(await first.json());
+    expect(await prisma.appointment.count()).toBe(2);
+    expect(await prisma.simAppointment.count()).toBe(2);
+  });
+
+  it("la misma clave en otra ruta responde 409", async () => {
+    const { request, token } = await pendingBook();
+    const ctx = () => ({ params: Promise.resolve({ id: request.id }) });
+    await approveInbox(inboxPost(`${request.id}/approve`, token, "k-shared"), ctx());
+    const conflict = await rejectInbox(inboxPost(`${request.id}/reject`, token, "k-shared"), ctx());
+    expect(conflict.status).toBe(409);
+  });
+
+  it("un cursor manipulado en la bandeja es 422, nunca 500", async () => {
+    const { token } = await pendingBook();
+    const response = await listSimInbox(
+      authedRequest("http://localhost/api/sim/v1/inbox?cursor=no-es-un-cursor%24", token),
+    );
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.code).toBe("validation_failed");
   });
 });
