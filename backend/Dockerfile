@@ -13,16 +13,19 @@ COPY . .
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=public
 RUN npx prisma generate && npm run build
 
-# Herramientas de operacion: CLI de Prisma para migrar y tsx para el seed.
+# Herramientas de operacion: migraciones, seed y demo (token + datos de prueba).
 FROM node:26-alpine AS tools
 RUN apk add --no-cache openssl
 WORKDIR /app/tools
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev --no-audit --no-fund
+COPY tsconfig.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
+COPY scripts/demo.ts ./scripts/demo.ts
 COPY src/config ./src/config
-COPY src/modules/shared/infrastructure/prisma-client.ts ./src/modules/shared/infrastructure/prisma-client.ts
+COPY src/modules/shared ./src/modules/shared
+COPY src/modules/knowledge/domain ./src/modules/knowledge/domain
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=public
 RUN npx prisma generate
 
@@ -39,6 +42,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=tools --chown=nextjs:nodejs /app/tools ./tools
 COPY --chown=nextjs:nodejs docker/entrypoint.sh ./entrypoint.sh
+COPY --chown=nextjs:nodejs docker/demo.sh ./demo.sh
+RUN chmod +x /app/demo.sh /app/entrypoint.sh
 USER nextjs
 EXPOSE 3001
 CMD ["sh", "/app/entrypoint.sh"]
