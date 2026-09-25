@@ -3,6 +3,10 @@ import {
   type CreateAppointmentRequestCommand,
   createCreateAppointmentRequest,
 } from "@/modules/scheduling/application/create-appointment-request";
+import {
+  createResolveAppointmentRequest,
+  type ResolveAppointmentRequestInput,
+} from "@/modules/scheduling/application/resolve-appointment-request";
 import type { PreAgendaPolicyValues } from "@/modules/scheduling/domain/ports/pre-agenda";
 import { createPrismaPreAgendaStore } from "@/modules/scheduling/infrastructure/prisma-pre-agenda-store";
 import type { Clock } from "@/modules/shared/domain/ports/clock";
@@ -303,6 +307,17 @@ export function createRequest(
         ...preAgendaDeps(tx, clock),
         policy: { read: async () => policy },
       })(command),
+    TX_OPTIONS,
+  );
+}
+
+export function resolveRequest(
+  prisma: PrismaClient,
+  clock: Clock,
+  input: ResolveAppointmentRequestInput,
+) {
+  return prisma.$transaction(
+    (tx) => createResolveAppointmentRequest(preAgendaDeps(tx, clock))(input),
     TX_OPTIONS,
   );
 }

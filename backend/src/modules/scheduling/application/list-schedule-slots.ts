@@ -5,6 +5,7 @@ import type { TenantId } from "@/modules/shared/domain/tenant-id";
 import type { TenantSettingsRepository } from "@/modules/tenancy/domain/ports/tenant-settings-repository";
 import type { Slot } from "../domain/entities";
 import type { ScheduleRepository, SlotRepository } from "../domain/ports/repositories";
+import type { ExpireDueRequests } from "./appointment-request-queries";
 
 export type ListScheduleSlotsInput = {
   readonly tenantId: TenantId;
@@ -22,6 +23,7 @@ export function createListScheduleSlots(
   schedules: ScheduleRepository,
   slots: SlotRepository,
   tenantSettings: TenantSettingsRepository,
+  expire: ExpireDueRequests,
 ): ListScheduleSlots {
   return async (input) => {
     const schedule = await schedules.get(input.tenantId, input.scheduleId);
@@ -42,6 +44,7 @@ export function createListScheduleSlots(
     if (input.cursor) {
       decodeCursor(input.cursor);
     }
+    await expire(input.tenantId);
     return slots.listBySchedule({
       tenantId: input.tenantId,
       scheduleId: input.scheduleId,
