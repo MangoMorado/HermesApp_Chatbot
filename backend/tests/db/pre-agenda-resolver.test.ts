@@ -156,14 +156,30 @@ describe("pre-agenda: resolucion y vencimiento", () => {
     });
   });
 
-  it("dos resoluciones simultaneas: una gana y se crea una sola cita", async () => {
+  it("dos resoluciones simultaneas (aprobar y rechazar): gana una y el estado es coherente", async () => {
     const request = await book(slotAt(world, 0));
     const results = await Promise.allSettled([
       resolve(request.id, APPROVE),
-      resolve(request.id, APPROVE),
+      resolve(request.id, DECLINE),
     ]);
-    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-    expect(await prisma.appointment.count()).toBe(2);
+    type Fulfilled = Extract<(typeof results)[number], { status: "fulfilled" }>;
+    const isRejected = (r: (typeof results)[number]): r is PromiseRejectedResult =>
+      r.status === "rejected";
+    const isFulfilled = (r: (typeof results)[number]): r is Fulfilled => r.status === "fulfilled";
+    const fulfilled = results.filter(isFulfilled);
+    const rejected = results.filter(isRejected);
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0]?.reason).toMatchObject({ details: { reason: "request_not_pending" } });
+    const winner = fulfilled[0]?.value;
+    if (winner?.status === "approved") {
+      expect(await status(slotAt(world, 0))).toBe("busy");
+      expect(await prisma.appointment.count()).toBe(2);
+    } else {
+      expect(winner?.status).toBe("rejected");
+      expect(await status(slotAt(world, 0))).toBe("free");
+      expect(await prisma.appointment.count()).toBe(1);
+    }
   });
 
   it("resolver una solicitud de otro tenant es 404", async () => {
