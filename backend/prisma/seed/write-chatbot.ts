@@ -11,10 +11,11 @@ const LOCAL_WIDGET_ORIGIN = "http://localhost:3000";
 /**
  * Borra lo que ya exista de estos tenants antes de volver a insertar. Sin esto, sembrar
  * con un ancla distinta deja cupos y citas de la fecha anterior huerfanos (cupos "busy"
- * sin cita que los referencie). Orden de FK: citas -> cupos -> agendas -> servicios ->
- * profesionales -> historias clinicas. Los tenants no se borran, solo se refrescan.
+ * sin cita que los referencie). Orden de FK: solicitudes -> citas -> cupos -> agendas ->
+ * servicios -> profesionales -> historias clinicas. Los tenants no se borran, solo se refrescan.
  */
 async function deleteExisting(tx: Tx, tenantIds: string[]): Promise<void> {
+  await tx.appointmentRequest.deleteMany({ where: { tenantId: { in: tenantIds } } });
   await tx.appointment.deleteMany({ where: { tenantId: { in: tenantIds } } });
   await tx.slot.deleteMany({ where: { tenantId: { in: tenantIds } } });
   await tx.schedule.deleteMany({ where: { tenantId: { in: tenantIds } } });

@@ -256,3 +256,23 @@ Solo se regenera el cliente orval del simulador. La interfaz de la bandeja es de
 Chat, conversaciones, verificación y pre-registro (3.3); interfaz de la bandeja (3.4); FHIR
 (Fase 4); barrido periódico (Fase 5); ruta REST de creación de solicitudes y solicitudes en el
 seed.
+
+## 13. Refinamientos al planificar
+
+Salen de leer el código al escribir el plan (`docs/superpowers/plans/2026-09-25-fase-3-2-pre-agenda.md`);
+mandan sobre el texto anterior donde choquen.
+
+1. **Sin `PreAgendaUnitOfWork` propio.** Toda escritura ya corre dentro de `withWriteTransaction` y Prisma
+   no anida transacciones interactivas. `PreAgendaStore` se construye sobre el ejecutor de esa
+   transacción y la creación empieza con `lockMedicalRecord` (`SELECT … FOR UPDATE`).
+2. **Un solo `expireDue(tenantId, now, scope?)`**, con `scope` `{ slotId }` o `{ appointmentId }`, en
+   vez de `expireDueOnSlot` / `expireDueOnAppointment`. `RequestExpirer` es ese método.
+3. **Resolver una solicitud vencida** responde `409 request_not_pending` con `details.status = "expired"`
+   sin persistir el vencimiento: el error revierte la transacción y la siguiente lectura la vence.
+4. **Bandeja en una sola transacción.** En la 3.2 la escritura de `hermes_sim` y
+   `resolveAppointmentRequest` comparten la transacción; si el chatbot responde `request_not_pending`,
+   la reversión deshace lo escrito en `hermes_sim` sin compensación manual. En la Fase 4 (HTTP) hará
+   falta compensar.
+5. **Errores añadidos:** `409 appointment_not_in_hermes` (el simulador no conoce la cita a cancelar o
+   reprogramar) y cita de otro paciente del mismo tenant → `404`.
+6. **FK compuestas opcionales** con `onDelete: Restrict`; `appointments` gana `@@unique([tenantId, id])`.
