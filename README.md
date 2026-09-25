@@ -6,9 +6,9 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fases 1 y 2 cerradas. Dominio persistido, APIs `/api/v1` y `/api/sim/v1`,
-> panel/simulador con clientes orval, y suites de aislamiento/idempotencia contra
-> Postgres en CI. Fase 3 (chat, pre-agenda, emisión de tokens) aún no abierta.
+> Estado: Fases 1 y 2 cerradas. Fase 3 en curso: la 3.1 (emisión de tokens por
+> `/api/platform/v1`, sesiones del widget, `bot-config` y base de conocimiento) está en
+> `main`; siguen la 3.2 (pre-agenda), la 3.3 (motor conversacional) y la 3.4 (frontend del chat).
 
 ## Requisitos
 
