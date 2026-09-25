@@ -25,6 +25,15 @@ El servicio solo origina **solicitudes** y pre-registros. Nunca confirma, modifi
 cancela por su cuenta una cita en firme: eso lo resuelve Hermes y llega de vuelta por
 FHIR. Cualquier estado propio es provisional hasta que Hermes lo resuelva.
 
+**Política de apartado (pre-agenda, Fase 3.2).** Una solicitud `book` o `reschedule` pasa el
+cupo de `free` a `busy_tentative` en la misma transacción que la crea; dos solicitudes
+concurrentes nunca apartan el mismo cupo. El apartado vence a los `request_hold_minutes` del
+tenant (240 por defecto, 15–4320) o al inicio del cupo si llega antes; las cancelaciones no
+apartan cupo y vencen con el mismo plazo. Cada historia clínica admite como máximo
+`max_pending_requests_per_patient` solicitudes `book`/`reschedule` vivas (2 por defecto, 1–5);
+las cancelaciones no cuentan. Cada cita en firme admite una sola solicitud de cambio viva. El
+vencimiento se evalúa al leer y al crear o resolver; nunca se resuelve una solicitud vencida.
+
 ### 1.3 Multitenancy por token
 
 El `tenant_id` se toma **solo** del claim del JWT. Nunca del body, del query string ni de

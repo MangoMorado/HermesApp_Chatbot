@@ -1,6 +1,6 @@
 # Fase 3.2 — Pre-agenda (diseño)
 
-> Estado: **diseño aprobado**, pendiente de plan.
+> Estado: **implementada** en la rama `fase-3-2-pre-agenda` (pendiente de merge por el usuario).
 > Fuente del alcance: `ROADMAP.md` §Fase 3, entregables 6, 8 y 10; corte de sub-proyectos en la
 > §1 de `2026-09-22-fase-3-1-tenant-listo-design.md`. Manda `GOBERNANZA.md` ante cualquier conflicto.
 

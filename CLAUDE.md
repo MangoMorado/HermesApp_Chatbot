@@ -13,7 +13,7 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 **Fase 3 en curso**, en cuatro sub-proyectos (corte en la §1 de la spec de la 3.1):
 
 - **3.1 tenant listo para chatear — cerrada** y en `main` (PR #3). Spec en `docs/superpowers/specs/2026-09-22-fase-3-1-tenant-listo-design.md`: emisión de tokens por `/api/platform/v1`, sesiones del widget con rate limit in-memory, `bot-config` con rotación de clave y base de conocimiento CRUD.
-- **3.2 pre-agenda — siguiente**: solicitudes, apartado atómico `free` → `busy_tentative`, vencimiento al leer, bandeja del simulador. Sin spec todavía.
+- **3.2 pre-agenda — implementada** en la rama `fase-3-2-pre-agenda` (spec en `docs/superpowers/specs/2026-09-25-fase-3-2-pre-agenda-design.md`): tabla `appointment_requests`, apartado atómico `free` → `busy_tentative`, tope por paciente, vencimiento al leer y bandeja del simulador (`/api/sim/v1/inbox`) que resuelve en proceso vía `ChatbotRequestsGateway`. El motor de la 3.3 consume `createAppointmentRequest` (en `WritePorts`).
 - 3.3 motor conversacional y 3.4 frontend (`/chat`, bandeja, KB, config): pendientes. Requisito de entrada de la primera que toque el widget: resolver CORS/proxy (§11 de la spec de la 3.1).
 
 Fuera del plan de fases, `main` incluye el rediseño del panel operativo (tablero oscuro; sistema visual en `DESIGN.md`).
