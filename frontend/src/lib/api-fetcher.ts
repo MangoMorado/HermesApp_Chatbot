@@ -22,6 +22,18 @@ export class ApiClientError extends Error {
   }
 }
 
+/** `undefined` si el cuerpo no es JSON; `null` si viene vacío. */
+function parseJson(text: string): unknown {
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Mutator orval: fetch + Bearer desde sessionStorage. Las URLs son relativas
  * (`/api/v1/...`): las atiende el proxy same-origin de `app/api/[...path]`.
@@ -46,7 +58,11 @@ export async function apiFetcher<T>(url: string, options?: RequestInit): Promise
   }
 
   const text = await response.text();
-  const data = text ? (JSON.parse(text) as unknown) : null;
+  const data = parseJson(text);
+  if (data === undefined) {
+    // Una página HTML (proxy caído, error del servidor de desarrollo) no es el contrato REST.
+    throw new ApiClientError(response.status, null, `HTTP ${response.status}: respuesta sin JSON`);
+  }
 
   if (!response.ok) {
     throw new ApiClientError(

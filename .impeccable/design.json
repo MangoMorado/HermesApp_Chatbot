@@ -1,0 +1,575 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-25T15:11:36.581Z",
+  "title": "Design System: Ingenius360",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Índigo Noche",
+        "canonical": "#140c33",
+        "tonalRamp": [
+          "#0b0327",
+          "#231d45",
+          "#3d3964",
+          "#5b5785",
+          "#7d7aaa",
+          "#a19ed1",
+          "#c8c7e6",
+          "#ecebff"
+        ]
+      },
+      "board": {
+        "role": "neutral",
+        "displayName": "Cara del Tablero",
+        "canonical": "#1e1450",
+        "tonalRamp": [
+          "#0c0034",
+          "#201753",
+          "#3a3574",
+          "#575496",
+          "#7877bc",
+          "#9c9ce4",
+          "#c4c6f3",
+          "#e8eaff"
+        ]
+      },
+      "cell": {
+        "role": "neutral",
+        "displayName": "Celda",
+        "canonical": "#271a63",
+        "tonalRamp": [
+          "#0e003b",
+          "#21125b",
+          "#3a327c",
+          "#57519f",
+          "#7875c6",
+          "#9b9aee",
+          "#c4c5f9",
+          "#e8e9ff"
+        ]
+      },
+      "cell-hi": {
+        "role": "neutral",
+        "displayName": "Celda Encendida",
+        "canonical": "#30207a",
+        "tonalRamp": [
+          "#100044",
+          "#220765",
+          "#3a2d87",
+          "#554eab",
+          "#7672d2",
+          "#9997fb",
+          "#c2c4ff",
+          "#e6e8ff"
+        ]
+      },
+      "slot": {
+        "role": "neutral",
+        "displayName": "Ranura",
+        "canonical": "#0f0a28",
+        "tonalRamp": [
+          "#0a0522",
+          "#221f3f",
+          "#3d3b5d",
+          "#5b597e",
+          "#7d7ba2",
+          "#a1a0c8",
+          "#c8c8e1",
+          "#ececff"
+        ]
+      },
+      "flap-top": {
+        "role": "neutral",
+        "displayName": "Tapa de Paleta",
+        "canonical": "#181040",
+        "tonalRamp": [
+          "#0b002d",
+          "#211b4b",
+          "#3b386b",
+          "#58568d",
+          "#7a79b2",
+          "#9e9dd9",
+          "#c6c7ec",
+          "#eaebff"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Filete",
+        "canonical": "#3a2c86",
+        "tonalRamp": [
+          "#110043",
+          "#230665",
+          "#3b2d87",
+          "#564daa",
+          "#7771d2",
+          "#9a97fb",
+          "#c3c4ff",
+          "#e7e8ff"
+        ]
+      },
+      "rule-soft": {
+        "role": "neutral",
+        "displayName": "Filete Tenue",
+        "canonical": "#2c1f6e",
+        "tonalRamp": [
+          "#0e003e",
+          "#210f5f",
+          "#3a3080",
+          "#5650a3",
+          "#7774ca",
+          "#9a99f3",
+          "#c3c5fc",
+          "#e7e9ff"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "#f4f1ff",
+        "tonalRamp": [
+          "#0c0a12",
+          "#25222c",
+          "#403e49",
+          "#5e5c67",
+          "#817e8b",
+          "#a5a2af",
+          "#cbc9d1",
+          "#efedf5"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Lavanda Media",
+        "canonical": "#b9b0e0",
+        "tonalRamp": [
+          "#0e0324",
+          "#261c41",
+          "#413860",
+          "#5f5681",
+          "#8279a6",
+          "#a69dcc",
+          "#cbc6e3",
+          "#efeaff"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Lavanda Apagada",
+        "canonical": "#9d94c9",
+        "tonalRamp": [
+          "#0e0128",
+          "#261b46",
+          "#413765",
+          "#5f5586",
+          "#8178ab",
+          "#a59cd2",
+          "#cbc6e7",
+          "#eeeaff"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Violeta Ingenius",
+        "canonical": "#8851fa",
+        "tonalRamp": [
+          "#220064",
+          "#360088",
+          "#4e00ad",
+          "#6a26d3",
+          "#8b54fd",
+          "#ae7dff",
+          "#ceb8ff",
+          "#f1dcff"
+        ]
+      },
+      "accent-hi": {
+        "role": "primary",
+        "displayName": "Violeta Encendido",
+        "canonical": "#9d6bff",
+        "tonalRamp": [
+          "#200058",
+          "#35007b",
+          "#4f009f",
+          "#6c31c4",
+          "#8e5aed",
+          "#b281ff",
+          "#d1b9ff",
+          "#f5ddff"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Blanco de Acción",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#808080",
+          "#a4a4a4",
+          "#cacaca",
+          "#eeeeee"
+        ]
+      },
+      "focus": {
+        "role": "neutral",
+        "displayName": "Anillo de Foco",
+        "canonical": "#c8b0fb",
+        "tonalRamp": [
+          "#140030",
+          "#2c114f",
+          "#483070",
+          "#664e91",
+          "#8971b7",
+          "#ad96df",
+          "#d0c2ef",
+          "#f4e6ff"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "Verde Libre",
+        "canonical": "#4ade9a",
+        "tonalRamp": [
+          "#001900",
+          "#003600",
+          "#00561c",
+          "#00763a",
+          "#009b5c",
+          "#1dc280",
+          "#93deb4",
+          "#b6ffd8"
+        ]
+      },
+      "hold": {
+        "role": "status",
+        "displayName": "Ámbar Tentativo",
+        "canonical": "#f2c94c",
+        "tonalRamp": [
+          "#210000",
+          "#3e1900",
+          "#5d3700",
+          "#7d5700",
+          "#a17a00",
+          "#c79f05",
+          "#e0c987",
+          "#ffedaa"
+        ]
+      },
+      "busy": {
+        "role": "status",
+        "displayName": "Rosa Ocupado",
+        "canonical": "#ff7a93",
+        "tonalRamp": [
+          "#350000",
+          "#5a0011",
+          "#7f002b",
+          "#a42548",
+          "#cd4d69",
+          "#f8748d",
+          "#ffb0bc",
+          "#ffd4df"
+        ]
+      },
+      "off": {
+        "role": "status",
+        "displayName": "Gris Fuera de Servicio",
+        "canonical": "#9d94c9",
+        "tonalRamp": [
+          "#0e0128",
+          "#261b46",
+          "#413765",
+          "#5f5586",
+          "#8178ab",
+          "#a59cd2",
+          "#cbc6e7",
+          "#eeeaff"
+        ]
+      },
+      "info": {
+        "role": "status",
+        "displayName": "Lavanda Informativa",
+        "canonical": "#c8b0fb",
+        "tonalRamp": [
+          "#140030",
+          "#2c114f",
+          "#483070",
+          "#664e91",
+          "#8971b7",
+          "#ad96df",
+          "#d0c2ef",
+          "#f4e6ff"
+        ]
+      },
+      "danger": {
+        "role": "error",
+        "displayName": "Naranja de Error",
+        "canonical": "#ff9b6b",
+        "tonalRamp": [
+          "#2f0000",
+          "#520000",
+          "#751c00",
+          "#983e00",
+          "#c06232",
+          "#e98757",
+          "#f8bb9e",
+          "#ffdec1"
+        ]
+      },
+      "danger-ground": {
+        "role": "error",
+        "displayName": "Vino de Aviso",
+        "canonical": "#3b1a2a",
+        "tonalRamp": [
+          "#1b010e",
+          "#381727",
+          "#573343",
+          "#775061",
+          "#9b7384",
+          "#c196a9",
+          "#ddc2cd",
+          "#ffe6f1"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Título de página (h1), uno por pantalla."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Título de tablero."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "h2 de secciones, nombre de registro y de destino."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto corrido; descripciones hasta 68ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Nombre humano del campo; pistas y pies."
+      },
+      "column-head": {
+        "displayName": "Column head",
+        "purpose": "Solo encabezados de columna del tablero, en mayúsculas."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Ids, claves de API, fechas, reloj, códigos de error, request_id y valores técnicos en inputs."
+      },
+      "tile": {
+        "displayName": "Tile",
+        "purpose": "Horas en paleta neutra."
+      },
+      "flap": {
+        "displayName": "Flap",
+        "purpose": "Rótulo de estado en mayúsculas dentro de la paleta."
+      }
+    },
+    "shadows": [
+      {
+        "name": "selected-row-ring",
+        "value": "inset 0 0 0 1px var(--accent)",
+        "purpose": "Contorno interior violeta de la fila seleccionada del tablero; es un borde, no una elevación. Única sombra del sistema."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Curva única de todas las transiciones."
+      },
+      {
+        "name": "state-transition",
+        "value": "160ms",
+        "purpose": "Color y filetes de botones, inputs, andenes, chip y salidas."
+      },
+      {
+        "name": "row-hover",
+        "value": "120ms",
+        "purpose": "Fondo de fila del tablero y hundido de botón al pulsar."
+      },
+      {
+        "name": "flap-in",
+        "value": "240ms; rotateX(-88deg) a 0 con brightness(1.6); retardo 24ms por fila (máx. 16)",
+        "purpose": "Volteo de las paletas de estado al llegar datos; nulo con prefers-reduced-motion."
+      },
+      {
+        "name": "shimmer",
+        "value": "1.2s linear infinite",
+        "purpose": "Brillo de las filas skeleton; nulo con prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "760px"
+      },
+      {
+        "name": "stack",
+        "value": "1080px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Acción por defecto: celda con filete; hover a celda encendida con filete teñido de violeta.",
+      "html": "<button class=\"ds-btn\">Ver agenda</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 16px; border: 1px solid var(--rule, #3a2c86); border-radius: var(--radius, 6px); background: var(--cell, #271a63); color: var(--ink, #f4f1ff); font-family: var(--font-ui, Figtree), system-ui, sans-serif; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms cubic-bezier(0.16,1,0.3,1), transform 120ms cubic-bezier(0.16,1,0.3,1); } .ds-btn:hover { background: var(--cell-hi, #30207a); border-color: color-mix(in srgb, var(--accent, #8851fa) 60%, var(--rule, #3a2c86)); } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid var(--focus, #c8b0fb); outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Una acción primaria por grupo; único relleno con el violeta de marca.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Buscar libres</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 16px; border: 1px solid var(--rule, #3a2c86); border-radius: var(--radius, 6px); background: var(--cell, #271a63); color: var(--ink, #f4f1ff); font-family: var(--font-ui, Figtree), system-ui, sans-serif; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms cubic-bezier(0.16,1,0.3,1), transform 120ms cubic-bezier(0.16,1,0.3,1); } .ds-btn:hover { background: var(--cell-hi, #30207a); border-color: color-mix(in srgb, var(--accent, #8851fa) 60%, var(--rule, #3a2c86)); } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid var(--focus, #c8b0fb); outline-offset: 2px; } .ds-btn-primary { background: var(--accent, #8851fa); border-color: var(--accent, #8851fa); color: var(--accent-ink, #fff); } .ds-btn-primary:hover { background: var(--accent-hi, #9d6bff); border-color: var(--accent-hi, #9d6bff); }"
+    },
+    {
+      "name": "Botón ghost pequeño",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Acciones terciarias: copiar request_id, recargar.",
+      "html": "<button class=\"ds-btn ds-btn-ghost ds-btn-small\">Copiar request_id</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 16px; border: 1px solid var(--rule, #3a2c86); border-radius: var(--radius, 6px); background: var(--cell, #271a63); color: var(--ink, #f4f1ff); font-family: var(--font-ui, Figtree), system-ui, sans-serif; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms cubic-bezier(0.16,1,0.3,1), transform 120ms cubic-bezier(0.16,1,0.3,1); } .ds-btn:hover { background: var(--cell-hi, #30207a); border-color: color-mix(in srgb, var(--accent, #8851fa) 60%, var(--rule, #3a2c86)); } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid var(--focus, #c8b0fb); outline-offset: 2px; } .ds-btn-ghost { background: transparent; border-color: transparent; color: var(--ink-2, #b9b0e0); } .ds-btn-ghost:hover { color: var(--ink, #f4f1ff); } .ds-btn-small { height: 28px; padding: 0 10px; font-size: 0.8125rem; }"
+    },
+    {
+      "name": "Campo de dos capas",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Rótulo con nombre humano y clave de API; input en ranura con foco de 2 px.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Desde<span class=\"ds-field-key\">from</span></span><input class=\"ds-input ds-data\" value=\"2026-09-22\"></label>",
+      "css": ".ds-field { display: grid; gap: 4px; width: 200px; } .ds-field-label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-family: var(--font-ui, Figtree), system-ui, sans-serif; font-size: 0.8125rem; font-weight: 550; color: var(--ink, #f4f1ff); } .ds-field-key { font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; font-size: 0.6875rem; font-weight: 400; color: var(--ink-3, #9d94c9); } .ds-input { height: 36px; padding: 0 12px; border: 1px solid var(--rule, #3a2c86); border-radius: var(--radius, 6px); background: var(--slot, #0f0a28); color: var(--ink, #f4f1ff); font-family: var(--font-ui, Figtree), system-ui, sans-serif; transition: border-color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-input.ds-data { font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; font-size: 0.8125rem; } .ds-input:hover { border-color: color-mix(in srgb, var(--accent, #8851fa) 50%, var(--rule, #3a2c86)); } .ds-input:focus-visible { outline: 2px solid var(--focus, #c8b0fb); outline-offset: 0; border-color: transparent; }"
+    },
+    {
+      "name": "Marquesina",
+      "kind": "nav",
+      "refersTo": "marquee",
+      "description": "Barra superior de 56 px con andenes numerados; activo con subrayado violeta.",
+      "html": "<header class=\"ds-marquee\"><nav class=\"ds-platforms\"><a class=\"ds-platform\" aria-current=\"page\" href=\"#\">Panel <kbd class=\"ds-kbd\">1</kbd></a><a class=\"ds-platform\" href=\"#\">Ajustes <kbd class=\"ds-kbd\">2</kbd></a><a class=\"ds-platform\" href=\"#\">Simulador <kbd class=\"ds-kbd\">3</kbd></a></nav></header>",
+      "css": ".ds-marquee { display: flex; align-items: center; height: 56px; padding: 0 24px; background: var(--board, #1e1450); border-bottom: 1px solid var(--rule, #3a2c86); } .ds-platforms { display: flex; gap: 4px; height: 100%; } .ds-platform { display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--ink-2, #b9b0e0); text-decoration: none; font-family: var(--font-ui, Figtree), system-ui, sans-serif; font-weight: 550; border-bottom: 2px solid transparent; transition: color 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-platform:hover { color: var(--ink, #f4f1ff); } .ds-platform:focus-visible { outline: 2px solid var(--focus, #c8b0fb); outline-offset: 2px; } .ds-platform[aria-current=\"page\"] { color: var(--ink, #f4f1ff); border-bottom-color: var(--accent, #8851fa); } .ds-kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border: 1px solid var(--rule, #3a2c86); border-radius: 4px; background: var(--slot, #0f0a28); color: var(--ink-3, #9d94c9); font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; font-size: 0.6875rem; } .ds-platform[aria-current=\"page\"] .ds-kbd { color: var(--ink, #f4f1ff); border-color: var(--accent, #8851fa); }"
+    },
+    {
+      "name": "Chip de sesión",
+      "kind": "chip",
+      "refersTo": "session-chip",
+      "description": "Píldora con rol · tenant y tecla 4; abre la franja de sesión.",
+      "html": "<button class=\"ds-chip\">admin · 74906d2a <kbd class=\"ds-kbd\">4</kbd></button>",
+      "css": ".ds-chip { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 1px solid var(--rule, #3a2c86); border-radius: 999px; background: var(--slot, #0f0a28); color: var(--ink, #f4f1ff); font-family: var(--font-ui, Figtree), system-ui, sans-serif; font-size: 0.8125rem; cursor: pointer; transition: border-color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-chip:hover { border-color: var(--accent, #8851fa); } .ds-chip:focus-visible { outline: 2px solid var(--focus, #c8b0fb); outline-offset: 2px; } .ds-kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border: 1px solid var(--rule, #3a2c86); border-radius: 4px; background: var(--slot, #0f0a28); color: var(--ink-3, #9d94c9); font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; font-size: 0.6875rem; }"
+    },
+    {
+      "name": "Paleta de estado",
+      "kind": "custom",
+      "refersTo": "flap",
+      "description": "Único portador de color de estado; voltea al llegar datos.",
+      "html": "<span class=\"ds-flap\" data-tone=\"ok\">LIBRE</span> <span class=\"ds-flap\" data-tone=\"hold\">TENTATIVO</span> <span class=\"ds-flap\" data-tone=\"busy\">OCUPADO</span> <span class=\"ds-flap\">NO DISPONIBLE</span> <span class=\"ds-flap\" data-tone=\"info\">AGENDADA</span>",
+      "css": ".ds-flap { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 4px; background: linear-gradient(to bottom, var(--flap-top, #181040) 50%, var(--slot, #0f0a28) 50%); color: var(--off, #9d94c9); font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; white-space: nowrap; transform-origin: 50% 0; animation: ds-flap-in 240ms cubic-bezier(0.16,1,0.3,1) backwards; } .ds-flap[data-tone=\"ok\"] { color: var(--ok, #4ade9a); } .ds-flap[data-tone=\"hold\"] { color: var(--hold, #f2c94c); } .ds-flap[data-tone=\"busy\"] { color: var(--busy, #ff7a93); } .ds-flap[data-tone=\"info\"] { color: var(--info, #c8b0fb); } @keyframes ds-flap-in { from { transform: perspective(200px) rotateX(-88deg); filter: brightness(1.6); } } @media (prefers-reduced-motion: reduce) { .ds-flap { animation: none; } }"
+    },
+    {
+      "name": "Tile de hora",
+      "kind": "custom",
+      "refersTo": "tile",
+      "description": "Hora en paleta neutra, sin color de estado.",
+      "html": "<time class=\"ds-tile\">08:30</time>",
+      "css": ".ds-tile { display: inline-flex; align-items: center; height: 28px; padding: 0 8px; border-radius: 4px; background: linear-gradient(to bottom, var(--flap-top, #181040) 50%, var(--slot, #0f0a28) 50%); color: var(--ink, #f4f1ff); font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }"
+    },
+    {
+      "name": "Tablero",
+      "kind": "card",
+      "refersTo": "board",
+      "description": "Contenedor plano con encabezado de columnas, fila de día en mono y filas de 44 px.",
+      "html": "<div class=\"ds-board\"><table class=\"ds-table\"><thead><tr><th style=\"width:1%\">Sale</th><th>Estado</th></tr></thead><tbody><tr class=\"ds-group\"><th colspan=\"2\">MAR 22 SEP</th></tr><tr class=\"ds-row\"><td>08:00</td><td>LIBRE</td></tr><tr class=\"ds-row\" data-selected=\"true\"><td>08:30</td><td>OCUPADO</td></tr></tbody></table></div>",
+      "css": ".ds-board { width: 360px; background: var(--board, #1e1450); border: 1px solid var(--rule, #3a2c86); border-radius: 12px; overflow: hidden; color: var(--ink, #f4f1ff); font-family: var(--font-ui, Figtree), system-ui, sans-serif; } .ds-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; } .ds-table thead th { padding: 8px 20px; background: var(--cell, #271a63); color: var(--ink-2, #b9b0e0); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-align: left; text-transform: uppercase; } .ds-group th { padding: 16px 20px 8px; font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; font-size: 0.75rem; letter-spacing: 0.06em; } .ds-row td { height: 44px; padding: 4px 20px; border-top: 1px solid var(--rule-soft, #2c1f6e); font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; } .ds-row { transition: background-color 120ms cubic-bezier(0.16,1,0.3,1); } .ds-row:hover { background: var(--cell, #271a63); } .ds-row[data-selected=\"true\"] { background: var(--cell-hi, #30207a); box-shadow: inset 0 0 0 1px var(--accent, #8851fa); }"
+    },
+    {
+      "name": "Aviso de error",
+      "kind": "custom",
+      "refersTo": "notice-error",
+      "description": "Franja de error: código del contrato, mensaje y request_id.",
+      "html": "<div class=\"ds-notice\" role=\"alert\"><span class=\"ds-notice-code\">not_found</span><span>Recurso no encontrado</span><span class=\"ds-notice-trace\">request_id 9f1c…</span></div>",
+      "css": ".ds-notice { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 4px 16px; align-items: center; padding: 12px 16px; border: 1px solid var(--danger, #ff9b6b); border-radius: 6px; background: var(--danger-ground, #3b1a2a); color: var(--ink, #f4f1ff); font-family: var(--font-ui, Figtree), system-ui, sans-serif; } .ds-notice-code { color: var(--danger, #ff9b6b); font-weight: 600; font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; font-size: 0.8125rem; } .ds-notice-trace { grid-column: 2; color: var(--ink-2, #b9b0e0); font-family: var(--font-data, 'Martian Mono'), ui-monospace, monospace; font-size: 0.8125rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El tablero de salidas",
+    "overview": "El panel de Ingenius360 se lee como el tablero de salidas de una terminal: cada cupo, cita o registro es una fila de celdas de ancho fijo y su estado se lee de un vistazo en una paleta split-flap. El mundo es un índigo casi negro tomado del peso profundo del logotipo, con la cara del tablero y sus celdas escalonadas en tonos de la misma familia, filetes finos en lugar de sombras y el violeta de marca reservado para la acción primaria y la selección.\n\nLa densidad es operativa: filas de 44 px, encabezados de columna pequeños y pegajosos, datos técnicos (horas, fechas, ids, claves de API) en fuente monoespaciada y todo lo humano en Figtree, la sans geométrica que acompaña al wordmark. El color de estado es ley: vive solo en las paletas, así que un vistazo al tablero dice qué está libre sin que nada más compita por el ojo. La navegación también es de terminal: una marquesina de 56 px con los andenes (pantallas) numerados y atajos de teclado 1 a 4.\n\nRechazo confirmado: la consola SaaS de tarjetas con barra lateral y resplandor violeta. Aquí no hay glow, ni sombras de tarjeta, ni barra lateral.",
+    "keyCharacteristics": [
+      "Tema oscuro índigo de una sola familia tonal (ground → board → cell → cell-hi).",
+      "Profundidad por tono y filete de 1 px, nunca por sombra.",
+      "Paleta split-flap como único portador de color de estado; horas en paletas neutras.",
+      "Dos fuentes con frontera estricta: Figtree para lo humano, Martian Mono para lo técnico.",
+      "Retícula de 4 px.",
+      "Rótulos de dos capas: nombre humano y clave de API."
+    ],
+    "rules": [
+      {
+        "name": "The Status-Is-Law Rule",
+        "body": "El color de estado vive solo en la paleta (`.flap`). Verde solo para LIBRE; ámbar tentativo; rosa ocupado; gris no disponible o inactivo; lavanda para cualquier otro estado positivo o neutro. Ningún texto, borde, fondo, icono o gráfico fuera de la paleta usa ok, hold o busy.",
+        "section": "colors"
+      },
+      {
+        "name": "The Orange-Means-Error Rule",
+        "body": "El naranja (danger) es el idioma del error: avisos de error y la confirmación armada de un borrado. Jamás marca un estado de negocio.",
+        "section": "colors"
+      },
+      {
+        "name": "The Violet-Is-Action Rule",
+        "body": "El violeta de marca aparece solo donde el usuario actúa o ha elegido: botón primario, andén/pestaña activos, fila seleccionada. Un violeta decorativo es un error.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Voices Rule",
+        "body": "Martian Mono solo para horas, fechas, ids, claves técnicas y el rotulado de paletas y tiles. Todo texto humano va en Figtree, incluido el texto de las opciones de un `select`. Un input lleva la clase de datos solo si su valor es técnico (fecha, token, id, número de documento).",
+        "section": "typography"
+      },
+      {
+        "name": "The Two-Layer Label Rule",
+        "body": "Cada campo se rotula en dos capas en la misma línea: el nombre humano (Label, ink) a la izquierda y la clave del contrato de API (Data 0.6875rem, ink-3) alineada a la derecha.",
+        "section": "typography"
+      },
+      {
+        "name": "The Departure-Board Rule",
+        "body": "Las filas de los tableros se agrupan por día bajo una fila separadora en mono; las horas van en tiles neutros; las columnas de hora, ids y claves se ciñen a su contenido (ancho 1%) y la columna de estado ocupa el resto.",
+        "section": "layout"
+      },
+      {
+        "name": "The Narrow-Board Rule",
+        "body": "A ≤760px las columnas marcadas como opcionales desaparecen, el relleno lateral de celdas baja de 20 a 8 px, el wordmark cede al isotipo y se ocultan reloj y teclas `kbd`. Las columnas esenciales (hora y estado) nunca se ocultan.",
+        "section": "layout"
+      },
+      {
+        "name": "The Tone-Not-Shadow Rule",
+        "body": "Para separar o elevar, sube un escalón tonal (ground → board → cell → cell-hi) o añade un filete; nunca una sombra ni un resplandor.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** poner cada estado de negocio en una paleta (`Flap`) y en ningún otro sitio: verde solo LIBRE, ámbar tentativo, rosa ocupado, gris no disponible/inactivo, lavanda para el resto.",
+      "**Do** mostrar horas en tiles neutros y agrupar las filas del tablero por día.",
+      "**Do** ceñir columnas técnicas a su contenido (ancho 1%) y dejar que la columna de estado ocupe el resto; marcar como opcionales las columnas prescindibles para que desaparezcan a ≤760px.",
+      "**Do** rotular cada campo con nombre humano y clave de API.",
+      "**Do** usar Martian Mono solo para horas, fechas, ids, claves técnicas y rotulado de paletas/tiles; Figtree para todo lo humano, incluidas las opciones de un `select`.",
+      "**Do** mantener todos los espacios en la retícula de 4 px.",
+      "**Do** separar superficies por escalón tonal y filete de 1 px.",
+      "**Do** usar la variante clara del wordmark sobre índigo, conservando «Ing» en violeta."
+    ],
+    "donts": [
+      "**Don't** usar ok, hold o busy fuera de la paleta: ni en textos, bordes, puntos, gráficos ni fondos.",
+      "**Don't** usar el naranja de error para un estado ni para decorar; solo avisos de error y borrado armado.",
+      "**Don't** usar el violeta de marca como decoración, degradado o resplandor; solo acción primaria y selección.",
+      "**Don't** añadir sombras de tarjeta, glow violeta ni barra lateral: el tablero es plano y la navegación va en la marquesina.",
+      "**Don't** poner texto humano en Martian Mono ni datos técnicos en Figtree.",
+      "**Don't** recolorear el wordmark en un solo tono ni usar la versión oscura sobre el índigo."
+    ]
+  }
+}

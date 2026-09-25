@@ -1,35 +1,36 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
+import { Figtree, Martian_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 import { Providers } from "@/components/providers";
-import { TokenBar } from "@/components/token-bar";
+import { Marquee } from "@/components/shell/marquee";
 import "./globals.css";
 
+const ui = Figtree({ subsets: ["latin"], variable: "--font-ui", display: "swap" });
+const data = Martian_Mono({
+  subsets: ["latin"],
+  variable: "--font-data",
+  display: "swap",
+  weight: ["400", "600"],
+});
+
 export const metadata: Metadata = {
-  title: "Chatbot Ingenius 360",
+  title: { default: "Ingenius360", template: "%s · Ingenius360" },
   description: "Panel operativo y consola del chatbot",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#1e1450",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${ui.variable} ${data.variable}`}>
       <body>
         <Providers>
-          <header className="site-header">
-            <Link href="/">Chatbot Ingenius 360</Link>
-            <nav>
-              <Link href="/panel">Panel</Link>
-              <Link href="/panel/ajustes">Ajustes</Link>
-              <Link href="/simulador">Simulador</Link>
-            </nav>
-          </header>
-          <TokenBar />
-          <main className="site-main">{children}</main>
+          <Marquee />
+          <main className="page">{children}</main>
         </Providers>
       </body>
     </html>
