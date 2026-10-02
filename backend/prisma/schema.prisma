@@ -356,6 +356,7 @@ model BotConfig {
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
+  @@index([allowedOrigins], type: Gin, map: "bot_configs_allowed_origins_gin")
   @@map("bot_configs")
   @@schema("public")
 }
