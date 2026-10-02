@@ -93,6 +93,49 @@ describe("flujo: motor", () => {
     expect(keysOf(out.lines)).toEqual(["handoff_created", "closed_prompt"]);
   });
 
+  it("Asesor dos veces en la misma conversacion crea un solo ticket", async () => {
+    const start = await startConversation(makeEnv(), steps);
+    const runEffect = vi.fn(async () => ({ ok: true as const }));
+    const first = await runTurn(start.state, { optionId: "1.2" }, makeEnv(), runEffect, steps);
+    const advisor = first.state.context.options.find((o) => o.value === NAV.advisor);
+    const second = await runTurn(
+      first.state,
+      { optionId: advisor?.id ?? "" },
+      makeEnv(),
+      runEffect,
+      steps,
+    );
+    expect(runEffect).toHaveBeenCalledTimes(1);
+    expect(second.state.step).toBe("closed");
+    expect(keysOf(second.lines)).toEqual(["handoff_created", "closed_prompt"]);
+    expect(second.state.context.handoffRequested).toBe(true);
+  });
+
+  it("el eco del documento solo enmascara entradas con forma de documento", async () => {
+    const docStep: Step = {
+      id: "id_document_number",
+      globals: "full",
+      echo: "document",
+      enter: async (c) => prompt(c, [line("kb_prompt")], [], "text"),
+      handle: async (_i, c) => go("id_document_number", c),
+    };
+    const reg = { ...steps, id_document_number: docStep } as unknown as StepRegistry;
+    const state = {
+      step: "id_document_number" as const,
+      context: { turn: 1, options: [], input: "text" as const, documentType: "CC" as const },
+    };
+    const run = (text: string) => runTurn(state, { text }, makeEnv(), noEffect, reg);
+    expect((await run("me duele, doctor!")).echo).toEqual({
+      text: { literal: "[redactado]" },
+      redacted: true,
+    });
+    expect((await run("123")).echo?.redacted).toBe(true);
+    expect((await run("1.234.567-8")).echo).toEqual({
+      text: { literal: "CC ••••5678" },
+      redacted: false,
+    });
+  });
+
   it("valida el cuerpo del mensaje", () => {
     expect(parseIncomingMessage({ option_id: "1.1" })).toEqual({ optionId: "1.1" });
     expect(parseIncomingMessage({ text: "  hola " })).toEqual({ text: "hola" });

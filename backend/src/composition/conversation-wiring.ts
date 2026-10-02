@@ -38,7 +38,7 @@ import {
 } from "../modules/verification/application/verification";
 import type { ChallengeRepository } from "../modules/verification/domain/ports";
 import { createPrismaChallengeRepository } from "../modules/verification/infrastructure/prisma-challenge-repository";
-import { createEffectRunner } from "./conversation-effects";
+import { createEffectRunner, type EffectPorts } from "./conversation-effects";
 
 /** Cableado del chat (3.3). Aparte para no empujar composition-root.ts por encima de 400 lineas. */
 function configReader(
@@ -87,18 +87,16 @@ function readsFor(
   };
 }
 
-export function conversationWritePorts(
+function effectPorts(
   db: PrismaExecutor,
-  config: AppConfig,
   auditLog: AuditLog,
   createAppointmentRequest: CreateAppointmentRequest,
-) {
-  const botConfigs = createPrismaBotConfigRepository(db);
-  const readParams = createReadBotParams(botConfigs);
-  const prismaReads = createPrismaConversationReads(db);
-  const challenges = createPrismaChallengeRepository(db);
+  readParams: ReturnType<typeof createReadBotParams>,
+  prismaReads: PrismaConversationReads,
+  challenges: ChallengeRepository,
+): EffectPorts {
   const base = { ids: uuidV7Generator, clock: systemClock, audit: auditLog };
-  const runEffect = createEffectRunner(db, {
+  return {
     createAppointmentRequest,
     preRegisterPatient: createPreRegisterPatient({
       ...base,
@@ -127,7 +125,23 @@ export function conversationWritePorts(
       },
       records: (tenantId, id) => prismaReads.getPatient(tenantId, id),
     }),
-  });
+  };
+}
+
+export function conversationWritePorts(
+  db: PrismaExecutor,
+  config: AppConfig,
+  auditLog: AuditLog,
+  createAppointmentRequest: CreateAppointmentRequest,
+) {
+  const botConfigs = createPrismaBotConfigRepository(db);
+  const readParams = createReadBotParams(botConfigs);
+  const prismaReads = createPrismaConversationReads(db);
+  const challenges = createPrismaChallengeRepository(db);
+  const runEffect = createEffectRunner(
+    db,
+    effectPorts(db, auditLog, createAppointmentRequest, readParams, prismaReads, challenges),
+  );
   const deps: ConversationDeps = {
     conversations: createPrismaConversationRepository(db),
     messages: createPrismaMessageRepository(db, uuidV7Generator),

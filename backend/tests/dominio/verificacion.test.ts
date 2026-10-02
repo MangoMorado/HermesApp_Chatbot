@@ -61,13 +61,18 @@ describe("verificacion: banco de preguntas", () => {
     expect(right?.label).toBe("j•••@gmail.com");
   });
 
-  it("los senuelos de correo comparten el dominio real, aunque sea poco comun", () => {
-    const record = { ...FULL, id: "mr-9", email: "Zoe@clinica.co" };
-    const options = questionById("email_hint")?.options?.(record) ?? [];
+  it("los senuelos de correo varian tambien en dominio y no delatan el real", () => {
+    const options = questionById("email_hint")?.options?.(FULL) ?? [];
+    const domains = new Set(options.map((o) => o.value.slice(o.value.indexOf("@"))));
     expect(new Set(options.map((o) => o.value)).size).toBe(4);
-    expect(options.every((o) => o.value.endsWith("@clinica.co"))).toBe(true);
-    expect(options.map((o) => o.value)).toContain("z•••@clinica.co");
-    expect(answerMatches("email_hint", record, "z•••@clinica.co")).toBe(true);
+    expect(domains.size).toBeGreaterThan(1);
+  });
+
+  it("un dominio poco comun no ofrece la pregunta de correo", () => {
+    const record = { ...FULL, id: "mr-9", email: "Zoe@clinica.co" };
+    expect(questionById("email_hint")?.isAvailable(record)).toBe(false);
+    expect(pairUsable(["email_hint", "birth_day"], record)).toBe(false);
+    expect(answerMatches("email_hint", record, "z•••@clinica.co")).toBe(false);
   });
 
   it("sin telefono ni correo solo quedan preguntas de fecha", () => {

@@ -50,7 +50,11 @@ export function formatLocalDay(date: string, timeZone: string): string {
 }
 
 /** Eco del documento en el historial: tipo y ultimos 4 caracteres. */
+export function normalizeDocument(raw: string): string {
+  return raw.replace(/[\s.-]/g, "").toUpperCase();
+}
+
 export function maskDocument(type: string | undefined, raw: string): string {
-  const clean = raw.replace(/[\s.-]/g, "").toUpperCase();
+  const clean = normalizeDocument(raw);
   return `${type ?? ""} ••••${clean.slice(-4)}`.trim();
 }

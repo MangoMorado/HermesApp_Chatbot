@@ -43,7 +43,7 @@ export const DEFAULT_TEXTS = {
   verify_q_phone_first_3: "Escribe los primeros 3 dígitos de tu celular registrado.",
   verify_q_email_hint: "¿Cuál de estos se parece a tu correo registrado?",
   verify_success: "Verificamos tu identidad.",
-  verify_failed: "No pudimos verificar tus datos. Te quedan {remaining} intentos.",
+  verify_failed: "No pudimos verificar tus datos. Intentos restantes: {remaining}.",
   verify_locked:
     "Por seguridad, la verificación de este documento queda bloqueada hasta {until}. Un asesor puede ayudarte.",
   verify_unverifiable:

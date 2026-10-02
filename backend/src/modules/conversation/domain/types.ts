@@ -78,6 +78,8 @@ export type ConversationContext = {
   readonly booking?: BookingDraft;
   readonly kbResults?: readonly KbResult[];
   readonly handoffReason?: HandoffReason;
+  /** Ya se creo el ticket de esta conversacion: el Asesor no lo duplica. */
+  readonly handoffRequested?: boolean;
 };
 
 export type ConversationState = { readonly step: StepId; readonly context: ConversationContext };

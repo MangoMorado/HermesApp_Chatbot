@@ -311,10 +311,12 @@ clave.
 9. **Orden de mensajes por `seq`** (`conversations.message_count`), no por `created_at`.
 10. **Repetición idempotente de mensajes** comprueba la sesión: una `Idempotency-Key` usada por otra sesión del tenant responde `409`, nunca la respuesta ajena.
 11. **Identificador del pre-registro:** `identifier_system = "urn:ingenius:pre-registration"`, `identifier_value` = id del expediente. Hermes asigna el suyo en la Fase 4.
-12. **`email_hint` con señuelos deterministas** por expediente (hash del id): si cambiaran en cada sesión, la intersección de las listas revelaría la respuesta.
+12. **`email_hint` con señuelos deterministas** por expediente (hash del id): si cambiaran en cada sesión, la intersección de las listas revelaría la respuesta. La pregunta solo se ofrece si el dominio del correo es de un proveedor común (gmail, hotmail, outlook, yahoo, icloud, live); los señuelos varían en inicial y dominio, así que el conjunto no delata el dominio real a quien aún no se verifica.
 13. **El ticket de handoff solo enlaza el expediente si el paciente ya verificó** en la sesión; un documento solo declarado no se asocia.
 14. **Validación del pre-registro duplicada a propósito:** `conversation` valida campo a campo para la UX y `patients` valida el conjunto (autoritativo). DRY al tercer uso.
 15. **Hash con clave en `idempotency_keys` para el chat.** El hash SHA-256 del cuerpo permitiría recuperar por fuerza bruta una respuesta de 4 dígitos. La ruta de mensajes usa HMAC-SHA256 (clave: el secreto JWT) y guarda la respuesta con las líneas redactadas.
 16. **Sesión de otro tenant → `401`**, no `404`: el token apunta a una sesión que no existe para su tenant, igual que en `POST /widget/sessions/refresh`.
 17. **`then` → `onOutcome`.** La continuación pura de cada paso se llama `onOutcome(outcome)`: recibe el resultado del efecto (o su fallo traducido) y `then` se confundía con el método de las promesas (los objetos con `then` se tratan como *thenables*).
 18. **`guard` en `idempotentRoute`.** Las rutas con token del widget pasan un `guard` que comprueba sesión y origen también en las repeticiones idempotentes; sin él, una respuesta guardada se serviría sin esa comprobación.
+19. **Lista de días de agendamiento acotada:** lee como máximo 200 cupos libres dentro de 30 días.
+20. **Un ticket de handoff por conversación** (`handoffRequested` en el contexto): elegir Asesor otra vez cierra sin crear otro ticket.

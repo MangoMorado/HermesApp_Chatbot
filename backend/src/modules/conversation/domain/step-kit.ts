@@ -56,6 +56,7 @@ export function resetFlow(context: ConversationContext): ConversationContext {
     options: context.options,
     input: context.input,
     ...(context.patientId ? { patientId: context.patientId } : {}),
+    ...(context.handoffRequested ? { handoffRequested: true } : {}),
   };
 }
 

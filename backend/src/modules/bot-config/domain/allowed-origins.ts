@@ -57,3 +57,12 @@ export function removeOrigin(current: readonly string[], raw: unknown): string[]
   }
   return current.filter((value) => value !== origin);
 }
+
+/** Decodifica el origen de la ruta; un escape mal formado es 422, no 500. */
+export function decodeOriginParam(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    throw new ValidationError("origin no es un origen valido", { field: "origin" });
+  }
+}

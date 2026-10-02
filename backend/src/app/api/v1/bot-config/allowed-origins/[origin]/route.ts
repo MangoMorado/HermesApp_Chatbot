@@ -1,5 +1,6 @@
 import { idempotentRoute } from "@/http/idempotent-route";
 import { botConfigJson } from "@/http/serializers-chatbot";
+import { decodeOriginParam } from "@/modules/bot-config/domain/allowed-origins";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export const DELETE = (request: Request, context: RouteContext): Promise<Respons
     const { origin } = await context.params;
     const view = await ports.removeAllowedOrigin({
       tenantId: actor.tenantId,
-      origin: decodeURIComponent(origin),
+      origin: decodeOriginParam(origin),
       actorSubject: actor.subject,
       actorRole: actor.role,
       requestId,

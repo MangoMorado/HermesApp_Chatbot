@@ -58,21 +58,40 @@ function stableHash(text: string): number {
 }
 
 /**
- * Cuatro opciones: la real y tres senuelos con el MISMO dominio que solo cambian la inicial,
- * para que un dominio poco comun no delate la respuesta. Deterministas por expediente y
- * acotadas a 26 pasos sobre el alfabeto.
+ * Proveedores comunes: solo con ellos se ofrece la pregunta de correo, para que el dominio
+ * de la pista no delate datos del paciente a quien aun no se verifica.
+ */
+const COMMON_DOMAINS = [
+  "gmail.com",
+  "hotmail.com",
+  "outlook.com",
+  "yahoo.com",
+  "icloud.com",
+  "live.com",
+] as const;
+
+function emailDomain(email: string | null): string {
+  const text = (email ?? "").trim().toLowerCase();
+  return text.includes("@") ? text.slice(text.indexOf("@") + 1) : "";
+}
+
+function hasCommonDomain(email: string | null): boolean {
+  return (COMMON_DOMAINS as readonly string[]).includes(emailDomain(email));
+}
+
+/**
+ * Cuatro opciones: la real y tres senuelos que varian en inicial Y en dominio (todos de la
+ * lista comun), asi el conjunto no delata el dominio real. Deterministas por expediente y
+ * acotadas a 60 pasos.
  */
 function emailOptions(record: VerifiableRecord): QuestionOption[] {
   const real = emailHint(record.email ?? "");
-  const domain = real.slice(real.indexOf("@"));
-  const realInitial = real.charAt(0);
   const hints = new Set([real]);
-  const start = stableHash(record.id) % DECOY_LETTERS.length;
-  for (let step = 0; step < DECOY_LETTERS.length && hints.size < 4; step++) {
-    const letter = DECOY_LETTERS.charAt((start + step) % DECOY_LETTERS.length);
-    if (letter !== realInitial) {
-      hints.add(`${letter}•••${domain}`);
-    }
+  const seed = stableHash(record.id);
+  for (let step = 0; step < 60 && hints.size < 4; step++) {
+    const letter = DECOY_LETTERS.charAt((seed + step * 7) % DECOY_LETTERS.length);
+    const domain = COMMON_DOMAINS[((seed >>> 8) + step) % COMMON_DOMAINS.length];
+    hints.add(`${letter}•••@${domain}`);
   }
   return [...hints].sort().map((hint) => ({ value: hint, label: hint }));
 }
@@ -131,7 +150,7 @@ export const QUESTION_BANK: readonly VerificationQuestion[] = [
     source: "email",
     textKey: "verify_q_email_hint",
     input: "options",
-    isAvailable: (r) => (r.email ?? "").includes("@"),
+    isAvailable: (r) => hasCommonDomain(r.email),
     expected: (r) => emailHint(r.email ?? ""),
     normalize: (raw) => raw.trim().toLowerCase(),
     options: emailOptions,

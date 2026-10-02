@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addOrigin,
+  decodeOriginParam,
   removeOrigin,
   validateAllowedOrigins,
 } from "@/modules/bot-config/domain/allowed-origins";
@@ -241,5 +242,12 @@ describe("conocimiento-config: alta y baja de un origen", () => {
       "https://b.test",
     ]);
     expect(() => removeOrigin(["https://a.test"], "https://x.test")).toThrow(NotFoundError);
+  });
+});
+
+describe("conocimiento-config: origen en la ruta", () => {
+  it("decodifica el origen y rechaza un escape mal formado con 422", () => {
+    expect(decodeOriginParam("https%3A%2F%2Fclinica.test")).toBe("https://clinica.test");
+    expect(() => decodeOriginParam("%E0%A4%A")).toThrow(ValidationError);
   });
 });

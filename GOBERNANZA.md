@@ -77,6 +77,8 @@ respuestas se comparan en memoria: nunca llegan a `conversation_messages`,
 paciente se guarda como `[redactado]` (también las consultas a la KB) salvo el documento,
 enmascarado (`CC ••••5678`); el resumen del pre-registro también se redacta. El hash de la
 petición del chat en `idempotency_keys` es un HMAC (clave derivada del secreto JWT).
+La pregunta de correo solo se ofrece si el dominio es de un proveedor común y sus señuelos nunca
+comparten en exclusiva el dominio real del paciente.
 
 El `subject` de un token emitido (p. ej. el correo de un operador) se guarda como
 `audit_events.resource_id` de `token.issued`: identifica a quién actúa, no es un dato de

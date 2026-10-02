@@ -88,50 +88,96 @@ function toCommand(
   }
 }
 
+type RunContext = Parameters<EffectRunner>[1];
+
+function requestAppointment(
+  db: PrismaExecutor,
+  ports: EffectPorts,
+  effect: Extract<Effect, { kind: "request_appointment" }>,
+  context: RunContext,
+): Promise<EffectOutcome> {
+  const tenantId = toTenantId(context.tenantId);
+  return guarded(db, async () => {
+    const request = await ports.createAppointmentRequest(
+      toCommand(tenantId, effect, context.actor),
+    );
+    return { ok: true, expiresAt: request.expiresAt };
+  });
+}
+
+function preRegister(
+  db: PrismaExecutor,
+  ports: EffectPorts,
+  effect: Extract<Effect, { kind: "pre_register" }>,
+  context: RunContext,
+): Promise<EffectOutcome> {
+  const tenantId = toTenantId(context.tenantId);
+  return guarded(db, async () => {
+    const record = await ports.preRegisterPatient({
+      ...context.actor,
+      tenantId,
+      data: effect.data,
+    });
+    return { ok: true, medicalRecordId: record.id };
+  });
+}
+
+async function handoff(
+  ports: EffectPorts,
+  effect: Extract<Effect, { kind: "handoff" }>,
+  context: RunContext,
+): Promise<EffectOutcome> {
+  await ports.createHandoffTicket({
+    ...context.actor,
+    tenantId: toTenantId(context.tenantId),
+    conversationId: context.conversationId,
+    reason: effect.reason,
+    medicalRecordId: effect.medicalRecordId,
+  });
+  return { ok: true };
+}
+
+async function openChallenge(
+  ports: EffectPorts,
+  effect: Extract<Effect, { kind: "open_challenge" }>,
+  context: RunContext,
+): Promise<EffectOutcome> {
+  const questionIds = await ports.openChallenge({
+    tenantId: toTenantId(context.tenantId),
+    medicalRecordId: effect.medicalRecordId,
+    questionIds: effect.questionIds,
+  });
+  return { ok: true, questionIds };
+}
+
+async function verificationAttempt(
+  ports: EffectPorts,
+  effect: Extract<Effect, { kind: "verification_attempt" }>,
+  context: RunContext,
+): Promise<EffectOutcome> {
+  const verification = await ports.recordVerificationAttempt({
+    ...context.actor,
+    tenantId: toTenantId(context.tenantId),
+    medicalRecordId: effect.medicalRecordId,
+    success: effect.success,
+  });
+  return { ok: true, verification };
+}
+
 /** Cumple los efectos del motor con los casos de uso de cada modulo (refinamiento 2). */
 export function createEffectRunner(db: PrismaExecutor, ports: EffectPorts): EffectRunner {
-  return async (effect, context) => {
-    const tenantId = toTenantId(context.tenantId);
-    const { actor } = context;
+  return (effect, context) => {
     switch (effect.kind) {
       case "request_appointment":
-        return guarded(db, async () => {
-          const request = await ports.createAppointmentRequest(toCommand(tenantId, effect, actor));
-          return { ok: true, expiresAt: request.expiresAt };
-        });
+        return requestAppointment(db, ports, effect, context);
       case "pre_register":
-        return guarded(db, async () => {
-          const record = await ports.preRegisterPatient({ ...actor, tenantId, data: effect.data });
-          return { ok: true, medicalRecordId: record.id };
-        });
+        return preRegister(db, ports, effect, context);
       case "handoff":
-        await ports.createHandoffTicket({
-          ...actor,
-          tenantId,
-          conversationId: context.conversationId,
-          reason: effect.reason,
-          medicalRecordId: effect.medicalRecordId,
-        });
-        return { ok: true };
+        return handoff(ports, effect, context);
       case "open_challenge":
-        return {
-          ok: true,
-          questionIds: await ports.openChallenge({
-            tenantId,
-            medicalRecordId: effect.medicalRecordId,
-            questionIds: effect.questionIds,
-          }),
-        };
+        return openChallenge(ports, effect, context);
       case "verification_attempt":
-        return {
-          ok: true,
-          verification: await ports.recordVerificationAttempt({
-            ...actor,
-            tenantId,
-            medicalRecordId: effect.medicalRecordId,
-            success: effect.success,
-          }),
-        };
+        return verificationAttempt(ports, effect, context);
     }
   };
 }
