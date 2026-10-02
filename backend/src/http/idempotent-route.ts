@@ -25,6 +25,8 @@ type IdempotentHandler = (context: {
 }) => Promise<IdempotentOutcome>;
 
 type IdempotentRouteOptions = {
+  /** Comprobacion previa a la idempotencia: cubre la primera ejecucion y la repeticion. */
+  readonly guard?: (context: { actor: Actor; request: Request }) => Promise<void>;
   /** Reconstruye la repeticion cuando lo persistido no es la respuesta (credenciales). */
   readonly rebuild?: (stored: IdempotentResult, actor: Actor) => Promise<IdempotentResult>;
 };
@@ -41,6 +43,7 @@ export function idempotentRoute(
       const container = getContainer();
       const actor = await container.authenticate(request.headers.get("Authorization"));
       requireRole(actor, allowedRoles);
+      await options.guard?.({ actor, request });
       const idempotent = await readIdempotentRequest(request, actor.subject);
       const { rebuild } = options;
       const result = await runIdempotent({

@@ -74,6 +74,20 @@ describe("cors: rutas del widget", () => {
     expect(response.status).toBe(403);
   });
 
+  it("la repeticion con la misma clave desde otro origen tambien da 403", async () => {
+    const { token } = await (await open(seed)).json();
+    const key = randomUUID();
+    const refresh = (origin: string) =>
+      refreshSession(
+        authedRequest(URL_REFRESH, token, {
+          method: "POST",
+          headers: { "Idempotency-Key": key, Origin: origin },
+        }),
+      );
+    expect((await refresh(ORIGIN)).status).toBe(200);
+    expect((await refresh("https://clinica-b.test")).status).toBe(403);
+  });
+
   it("una ruta con token rechaza un Origin distinto al de la sesion", async () => {
     const { token } = await (await open(seed)).json();
     const refresh = (headers: Record<string, string>) =>

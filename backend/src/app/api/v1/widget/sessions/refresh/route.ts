@@ -17,13 +17,11 @@ function sessionIdOf(actor: Actor): string {
 /** El widget renueva solo la sesion de su propio token. */
 const refresh = idempotentRoute(
   ["widget"],
-  async ({ actor, ports, request }) => {
-    const sessionId = sessionIdOf(actor);
-    assertSessionOrigin(
-      request,
-      await getContainer().getActiveWidgetSession(actor.tenantId, sessionId),
-    );
-    const session = await ports.refreshWidgetSession({ tenantId: actor.tenantId, sessionId });
+  async ({ actor, ports }) => {
+    const session = await ports.refreshWidgetSession({
+      tenantId: actor.tenantId,
+      sessionId: sessionIdOf(actor),
+    });
     const issued = await getContainer().issueSessionToken(session);
     return {
       status: 200,
@@ -32,6 +30,11 @@ const refresh = idempotentRoute(
     };
   },
   {
+    guard: async ({ actor, request }) =>
+      assertSessionOrigin(
+        request,
+        await getContainer().getActiveWidgetSession(actor.tenantId, sessionIdOf(actor)),
+      ),
     rebuild: (stored, actor) => rebuildSessionResponse(stored, actor.tenantId, sessionIdOf(actor)),
   },
 );
