@@ -11,6 +11,7 @@
       "!**/.claude/skills",
       "!**/.agents/skills",
       "!**/.github/skills",
+      "!**/.impeccable",
       "!**/frontend/src/api",
       "!**/frontend/src/sim",
       "!**/openapi.json",
