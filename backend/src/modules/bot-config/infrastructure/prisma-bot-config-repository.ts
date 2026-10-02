@@ -39,5 +39,12 @@ export function createPrismaBotConfigRepository(db: PrismaExecutor): BotConfigRe
         SELECT "tenant_id" FROM "public"."bot_configs" WHERE "tenant_id" = ${tenantId} FOR UPDATE`;
       return rows.length === 1;
     },
+    async isOriginRegistered(origin) {
+      const found = await db.botConfig.findFirst({
+        where: { allowedOrigins: { has: origin.toLowerCase() } },
+        select: { tenantId: true },
+      });
+      return found !== null;
+    },
   };
 }

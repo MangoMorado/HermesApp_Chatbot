@@ -21,6 +21,7 @@ type IdempotentHandler = (context: {
   requestId: string;
   body: unknown;
   ports: WritePorts;
+  request: Request;
 }) => Promise<IdempotentOutcome>;
 
 type IdempotentRouteOptions = {
@@ -46,7 +47,7 @@ export function idempotentRoute(
         request: idempotent,
         outside: tenantScope(container.idempotencyStore, actor.tenantId),
         inside: (ports) => tenantScope(ports.idempotencyStore, actor.tenantId),
-        execute: (ports) => handler({ actor, requestId, body: idempotent.body, ports }),
+        execute: (ports) => handler({ actor, requestId, body: idempotent.body, ports, request }),
         ...(rebuild ? { rebuild: (stored: IdempotentResult) => rebuild(stored, actor) } : {}),
       });
       return idempotentJson(result, requestId);

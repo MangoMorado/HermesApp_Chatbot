@@ -1,5 +1,6 @@
 import { getContainer } from "@/composition-root";
 import { clientIp } from "@/http/client-ip";
+import { widgetPreflight, withWidgetCors } from "@/http/cors";
 import { errorResponse, toApiError } from "@/http/errors";
 import {
   idempotentJson,
@@ -23,7 +24,7 @@ function widgetKeyOf(body: unknown): unknown {
 }
 
 /** Apertura anonima: la clave publica resuelve el tenant; el cliente nunca lo elige. */
-export async function POST(request: Request): Promise<Response> {
+async function openSession(request: Request): Promise<Response> {
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
   try {
     const container = getContainer();
@@ -58,3 +59,6 @@ export async function POST(request: Request): Promise<Response> {
     return errorResponse(toApiError(error), requestId);
   }
 }
+
+export const POST = withWidgetCors(openSession);
+export const OPTIONS = widgetPreflight;

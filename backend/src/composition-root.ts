@@ -164,6 +164,7 @@ export type Container = {
     tenantId: TenantId,
     sessionId: string,
   ) => Promise<WidgetSession>;
+  readonly isWidgetOriginRegistered: (origin: string) => Promise<boolean>;
   readonly withWriteTransaction: <T>(fn: (ports: WritePorts) => Promise<T>) => Promise<T>;
 };
 
