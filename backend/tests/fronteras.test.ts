@@ -98,16 +98,39 @@ describe("fronteras de capas", () => {
   });
 
   it("los modulos de la Fase 3 solo importan shared y auth de otros modulos", () => {
-    const phase3 = ["bot-config", "knowledge", "widget", "platform"];
+    const phase3 = [
+      "bot-config",
+      "knowledge",
+      "widget",
+      "platform",
+      "verification",
+      "handoff",
+      "conversation",
+    ];
+    // conversation evalua respuestas con el dominio puro de verification (refinamiento 4).
+    const extra: Record<string, RegExp> = { conversation: /modules\/verification\/domain\// };
     const offenders = phase3.flatMap((mod) => {
       const allowed = new Set([mod, "shared", "auth"]);
       return listFiles(join(MODULES_DIR, mod)).flatMap((file) =>
         importsOf(file)
           .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
           .filter(({ module }) => module !== undefined && !allowed.has(module))
+          .filter(({ specifier }) => !extra[mod]?.test(specifier))
           .map(({ specifier }) => `${file} -> ${specifier}`),
       );
     });
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("conversation solo toma el dominio de verification", () => {
+    const offenders = listFiles(join(MODULES_DIR, "conversation")).flatMap((file) =>
+      importsOf(file)
+        .filter((specifier) =>
+          /modules\/verification\/(application|infrastructure)\//.test(specifier),
+        )
+        .map((specifier) => `${file} -> ${specifier}`),
+    );
 
     expect(offenders).toEqual([]);
   });
