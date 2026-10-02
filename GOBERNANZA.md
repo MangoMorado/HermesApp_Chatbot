@@ -58,11 +58,25 @@ La clave del widget es **pública** (va en el HTML de la clínica): solo identif
 abre sesiones desde los `allowed_origins` del tenant. Se guarda en claro y se rota con gracia.
 El token del widget sale de una sesión (`POST /api/v1/widget/sessions`) y expira con ella.
 
+El widget alcanza `GET /widget/conversation` y `POST /widget/conversation/messages` de su
+propia sesión. Las rutas del widget responden CORS con el origen exacto si algún tenant lo
+admite; con token, un `Origin` distinto al de la sesión es `403`.
+
 ### 1.5 No divulgación
 
 No se persisten respuestas de verificación de identidad ni datos clínicos en mensajes,
 auditoría ni logs. Cuando haya que registrar que algo pasó, se registra el hecho y el
 resultado, no el contenido.
+
+Verificación de identidad: dos preguntas de un banco en código
+(`verification/domain/questions.ts`), con un par fijo por expediente que se guarda al
+sortearlo y solo se re-sortea tras verificar. A los `verification_max_attempts` fallos el
+documento queda bloqueado `verification_lock_minutes` y el chat ofrece un asesor. Las
+respuestas se comparan en memoria: nunca llegan a `conversation_messages`,
+`conversations.context`, `audit_events`, logs ni respuestas HTTP. Todo texto libre del
+paciente se guarda como `[redactado]` (también las consultas a la KB) salvo el documento,
+enmascarado (`CC ••••5678`); el resumen del pre-registro también se redacta. El hash de la
+petición del chat en `idempotency_keys` es un HMAC (clave derivada del secreto JWT).
 
 El `subject` de un token emitido (p. ej. el correo de un operador) se guarda como
 `audit_events.resource_id` de `token.issued`: identifica a quién actúa, no es un dato de
@@ -128,6 +142,11 @@ hacen cumplir dos mecanismos independientes, y los dos deben quedar en verde:
 La regla de oro para decidir de qué lado va algo: **¿hace I/O o corre fuera de proceso?**
 Si sí, es infraestructura. Las dependencias de un componente también cuentan: algo que no
 hace I/O pero importa el driver de la base de datos ya es infraestructura.
+
+`conversation` solo importa `shared`, `auth` y `verification/domain`; las escrituras del chat
+son efectos que cumple `composition/conversation-effects.ts`. Solo `request_appointment` y
+`pre_register` corren en un `SAVEPOINT` (pueden fallar por unicidad y el turno sigue); si
+otro efecto lanza, el turno entero se revierte.
 
 ### 2.3 Composition root
 
@@ -210,7 +229,11 @@ código, o se cambia la regla en una PR aparte que argumente el cambio.
 Se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`,
 `dominio`, `simetria-seed`, `aislamiento-tenant`, `flujo`, `verificacion`, `pre-agenda`,
 `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`,
-`fhir-conformance`, `hermes-simulador`, `carga-basica`.
+`fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`.
+
+`flujo` cubre el motor conversacional: el motor, los pasos, el recorrido completo y el chat
+por HTTP. `cors` cubre las respuestas CORS de las rutas del widget y el alta/baja de
+orígenes.
 
 ---
 

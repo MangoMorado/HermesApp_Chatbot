@@ -14,7 +14,7 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 
 - **3.1 tenant listo para chatear — cerrada** y en `main` (PR #3). Spec en `docs/superpowers/specs/2026-09-22-fase-3-1-tenant-listo-design.md`: emisión de tokens por `/api/platform/v1`, sesiones del widget con rate limit in-memory, `bot-config` con rotación de clave y base de conocimiento CRUD.
 - **3.2 pre-agenda — cerrada** y en `main` (PR #4). Spec en `docs/superpowers/specs/2026-09-25-fase-3-2-pre-agenda-design.md`: tabla `appointment_requests`, apartado atómico `free` → `busy_tentative`, tope por paciente, vencimiento al leer y bandeja del simulador (`/api/sim/v1/inbox`) que resuelve en proceso vía `ChatbotRequestsGateway`. El motor de la 3.3 consume `createAppointmentRequest` (en `WritePorts`).
-- **3.3 motor conversacional — en diseño** en la rama `fase-3-3-motor-conversacional`. 3.4 frontend (`/chat`, bandeja, KB, config): pendiente. Requisito de entrada de la primera que toque el widget: resolver CORS/proxy (§11 de la spec de la 3.1).
+- **3.3 motor conversacional — implementada** en la rama `fase-3-3-motor-conversacional` (spec en `docs/superpowers/specs/2026-10-02-fase-3-3-motor-conversacional-design.md`): conversaciones con historial redactado, verificación con banco de preguntas y par fijo, pre-registro, handoff-tickets (solo creación), CORS del widget y alta/baja de orígenes. **Suites de BD de la 3.3 pendientes de ejecutar** (Postgres local caído durante la implementación). 3.4 frontend (`/chat`, bandeja, KB, config): pendiente.
 
 Fuera del plan de fases, `main` incluye el rediseño del panel operativo (tablero oscuro; sistema visual en `DESIGN.md`).
 
@@ -80,7 +80,7 @@ Detalles de instalación que muerden: npm 12 bloquea los scripts de instalación
 Si `biome` no produce salida, el binario se bajó truncado: borra `node_modules/@biomejs`
 y reinstala (el `.exe` correcto pesa ~76 MB).
 
-Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`.
+Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`.
 
 ## Puertas de calidad por PR
 

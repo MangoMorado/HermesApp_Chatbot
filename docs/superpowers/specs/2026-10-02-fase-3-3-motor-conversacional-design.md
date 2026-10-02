@@ -1,7 +1,8 @@
 # Fase 3.3 — Motor conversacional (diseño)
 
-> Estado: **en implementación** en la rama `fase-3-3-motor-conversacional`; plan en
-> `docs/superpowers/plans/2026-10-02-fase-3-3-motor-conversacional.md`.
+> Estado: **implementada** en la rama `fase-3-3-motor-conversacional` (pendiente de merge por
+> el usuario); **suites de BD de la 3.3 pendientes de ejecutar** (Postgres local caído durante
+> la implementación). Plan en `docs/superpowers/plans/2026-10-02-fase-3-3-motor-conversacional.md`.
 > Fuente del alcance: `ROADMAP.md` §Fase 3, entregables 3, 4 y 9; corte de sub-proyectos en la
 > §1 de `2026-09-22-fase-3-1-tenant-listo-design.md`; requisito de entrada en su §11 (CORS).
 > Manda `GOBERNANZA.md` ante cualquier conflicto.
@@ -315,3 +316,5 @@ clave.
 14. **Validación del pre-registro duplicada a propósito:** `conversation` valida campo a campo para la UX y `patients` valida el conjunto (autoritativo). DRY al tercer uso.
 15. **Hash con clave en `idempotency_keys` para el chat.** El hash SHA-256 del cuerpo permitiría recuperar por fuerza bruta una respuesta de 4 dígitos. La ruta de mensajes usa HMAC-SHA256 (clave: el secreto JWT) y guarda la respuesta con las líneas redactadas.
 16. **Sesión de otro tenant → `401`**, no `404`: el token apunta a una sesión que no existe para su tenant, igual que en `POST /widget/sessions/refresh`.
+17. **`then` → `onOutcome`.** La continuación pura de cada paso se llama `onOutcome(outcome)`: recibe el resultado del efecto (o su fallo traducido) y `then` se confundía con el método de las promesas (los objetos con `then` se tratan como *thenables*).
+18. **`guard` en `idempotentRoute`.** Las rutas con token del widget pasan un `guard` que comprueba sesión y origen también en las repeticiones idempotentes; sin él, una respuesta guardada se serviría sin esa comprobación.
