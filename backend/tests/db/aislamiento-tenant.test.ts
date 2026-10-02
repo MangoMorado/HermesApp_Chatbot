@@ -22,6 +22,7 @@ import { GET as getSchedules } from "@/app/api/v1/schedules/route";
 import { GET as getTenantSettings } from "@/app/api/v1/tenant-settings/route";
 import { resetContainer } from "@/composition-root";
 import { authedRequest, signToken } from "../helpers/token";
+import { enableWidget, getChat, openChat, sendChat } from "./chat-support";
 import {
   ACTOR,
   clockAt,
@@ -478,5 +479,28 @@ describe("aislamiento-tenant: bandeja del simulador", () => {
     expect(
       (await prisma.appointmentRequest.findUniqueOrThrow({ where: { id: request.id } })).status,
     ).toBe("pending");
+  });
+});
+
+describe("aislamiento-tenant: chat", () => {
+  beforeEach(async () => {
+    await truncateAll(prisma);
+    resetContainer();
+  });
+
+  it("un token con la sesion de otro tenant no alcanza esa conversacion", async () => {
+    const a = await seedTenantDomain(prisma, "chat-a");
+    const b = await seedTenantDomain(prisma, "chat-b");
+    const session = await openChat(await enableWidget(prisma, a.tenantId, "chat-a"));
+    await getChat(session.token);
+    const forged = await signToken({
+      role: "widget",
+      tenantId: b.tenantId,
+      sessionId: session.sessionId,
+      subject: `widget:${session.sessionId}`,
+    });
+    expect((await getChat(forged)).status).toBe(401);
+    expect((await sendChat(forged, { text: "hola" })).status).toBe(401);
+    expect(await prisma.conversation.count({ where: { tenantId: b.tenantId } })).toBe(0);
   });
 });

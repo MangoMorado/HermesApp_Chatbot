@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getContainer, type WritePorts } from "@/composition-root";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
@@ -98,14 +98,22 @@ export function parseJsonBody(bodyText: string): unknown {
   }
 }
 
-function requestHash(method: string, path: string, bodyText: string): string {
-  return createHash("sha256").update(`${method}\n${path}\n${bodyText}`).digest("hex");
+/**
+ * Con `hashKey` (HMAC) el hash no permite recuperar por fuerza bruta un cuerpo corto, como una
+ * respuesta de verificacion de 4 digitos (GOBERNANZA §1.5).
+ */
+function requestHash(method: string, path: string, bodyText: string, hashKey?: string): string {
+  const payload = `${method}\n${path}\n${bodyText}`;
+  return hashKey
+    ? createHmac("sha256", hashKey).update(payload).digest("hex")
+    : createHash("sha256").update(payload).digest("hex");
 }
 
 export async function readIdempotentRequest(
   request: Request,
   actorSubject: string,
   minKeyLength = 1,
+  hashKey?: string,
 ): Promise<IdempotentRequest> {
   const key = request.headers.get(IDEMPOTENCY_HEADER)?.trim() ?? "";
   if (key === "") {
@@ -121,7 +129,7 @@ export async function readIdempotentRequest(
   const path = new URL(request.url).pathname;
   return {
     key,
-    hash: requestHash(request.method, path, bodyText),
+    hash: requestHash(request.method, path, bodyText, hashKey),
     method: request.method,
     path,
     actorSubject,

@@ -1,9 +1,11 @@
 import type { PrismaClient } from "@prisma/client";
+import { conversationWritePorts } from "./composition/conversation-wiring";
 import {
   type PreAgendaReads,
   preAgendaReads,
   preAgendaWritePorts,
 } from "./composition/pre-agenda-wiring";
+import { simReads } from "./composition/sim-wiring";
 import { widgetReads, widgetWritePorts } from "./composition/widget-wiring";
 import { type AppConfig, loadConfig } from "./config/env";
 import { type Authenticate, createAuthenticate } from "./modules/auth/application/authenticate";
@@ -118,13 +120,15 @@ type KnowledgeWritePorts = ReturnType<typeof knowledgeWritePorts>;
 type PlatformWritePorts = ReturnType<typeof platformWritePorts>;
 type WidgetWritePorts = ReturnType<typeof widgetWritePorts>;
 type PreAgendaWritePorts = ReturnType<typeof preAgendaWritePorts>;
+type ConversationWritePorts = ReturnType<typeof conversationWritePorts>;
 
 export type WritePorts = BaseWritePorts &
   BotConfigWritePorts &
   KnowledgeWritePorts &
   PlatformWritePorts &
   WidgetWritePorts &
-  PreAgendaWritePorts;
+  PreAgendaWritePorts &
+  ConversationWritePorts;
 
 export type Container = {
   readonly config: AppConfig;
@@ -302,28 +306,12 @@ function patientReads(prisma: PrismaClient) {
   };
 }
 
-function simReads(prisma: PrismaClient) {
-  const simPractitioners = createPrismaSimPractitionerStore(prisma);
-  const simServices = createPrismaSimHealthcareServiceStore(prisma);
-  const simSchedules = createPrismaSimScheduleStore(prisma);
-  const simPatients = createPrismaSimPatientStore(prisma);
-  return {
-    listSimPractitioners: simPractitioners.list,
-    getSimPractitioner: simPractitioners.get,
-    listSimServices: simServices.list,
-    getSimService: simServices.get,
-    listSimSchedules: simSchedules.list,
-    getSimSchedule: simSchedules.get,
-    listSimPatients: simPatients.list,
-    getSimPatient: simPatients.get,
-  };
-}
-
 function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
   const tenantSettings = createPrismaTenantSettingsRepository(db);
   const auditLog = createPrismaAuditLog(db, uuidV7Generator);
   const idempotencyStore = createPrismaIdempotencyStore(db);
   const simSchedules = createPrismaSimScheduleStore(db);
+  const preAgenda = preAgendaWritePorts(db, auditLog);
   return {
     clock: systemClock,
     ids: uuidV7Generator,
@@ -347,7 +335,8 @@ function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
     ...knowledgeWritePorts(db, auditLog),
     ...platformWritePorts(db, config, auditLog),
     ...widgetWritePorts(db),
-    ...preAgendaWritePorts(db, auditLog),
+    ...preAgenda,
+    ...conversationWritePorts(db, config, auditLog, preAgenda.createAppointmentRequest),
   };
 }
 
