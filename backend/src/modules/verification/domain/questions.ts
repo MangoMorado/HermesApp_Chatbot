@@ -41,7 +41,6 @@ const MONTH_OPTIONS: QuestionOption[] = Array.from({ length: 12 }, (_, i) => ({
   label: MONTHS.format(new Date(Date.UTC(2000, i, 1))),
 }));
 
-const DECOY_DOMAINS = ["gmail.com", "hotmail.com", "outlook.com", "yahoo.com", "icloud.com"];
 const DECOY_LETTERS = "abcdefghijklmnopqrstuvwxyz";
 
 function emailHint(email: string): string {
@@ -58,15 +57,22 @@ function stableHash(text: string): number {
   return hash;
 }
 
+/**
+ * Cuatro opciones: la real y tres senuelos con el MISMO dominio que solo cambian la inicial,
+ * para que un dominio poco comun no delate la respuesta. Deterministas por expediente y
+ * acotadas a 26 pasos sobre el alfabeto.
+ */
 function emailOptions(record: VerifiableRecord): QuestionOption[] {
   const real = emailHint(record.email ?? "");
+  const domain = real.slice(real.indexOf("@"));
+  const realInitial = real.charAt(0);
   const hints = new Set([real]);
-  let seed = stableHash(record.id);
-  while (hints.size < 4) {
-    const letter = DECOY_LETTERS.charAt(seed % DECOY_LETTERS.length);
-    const domain = DECOY_DOMAINS[(seed >>> 8) % DECOY_DOMAINS.length] ?? "gmail.com";
-    hints.add(`${letter}•••@${domain}`);
-    seed = stableHash(`${seed}`);
+  const start = stableHash(record.id) % DECOY_LETTERS.length;
+  for (let step = 0; step < DECOY_LETTERS.length && hints.size < 4; step++) {
+    const letter = DECOY_LETTERS.charAt((start + step) % DECOY_LETTERS.length);
+    if (letter !== realInitial) {
+      hints.add(`${letter}•••${domain}`);
+    }
   }
   return [...hints].sort().map((hint) => ({ value: hint, label: hint }));
 }
@@ -91,7 +97,7 @@ export const QUESTION_BANK: readonly VerificationQuestion[] = [
     isAvailable: always,
     expected: (r) => asNumber(r.birthDate.slice(5, 7)),
     normalize: asNumber,
-    options: () => MONTH_OPTIONS,
+    options: () => MONTH_OPTIONS.map((option) => ({ ...option })),
   },
   {
     id: "birth_year",

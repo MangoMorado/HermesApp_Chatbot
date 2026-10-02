@@ -61,6 +61,15 @@ describe("verificacion: banco de preguntas", () => {
     expect(right?.label).toBe("j•••@gmail.com");
   });
 
+  it("los senuelos de correo comparten el dominio real, aunque sea poco comun", () => {
+    const record = { ...FULL, id: "mr-9", email: "Zoe@clinica.co" };
+    const options = questionById("email_hint")?.options?.(record) ?? [];
+    expect(new Set(options.map((o) => o.value)).size).toBe(4);
+    expect(options.every((o) => o.value.endsWith("@clinica.co"))).toBe(true);
+    expect(options.map((o) => o.value)).toContain("z•••@clinica.co");
+    expect(answerMatches("email_hint", record, "z•••@clinica.co")).toBe(true);
+  });
+
   it("sin telefono ni correo solo quedan preguntas de fecha", () => {
     const available = QUESTION_BANK.filter((q) => q.isAvailable(DATE_ONLY)).map((q) => q.source);
     expect(new Set(available)).toEqual(new Set(["birth_date"]));

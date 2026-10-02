@@ -4,6 +4,9 @@ import { QUESTION_BANK, questionById, type VerifiableRecord } from "./questions"
 export type QuestionPair = readonly [string, string];
 
 function pick<T>(items: readonly T[], random: Random): T | undefined {
+  if (items.length === 0) {
+    return undefined;
+  }
   return items[random.int(items.length)];
 }
 
