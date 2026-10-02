@@ -11,17 +11,23 @@ const LOCAL_WIDGET_ORIGIN = "http://localhost:3000";
 /**
  * Borra lo que ya exista de estos tenants antes de volver a insertar. Sin esto, sembrar
  * con un ancla distinta deja cupos y citas de la fecha anterior huerfanos (cupos "busy"
- * sin cita que los referencie). Orden de FK: solicitudes -> citas -> cupos -> agendas ->
- * servicios -> profesionales -> historias clinicas. Los tenants no se borran, solo se refrescan.
+ * sin cita que los referencie). Orden de FK: tickets -> mensajes -> conversaciones ->
+ * desafios -> solicitudes -> citas -> cupos -> agendas -> servicios -> profesionales ->
+ * historias clinicas. Los tenants no se borran, solo se refrescan.
  */
 async function deleteExisting(tx: Tx, tenantIds: string[]): Promise<void> {
-  await tx.appointmentRequest.deleteMany({ where: { tenantId: { in: tenantIds } } });
-  await tx.appointment.deleteMany({ where: { tenantId: { in: tenantIds } } });
-  await tx.slot.deleteMany({ where: { tenantId: { in: tenantIds } } });
-  await tx.schedule.deleteMany({ where: { tenantId: { in: tenantIds } } });
-  await tx.healthcareService.deleteMany({ where: { tenantId: { in: tenantIds } } });
-  await tx.practitioner.deleteMany({ where: { tenantId: { in: tenantIds } } });
-  await tx.medicalRecord.deleteMany({ where: { tenantId: { in: tenantIds } } });
+  const scope = { where: { tenantId: { in: tenantIds } } };
+  await tx.handoffTicket.deleteMany(scope);
+  await tx.conversationMessage.deleteMany(scope);
+  await tx.conversation.deleteMany(scope);
+  await tx.verificationChallenge.deleteMany(scope);
+  await tx.appointmentRequest.deleteMany(scope);
+  await tx.appointment.deleteMany(scope);
+  await tx.slot.deleteMany(scope);
+  await tx.schedule.deleteMany(scope);
+  await tx.healthcareService.deleteMany(scope);
+  await tx.practitioner.deleteMany(scope);
+  await tx.medicalRecord.deleteMany(scope);
 }
 
 async function writeMasters(tx: Tx, t: SeedTenant): Promise<void> {

@@ -1,5 +1,6 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Normaliza a LF en el índice y en la copia de trabajo (también en Windows con
+# core.autocrlf=true): Biome exige LF y fallaba en local con CRLF.
+* text=auto eol=lf
 
 # Los scripts de shell deben mantener LF siempre: CRLF rompe el shebang y
 # `set -e` en el contenedor Alpine (busybox sh) aunque el checkout sea en Windows.

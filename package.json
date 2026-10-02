@@ -16,6 +16,6 @@
     "demo": "npm --prefix backend run demo --"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14"
+    "@biomejs/biome": "^2.5.15"
   }
 }

@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import type { NextResponse } from "next/server";
 import { getContainer, type WritePorts } from "@/composition-root";
 import { requireRole } from "@/modules/auth/application/authorize";
@@ -21,12 +22,22 @@ type IdempotentHandler = (context: {
   requestId: string;
   body: unknown;
   ports: WritePorts;
+  request: Request;
 }) => Promise<IdempotentOutcome>;
 
 type IdempotentRouteOptions = {
+  /** Comprobacion previa a la idempotencia: cubre la primera ejecucion y la repeticion. */
+  readonly guard?: (context: { actor: Actor; request: Request }) => Promise<void>;
+  /** El cuerpo puede llevar respuestas de verificacion: hash con clave (refinamiento 15). */
+  readonly sensitiveBody?: boolean;
   /** Reconstruye la repeticion cuando lo persistido no es la respuesta (credenciales). */
   readonly rebuild?: (stored: IdempotentResult, actor: Actor) => Promise<IdempotentResult>;
 };
+
+/** Clave propia del hash de peticiones, derivada del secreto para no reutilizarlo directamente. */
+function hashKeyFor(secret: string): string {
+  return createHmac("sha256", secret).update("idempotency-request-hash").digest("hex");
+}
 
 /** Escritura autenticada con `Idempotency-Key` obligatoria, en el ambito del tenant del token. */
 export function idempotentRoute(
@@ -40,13 +51,19 @@ export function idempotentRoute(
       const container = getContainer();
       const actor = await container.authenticate(request.headers.get("Authorization"));
       requireRole(actor, allowedRoles);
-      const idempotent = await readIdempotentRequest(request, actor.subject);
+      await options.guard?.({ actor, request });
+      const idempotent = await readIdempotentRequest(
+        request,
+        actor.subject,
+        1,
+        options.sensitiveBody ? hashKeyFor(container.config.jwt.secret) : undefined,
+      );
       const { rebuild } = options;
       const result = await runIdempotent({
         request: idempotent,
         outside: tenantScope(container.idempotencyStore, actor.tenantId),
         inside: (ports) => tenantScope(ports.idempotencyStore, actor.tenantId),
-        execute: (ports) => handler({ actor, requestId, body: idempotent.body, ports }),
+        execute: (ports) => handler({ actor, requestId, body: idempotent.body, ports, request }),
         ...(rebuild ? { rebuild: (stored: IdempotentResult) => rebuild(stored, actor) } : {}),
       });
       return idempotentJson(result, requestId);

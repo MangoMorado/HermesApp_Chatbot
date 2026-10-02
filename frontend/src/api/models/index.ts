@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.3.0
  */
 
+export * from './allowedOriginInput';
 export * from './botConfig';
 export * from './botConfigParams';
 export * from './botConfigPatch';
@@ -13,6 +14,14 @@ export * from './botConfigPatchParams';
 export * from './botConfigPatchTexts';
 export * from './botConfigTexts';
 export * from './botConfigWidgetKeys';
+export * from './conversationHistory';
+export * from './conversationHistoryInput';
+export * from './conversationHistoryMessagesItem';
+export * from './conversationHistoryMessagesItemAuthor';
+export * from './conversationMessageInput';
+export * from './conversationOption';
+export * from './conversationTurn';
+export * from './conversationTurnInput';
 export * from './deleteKnowledgeEntry200';
 export * from './error';
 export * from './errorError';

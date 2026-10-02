@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { validateAllowedOrigins } from "@/modules/bot-config/domain/allowed-origins";
+import {
+  addOrigin,
+  decodeOriginParam,
+  removeOrigin,
+  validateAllowedOrigins,
+} from "@/modules/bot-config/domain/allowed-origins";
 import {
   applyPatch,
   DEFAULT_TEXTS,
@@ -8,7 +13,9 @@ import {
   PARAM_SPECS,
   parseBotConfigPatch,
   sanitizeOverrides,
+  TEXT_PLACEHOLDERS,
 } from "@/modules/bot-config/domain/bot-config";
+import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 
 const DEV = { allowLocalhost: true };
@@ -25,6 +32,8 @@ describe("conocimiento-config: bot-config efectivo", () => {
       kb_max_results: 3,
       request_hold_minutes: 240,
       max_pending_requests_per_patient: 2,
+      verification_max_attempts: 3,
+      verification_lock_minutes: 30,
     });
     expect(config.allowedOrigins).toEqual([]);
   });
@@ -175,5 +184,70 @@ describe("conocimiento-config: lectura defensiva", () => {
       params: { widget_key_grace_hours: 12 },
       allowedOrigins: ["https://a.test"],
     });
+  });
+});
+
+describe("conocimiento-config: textos del chat", () => {
+  it("cada texto acepta {clinic_name} y solo los marcadores de su clave", () => {
+    const ok = applyPatch(
+      EMPTY_OVERRIDES,
+      { texts: { verify_failed: "Quedan {remaining} en {clinic_name}" } },
+      DEV,
+    );
+    expect(ok.texts.verify_failed).toBe("Quedan {remaining} en {clinic_name}");
+    expect(() =>
+      applyPatch(EMPTY_OVERRIDES, { texts: { welcome: "Quedan {remaining}" } }, DEV),
+    ).toThrow(ValidationError);
+  });
+
+  it("los predeterminados solo usan marcadores admitidos para su clave", () => {
+    for (const [key, value] of Object.entries(DEFAULT_TEXTS)) {
+      const used = [...value.matchAll(/\{([^{}]*)\}/g)].map((m) => m[1]);
+      const allowed = ["clinic_name", ...TEXT_PLACEHOLDERS[key as keyof typeof DEFAULT_TEXTS]];
+      expect(
+        used.filter((name) => !allowed.includes(name ?? "")),
+        key,
+      ).toEqual([]);
+    }
+  });
+
+  it("los params de verificacion respetan su rango", () => {
+    expect(() =>
+      applyPatch(EMPTY_OVERRIDES, { params: { verification_max_attempts: 6 } }, DEV),
+    ).toThrow(ValidationError);
+    expect(
+      applyPatch(EMPTY_OVERRIDES, { params: { verification_lock_minutes: 1440 } }, DEV).params,
+    ).toEqual({ verification_lock_minutes: 1440 });
+  });
+});
+
+describe("conocimiento-config: alta y baja de un origen", () => {
+  it("agrega normalizado y sin duplicar", () => {
+    expect(addOrigin(["https://a.test"], " HTTPS://B.test ", PROD)).toEqual([
+      "https://a.test",
+      "https://b.test",
+    ]);
+    expect(addOrigin(["https://a.test"], "https://a.test", PROD)).toEqual(["https://a.test"]);
+  });
+
+  it("respeta el formato y el maximo de 20", () => {
+    expect(() => addOrigin([], "http://a.test", PROD)).toThrow(ValidationError);
+    const full = Array.from({ length: 20 }, (_, i) => `https://o${i}.test`);
+    expect(() => addOrigin(full, "https://otro.test", PROD)).toThrow(ValidationError);
+    expect(addOrigin(full, "https://o3.test", PROD)).toEqual(full);
+  });
+
+  it("quita uno; si no esta es not_found", () => {
+    expect(removeOrigin(["https://a.test", "https://b.test"], "https://A.test")).toEqual([
+      "https://b.test",
+    ]);
+    expect(() => removeOrigin(["https://a.test"], "https://x.test")).toThrow(NotFoundError);
+  });
+});
+
+describe("conocimiento-config: origen en la ruta", () => {
+  it("decodifica el origen y rechaza un escape mal formado con 422", () => {
+    expect(decodeOriginParam("https%3A%2F%2Fclinica.test")).toBe("https://clinica.test");
+    expect(() => decodeOriginParam("%E0%A4%A")).toThrow(ValidationError);
   });
 });

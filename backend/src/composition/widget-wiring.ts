@@ -85,6 +85,8 @@ export function widgetReads(prisma: PrismaClient, config: AppConfig) {
       issuer: createJoseTokenIssuer(config.jwt),
       clock: systemClock,
     }),
+    isWidgetOriginRegistered: (origin: string) =>
+      createPrismaBotConfigRepository(prisma).isOriginRegistered(origin),
     getActiveWidgetSession: createGetActiveWidgetSession({
       sessions: createPrismaWidgetSessionRepository(prisma),
       clock: systemClock,

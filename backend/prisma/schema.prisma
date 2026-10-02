@@ -79,6 +79,30 @@ enum ResolutionReason {
   @@schema("public")
 }
 
+enum ConversationMessageAuthor {
+  bot
+  patient
+
+  @@map("conversation_message_author")
+  @@schema("public")
+}
+
+enum HandoffReason {
+  requested
+  verification_locked
+  unverifiable
+
+  @@map("handoff_reason")
+  @@schema("public")
+}
+
+enum HandoffStatus {
+  open
+
+  @@map("handoff_status")
+  @@schema("public")
+}
+
 model Tenant {
   id                String   @id
   slug              String   @unique
@@ -87,19 +111,23 @@ model Tenant {
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  practitioners       Practitioner[]
-  healthcareServices  HealthcareService[]
-  schedules           Schedule[]
-  slots               Slot[]
-  medicalRecords      MedicalRecord[]
-  appointments        Appointment[]
-  appointmentRequests AppointmentRequest[]
-  auditEvents         AuditEvent[]
-  idempotencyKeys     IdempotencyKey[]
-  botConfig           BotConfig?
-  widgetKeys          WidgetKey[]
-  knowledgeEntries    KnowledgeEntry[]
-  widgetSessions      WidgetSession[]
+  practitioners          Practitioner[]
+  healthcareServices     HealthcareService[]
+  schedules              Schedule[]
+  slots                  Slot[]
+  medicalRecords         MedicalRecord[]
+  appointments           Appointment[]
+  appointmentRequests    AppointmentRequest[]
+  auditEvents            AuditEvent[]
+  idempotencyKeys        IdempotencyKey[]
+  botConfig              BotConfig?
+  widgetKeys             WidgetKey[]
+  knowledgeEntries       KnowledgeEntry[]
+  widgetSessions         WidgetSession[]
+  conversations          Conversation[]
+  conversationMessages   ConversationMessage[]
+  verificationChallenges VerificationChallenge[]
+  handoffTickets         HandoffTicket[]
 
   @@map("tenants")
   @@schema("public")
@@ -207,9 +235,12 @@ model MedicalRecord {
   createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant              Tenant               @relation(fields: [tenantId], references: [id])
-  appointments        Appointment[]
-  appointmentRequests AppointmentRequest[]
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id])
+  appointments           Appointment[]
+  appointmentRequests    AppointmentRequest[]
+  conversations          Conversation[]
+  verificationChallenges VerificationChallenge[]
+  handoffTickets         HandoffTicket[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, identifierSystem, identifierValue])
@@ -325,6 +356,7 @@ model BotConfig {
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
+  @@index([allowedOrigins], type: Gin, map: "bot_configs_allowed_origins_gin")
   @@map("bot_configs")
   @@schema("public")
 }
@@ -375,10 +407,93 @@ model WidgetSession {
   expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
   lastSeenAt DateTime @map("last_seen_at") @db.Timestamptz(3)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  conversation Conversation?
 
   @@unique([tenantId, id])
   @@map("widget_sessions")
+  @@schema("public")
+}
+
+// Conversacion del widget: una por sesion. `context` nunca guarda respuestas de
+// verificacion (GOBERNANZA §1.5); el borrador del pre-registro se borra al confirmar.
+model Conversation {
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  widgetSessionId String   @map("widget_session_id")
+  step            String
+  context         Json     @default("{}")
+  medicalRecordId String?  @map("medical_record_id")
+  messageCount    Int      @default(0) @map("message_count")
+  createdAt       DateTime @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @map("updated_at") @db.Timestamptz(3)
+
+  tenant         Tenant                @relation(fields: [tenantId], references: [id])
+  widgetSession  WidgetSession         @relation(fields: [tenantId, widgetSessionId], references: [tenantId, id])
+  medicalRecord  MedicalRecord?        @relation(fields: [tenantId, medicalRecordId], references: [tenantId, id], onDelete: Restrict)
+  messages       ConversationMessage[]
+  handoffTickets HandoffTicket[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, widgetSessionId])
+  @@map("conversations")
+  @@schema("public")
+}
+
+// Historial. Un mensaje redactado guarda solo "[redactado]" (CHECK en la migracion).
+model ConversationMessage {
+  id             String                    @id
+  tenantId       String                    @map("tenant_id")
+  conversationId String                    @map("conversation_id")
+  seq            Int
+  author         ConversationMessageAuthor
+  text           String
+  redacted       Boolean                   @default(false)
+  createdAt      DateTime                  @map("created_at") @db.Timestamptz(3)
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  conversation Conversation @relation(fields: [tenantId, conversationId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, conversationId, seq])
+  @@map("conversation_messages")
+  @@schema("public")
+}
+
+// Par fijo de preguntas por expediente y contador de fallos. Nunca guarda respuestas.
+model VerificationChallenge {
+  id              String    @id
+  tenantId        String    @map("tenant_id")
+  medicalRecordId String    @map("medical_record_id")
+  questionIds     String[]  @map("question_ids")
+  failedAttempts  Int       @default(0) @map("failed_attempts")
+  lockedUntil     DateTime? @map("locked_until") @db.Timestamptz(3)
+  createdAt       DateTime  @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @map("updated_at") @db.Timestamptz(3)
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  medicalRecord MedicalRecord @relation(fields: [tenantId, medicalRecordId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, medicalRecordId])
+  @@map("verification_challenges")
+  @@schema("public")
+}
+
+// Solo creacion en la 3.3; lectura y gestion en la Fase 5.
+model HandoffTicket {
+  id              String        @id
+  tenantId        String        @map("tenant_id")
+  conversationId  String        @map("conversation_id")
+  reason          HandoffReason
+  status          HandoffStatus @default(open)
+  medicalRecordId String?       @map("medical_record_id")
+  createdAt       DateTime      @map("created_at") @db.Timestamptz(3)
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  conversation  Conversation   @relation(fields: [tenantId, conversationId], references: [tenantId, id], onDelete: Cascade)
+  medicalRecord MedicalRecord? @relation(fields: [tenantId, medicalRecordId], references: [tenantId, id], onDelete: Restrict)
+
+  @@index([tenantId, status, createdAt])
+  @@map("handoff_tickets")
   @@schema("public")
 }
 

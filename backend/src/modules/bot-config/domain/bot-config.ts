@@ -2,13 +2,9 @@ import { asRecord, isRecord } from "@/modules/shared/domain/input";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 import { type OriginPolicy, validateAllowedOrigins } from "./allowed-origins";
 
-/** Textos del bot. Los predeterminados viven aqui; el tenant solo guarda los que sobrescribe. */
-export const DEFAULT_TEXTS = {
-  welcome: "Hola, soy el asistente virtual de {clinic_name}. ¿En qué te puedo ayudar?",
-  kb_see_more_label: "Ver más",
-} as const;
+import { DEFAULT_TEXTS, TEXT_PLACEHOLDERS, type TextKey } from "./default-texts";
 
-export type TextKey = keyof typeof DEFAULT_TEXTS;
+export { DEFAULT_TEXTS, TEXT_PLACEHOLDERS, type TextKey };
 
 export const PARAM_SPECS = {
   widget_session_ttl_minutes: { default: 30, min: 5, max: 120 },
@@ -17,6 +13,8 @@ export const PARAM_SPECS = {
   kb_max_results: { default: 3, min: 1, max: 10 },
   request_hold_minutes: { default: 240, min: 15, max: 4320 },
   max_pending_requests_per_patient: { default: 2, min: 1, max: 5 },
+  verification_max_attempts: { default: 3, min: 1, max: 5 },
+  verification_lock_minutes: { default: 30, min: 5, max: 1440 },
 } as const;
 
 export type ParamKey = keyof typeof PARAM_SPECS;
@@ -46,7 +44,6 @@ export type BotConfigPatch = {
 export const EMPTY_OVERRIDES: BotConfigOverrides = { texts: {}, params: {}, allowedOrigins: [] };
 
 const TEXT_MAX_LENGTH = 1000;
-const ALLOWED_PLACEHOLDERS = new Set(["clinic_name"]);
 const PLACEHOLDER = /\{([^{}]*)\}/g;
 const PATCH_FIELDS = new Set(["texts", "params", "allowed_origins"]);
 
@@ -164,11 +161,12 @@ function validateText(key: TextKey, value: unknown): string {
   if (/[<>]/.test(value)) {
     throw new ValidationError(`${field} es texto plano: no admite HTML`, { field });
   }
+  const allowed = new Set(["clinic_name", ...TEXT_PLACEHOLDERS[key]]);
   for (const match of value.matchAll(PLACEHOLDER)) {
-    if (!ALLOWED_PLACEHOLDERS.has(match[1] ?? "")) {
+    if (!allowed.has(match[1] ?? "")) {
       throw new ValidationError(`Marcador desconocido en ${field}: {${match[1] ?? ""}}`, {
         field,
-        allowed: [...ALLOWED_PLACEHOLDERS],
+        allowed: [...allowed],
       });
     }
   }

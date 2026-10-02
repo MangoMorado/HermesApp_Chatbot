@@ -1,4 +1,5 @@
 import { CHATBOT_PATHS, CHATBOT_SCHEMAS } from "./openapi-paths-chatbot";
+import { CONVERSATION_PATHS, CONVERSATION_SCHEMAS } from "./openapi-paths-conversation";
 import {
   authErrors,
   ERROR_SCHEMA,
@@ -63,6 +64,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           properties: { max_query_range_days: { type: "integer", minimum: 1, maximum: 366 } },
         },
         ...CHATBOT_SCHEMAS,
+        ...CONVERSATION_SCHEMAS,
       },
     },
     paths: {
@@ -244,6 +246,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         },
       },
       ...CHATBOT_PATHS,
+      ...CONVERSATION_PATHS,
     },
   };
 }

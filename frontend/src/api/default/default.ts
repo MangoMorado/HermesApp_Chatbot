@@ -25,8 +25,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AllowedOriginInput,
   BotConfig,
   BotConfigPatch,
+  ConversationHistory,
+  ConversationMessageInput,
+  ConversationTurn,
   DeleteKnowledgeEntry200,
   Error,
   FindMedicalRecord200,
@@ -2177,4 +2181,339 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getRefreshWidgetSessionMutationOptions(options), queryClient);
+    }
+    export const getGetWidgetConversationUrl = () => {
+
+
+
+
+  return `/api/v1/widget/conversation`
+}
+
+/**
+ * Solo rol widget: turno actual e historial redactado de su sesion. Crea la conversacion con la bienvenida si no existe.
+ */
+export const getWidgetConversation = async ( options?: Parameters<typeof apiFetcher>[1]): Promise<ConversationHistory> => {
+
+  return apiFetcher<ConversationHistory>(getGetWidgetConversationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWidgetConversationQueryKey = () => {
+    return [
+    `/api/v1/widget/conversation`
+    ] as const;
+    }
+
+
+export const getGetWidgetConversationQueryOptions = <TData = Awaited<ReturnType<typeof getWidgetConversation>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWidgetConversation>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWidgetConversationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWidgetConversation>>> = ({ signal }) => getWidgetConversation({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWidgetConversation>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetWidgetConversationQueryResult = NonNullable<Awaited<ReturnType<typeof getWidgetConversation>>>
+export type GetWidgetConversationQueryError = Error
+
+
+export function useGetWidgetConversation<TData = Awaited<ReturnType<typeof getWidgetConversation>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWidgetConversation>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWidgetConversation>>,
+          TError,
+          Awaited<ReturnType<typeof getWidgetConversation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWidgetConversation<TData = Awaited<ReturnType<typeof getWidgetConversation>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWidgetConversation>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWidgetConversation>>,
+          TError,
+          Awaited<ReturnType<typeof getWidgetConversation>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWidgetConversation<TData = Awaited<ReturnType<typeof getWidgetConversation>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWidgetConversation>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetWidgetConversation<TData = Awaited<ReturnType<typeof getWidgetConversation>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWidgetConversation>>, TError, TData>>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetWidgetConversationQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getSendWidgetMessageUrl = () => {
+
+
+
+
+  return `/api/v1/widget/conversation/messages`
+}
+
+/**
+ * Solo rol widget: un turno. option_id de una opcion vigente (409 stale_option si no) o text donde el turno lo pide.
+ */
+export const sendWidgetMessage = async (conversationMessageInput: ConversationMessageInput, options?: Parameters<typeof apiFetcher>[1]): Promise<ConversationTurn> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetcher<ConversationTurn>(getSendWidgetMessageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(conversationMessageInput)
+  }
+);}
+
+
+
+
+
+export const getSendWidgetMessageMutationKey = () => ['sendWidgetMessage'] as const;
+
+export const getSendWidgetMessageMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendWidgetMessage>>, TError,SendWidgetMessageMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendWidgetMessage>>, TError,SendWidgetMessageMutationVariables, TContext> => {
+
+const mutationKey = getSendWidgetMessageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendWidgetMessage>>, SendWidgetMessageMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendWidgetMessage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendWidgetMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendWidgetMessage>>>
+    export type SendWidgetMessageMutationBody = ConversationMessageInput
+    export type SendWidgetMessageMutationError = Error
+    export type SendWidgetMessageMutationVariables = {data: ConversationMessageInput}
+
+    export const useSendWidgetMessage = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendWidgetMessage>>, TError,SendWidgetMessageMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof sendWidgetMessage>>,
+        TError,
+        SendWidgetMessageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSendWidgetMessageMutationOptions(options), queryClient);
+    }
+    export const getAddAllowedOriginUrl = () => {
+
+
+
+
+  return `/api/v1/bot-config/allowed-origins`
+}
+
+/**
+ * Agrega un origen (maximo 20). Si ya esta, responde 200 sin cambios.
+ */
+export const addAllowedOrigin = async (allowedOriginInput: AllowedOriginInput, options?: Parameters<typeof apiFetcher>[1]): Promise<BotConfig> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetcher<BotConfig>(getAddAllowedOriginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(allowedOriginInput)
+  }
+);}
+
+
+
+
+
+export const getAddAllowedOriginMutationKey = () => ['addAllowedOrigin'] as const;
+
+export const getAddAllowedOriginMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addAllowedOrigin>>, TError,AddAllowedOriginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof addAllowedOrigin>>, TError,AddAllowedOriginMutationVariables, TContext> => {
+
+const mutationKey = getAddAllowedOriginMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addAllowedOrigin>>, AddAllowedOriginMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  addAllowedOrigin(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddAllowedOriginMutationResult = NonNullable<Awaited<ReturnType<typeof addAllowedOrigin>>>
+    export type AddAllowedOriginMutationBody = AllowedOriginInput
+    export type AddAllowedOriginMutationError = Error
+    export type AddAllowedOriginMutationVariables = {data: AllowedOriginInput}
+
+    export const useAddAllowedOrigin = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addAllowedOrigin>>, TError,AddAllowedOriginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof addAllowedOrigin>>,
+        TError,
+        AddAllowedOriginMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAddAllowedOriginMutationOptions(options), queryClient);
+    }
+    export const getRemoveAllowedOriginUrl = (origin: string,) => {
+
+
+
+
+  return `/api/v1/bot-config/allowed-origins/${origin}`
+}
+
+/**
+ * Quita un origen. El origen va codificado (encodeURIComponent).
+ */
+export const removeAllowedOrigin = async (origin: string, options?: Parameters<typeof apiFetcher>[1]): Promise<BotConfig> => {
+
+  return apiFetcher<BotConfig>(getRemoveAllowedOriginUrl(origin),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveAllowedOriginMutationKey = () => ['removeAllowedOrigin'] as const;
+
+export const getRemoveAllowedOriginMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeAllowedOrigin>>, TError,RemoveAllowedOriginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeAllowedOrigin>>, TError,RemoveAllowedOriginMutationVariables, TContext> => {
+
+const mutationKey = getRemoveAllowedOriginMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeAllowedOrigin>>, RemoveAllowedOriginMutationVariables> = (props) => {
+          const {origin} = props ?? {};
+
+          return  removeAllowedOrigin(origin,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveAllowedOriginMutationResult = NonNullable<Awaited<ReturnType<typeof removeAllowedOrigin>>>
+
+    export type RemoveAllowedOriginMutationError = Error
+    export type RemoveAllowedOriginMutationVariables = {origin: string}
+
+    export const useRemoveAllowedOrigin = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeAllowedOrigin>>, TError,RemoveAllowedOriginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeAllowedOrigin>>,
+        TError,
+        RemoveAllowedOriginMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveAllowedOriginMutationOptions(options), queryClient);
     }

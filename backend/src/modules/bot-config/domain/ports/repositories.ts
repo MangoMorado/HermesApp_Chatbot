@@ -7,6 +7,10 @@ export type BotConfigRepository = {
   get(tenantId: TenantId): Promise<BotConfigOverrides | null>;
   create(tenantId: TenantId, overrides: BotConfigOverrides): Promise<void>;
   update(tenantId: TenantId, overrides: BotConfigOverrides): Promise<boolean>;
+  /** `SELECT ... FOR UPDATE` de la fila del tenant; `false` si no existe. Solo en transaccion. */
+  lock(tenantId: TenantId): Promise<boolean>;
+  /** Algun tenant tiene este origen entre sus permitidos (CORS de la peticion previa). */
+  isOriginRegistered(origin: string): Promise<boolean>;
 };
 
 export type WidgetKeyRepository = {

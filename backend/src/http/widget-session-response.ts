@@ -1,4 +1,6 @@
 import { getContainer } from "@/composition-root";
+import type { Actor } from "@/modules/auth/domain/actor";
+import { unauthorized } from "@/modules/auth/domain/auth-error";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
 import type { SessionToken } from "@/modules/widget/application/widget-sessions";
@@ -45,4 +47,12 @@ export async function rebuildSessionResponse(
     status: stored.status,
     body: sessionTokenJson(session, await container.issueSessionToken(session)),
   };
+}
+
+/** Sesion del token de widget; sin ella el token no sirve para el chat. */
+export function sessionIdOf(actor: Actor): string {
+  if (!actor.sessionId) {
+    throw unauthorized();
+  }
+  return actor.sessionId;
 }
