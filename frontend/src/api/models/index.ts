@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.3.0
  */
 
+export * from './allowedOriginInput';
 export * from './botConfig';
 export * from './botConfigParams';
 export * from './botConfigPatch';

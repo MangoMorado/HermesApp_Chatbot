@@ -25,6 +25,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AllowedOriginInput,
   BotConfig,
   BotConfigPatch,
   DeleteKnowledgeEntry200,
@@ -2177,4 +2178,158 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getRefreshWidgetSessionMutationOptions(options), queryClient);
+    }
+    export const getAddAllowedOriginUrl = () => {
+
+
+
+
+  return `/api/v1/bot-config/allowed-origins`
+}
+
+/**
+ * Agrega un origen (maximo 20). Si ya esta, responde 200 sin cambios.
+ */
+export const addAllowedOrigin = async (allowedOriginInput: AllowedOriginInput, options?: Parameters<typeof apiFetcher>[1]): Promise<BotConfig> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetcher<BotConfig>(getAddAllowedOriginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(allowedOriginInput)
+  }
+);}
+
+
+
+
+
+export const getAddAllowedOriginMutationKey = () => ['addAllowedOrigin'] as const;
+
+export const getAddAllowedOriginMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addAllowedOrigin>>, TError,AddAllowedOriginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof addAllowedOrigin>>, TError,AddAllowedOriginMutationVariables, TContext> => {
+
+const mutationKey = getAddAllowedOriginMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addAllowedOrigin>>, AddAllowedOriginMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  addAllowedOrigin(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddAllowedOriginMutationResult = NonNullable<Awaited<ReturnType<typeof addAllowedOrigin>>>
+    export type AddAllowedOriginMutationBody = AllowedOriginInput
+    export type AddAllowedOriginMutationError = Error
+    export type AddAllowedOriginMutationVariables = {data: AllowedOriginInput}
+
+    export const useAddAllowedOrigin = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addAllowedOrigin>>, TError,AddAllowedOriginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof addAllowedOrigin>>,
+        TError,
+        AddAllowedOriginMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAddAllowedOriginMutationOptions(options), queryClient);
+    }
+    export const getRemoveAllowedOriginUrl = (origin: string,) => {
+
+
+
+
+  return `/api/v1/bot-config/allowed-origins/${origin}`
+}
+
+/**
+ * Quita un origen. El origen va codificado (encodeURIComponent).
+ */
+export const removeAllowedOrigin = async (origin: string, options?: Parameters<typeof apiFetcher>[1]): Promise<BotConfig> => {
+
+  return apiFetcher<BotConfig>(getRemoveAllowedOriginUrl(origin),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveAllowedOriginMutationKey = () => ['removeAllowedOrigin'] as const;
+
+export const getRemoveAllowedOriginMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeAllowedOrigin>>, TError,RemoveAllowedOriginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeAllowedOrigin>>, TError,RemoveAllowedOriginMutationVariables, TContext> => {
+
+const mutationKey = getRemoveAllowedOriginMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeAllowedOrigin>>, RemoveAllowedOriginMutationVariables> = (props) => {
+          const {origin} = props ?? {};
+
+          return  removeAllowedOrigin(origin,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveAllowedOriginMutationResult = NonNullable<Awaited<ReturnType<typeof removeAllowedOrigin>>>
+
+    export type RemoveAllowedOriginMutationError = Error
+    export type RemoveAllowedOriginMutationVariables = {origin: string}
+
+    export const useRemoveAllowedOrigin = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeAllowedOrigin>>, TError,RemoveAllowedOriginMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeAllowedOrigin>>,
+        TError,
+        RemoveAllowedOriginMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveAllowedOriginMutationOptions(options), queryClient);
     }

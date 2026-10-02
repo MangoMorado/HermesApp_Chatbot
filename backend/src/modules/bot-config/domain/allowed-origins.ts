@@ -1,3 +1,4 @@
+import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 
 /** Fuera de produccion se admite localhost para probar el widget en local. */
@@ -21,15 +22,38 @@ export function validateAllowedOrigins(raw: unknown, policy: OriginPolicy): stri
       max: MAX_ALLOWED_ORIGINS,
     });
   }
-  const origins = raw.map((value, index) => validateOrigin(value, index, policy));
+  const origins = raw.map((value, index) =>
+    validateOrigin(value, `allowed_origins.${index}`, policy),
+  );
   return [...new Set(origins)];
 }
 
-function validateOrigin(value: unknown, index: number, policy: OriginPolicy): string {
+function validateOrigin(value: unknown, field: string, policy: OriginPolicy): string {
   const origin = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (HTTPS_ORIGIN.test(origin) || (policy.allowLocalhost && LOCALHOST_ORIGIN.test(origin))) {
     return origin;
   }
-  const field = `allowed_origins.${index}`;
   throw new ValidationError(`${field} no es un origen valido (https://host[:puerto])`, { field });
+}
+
+/** Agrega un origen a la lista; si ya esta, la lista no cambia. */
+export function addOrigin(
+  current: readonly string[],
+  raw: unknown,
+  policy: OriginPolicy,
+): string[] {
+  const origin = validateOrigin(raw, "origin", policy);
+  if (current.includes(origin)) {
+    return [...current];
+  }
+  return validateAllowedOrigins([...current, origin], policy);
+}
+
+/** Quita un origen; si no esta en la lista es un recurso inexistente. */
+export function removeOrigin(current: readonly string[], raw: unknown): string[] {
+  const origin = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (!current.includes(origin)) {
+    throw new NotFoundError();
+  }
+  return current.filter((value) => value !== origin);
 }

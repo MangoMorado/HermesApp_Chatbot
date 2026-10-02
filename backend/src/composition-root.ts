@@ -10,6 +10,10 @@ import { type Authenticate, createAuthenticate } from "./modules/auth/applicatio
 import { createJoseTokenIssuer } from "./modules/auth/infrastructure/jose-token-issuer";
 import { createJoseTokenVerifier } from "./modules/auth/infrastructure/jose-token-verifier";
 import {
+  createAddAllowedOrigin,
+  createRemoveAllowedOrigin,
+} from "./modules/bot-config/application/allowed-origins";
+import {
   createGetBotConfig,
   createUpdateBotConfig,
   type GetBotConfig,
@@ -178,6 +182,16 @@ function botConfigWritePorts(db: PrismaExecutor, config: AppConfig, auditLog: Au
     botConfigs,
     widgetKeys,
     updateBotConfig: createUpdateBotConfig({
+      ...deps,
+      audit: auditLog,
+      originPolicy: originPolicyOf(config),
+    }),
+    addAllowedOrigin: createAddAllowedOrigin({
+      ...deps,
+      audit: auditLog,
+      originPolicy: originPolicyOf(config),
+    }),
+    removeAllowedOrigin: createRemoveAllowedOrigin({
       ...deps,
       audit: auditLog,
       originPolicy: originPolicyOf(config),

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { validateAllowedOrigins } from "@/modules/bot-config/domain/allowed-origins";
+import {
+  addOrigin,
+  removeOrigin,
+  validateAllowedOrigins,
+} from "@/modules/bot-config/domain/allowed-origins";
 import {
   applyPatch,
   DEFAULT_TEXTS,
@@ -10,6 +14,7 @@ import {
   sanitizeOverrides,
   TEXT_PLACEHOLDERS,
 } from "@/modules/bot-config/domain/bot-config";
+import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 
 const DEV = { allowLocalhost: true };
@@ -212,5 +217,29 @@ describe("conocimiento-config: textos del chat", () => {
     expect(
       applyPatch(EMPTY_OVERRIDES, { params: { verification_lock_minutes: 1440 } }, DEV).params,
     ).toEqual({ verification_lock_minutes: 1440 });
+  });
+});
+
+describe("conocimiento-config: alta y baja de un origen", () => {
+  it("agrega normalizado y sin duplicar", () => {
+    expect(addOrigin(["https://a.test"], " HTTPS://B.test ", PROD)).toEqual([
+      "https://a.test",
+      "https://b.test",
+    ]);
+    expect(addOrigin(["https://a.test"], "https://a.test", PROD)).toEqual(["https://a.test"]);
+  });
+
+  it("respeta el formato y el maximo de 20", () => {
+    expect(() => addOrigin([], "http://a.test", PROD)).toThrow(ValidationError);
+    const full = Array.from({ length: 20 }, (_, i) => `https://o${i}.test`);
+    expect(() => addOrigin(full, "https://otro.test", PROD)).toThrow(ValidationError);
+    expect(addOrigin(full, "https://o3.test", PROD)).toEqual(full);
+  });
+
+  it("quita uno; si no esta es not_found", () => {
+    expect(removeOrigin(["https://a.test", "https://b.test"], "https://A.test")).toEqual([
+      "https://b.test",
+    ]);
+    expect(() => removeOrigin(["https://a.test"], "https://x.test")).toThrow(NotFoundError);
   });
 });

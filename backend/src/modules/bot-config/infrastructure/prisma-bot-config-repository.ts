@@ -34,5 +34,10 @@ export function createPrismaBotConfigRepository(db: PrismaExecutor): BotConfigRe
       });
       return result.count > 0;
     },
+    async lock(tenantId) {
+      const rows = await db.$queryRaw<{ tenant_id: string }[]>`
+        SELECT "tenant_id" FROM "public"."bot_configs" WHERE "tenant_id" = ${tenantId} FOR UPDATE`;
+      return rows.length === 1;
+    },
   };
 }

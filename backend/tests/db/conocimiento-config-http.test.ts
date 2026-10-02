@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { DELETE as removeOrigin } from "@/app/api/v1/bot-config/allowed-origins/[origin]/route";
+import { POST as addOrigin } from "@/app/api/v1/bot-config/allowed-origins/route";
 import { GET as getBotConfig, PATCH as patchBotConfig } from "@/app/api/v1/bot-config/route";
 import { POST as rotateKey } from "@/app/api/v1/bot-config/widget-keys/rotate/route";
 import {
@@ -381,5 +383,39 @@ describe("conocimiento-config: /knowledge-entries", () => {
     expect((await listEntries(authedRequest(KB_URL, operator))).status).toBe(200);
     const widget = await signToken({ role: "widget", tenantId: seed.tenantId, sessionId: "s-1" });
     expect((await listEntries(authedRequest(KB_URL, widget))).status).toBe(403);
+  });
+});
+
+describe("conocimiento-config: origenes por API", () => {
+  it("admin agrega y quita un origen; operator no", async () => {
+    await truncateAll(prisma);
+    resetContainer();
+    const { tenantId } = await insertChatbotTenant(prisma, "o", { allowedOrigins: [] });
+    const admin = await signToken({ role: "admin", tenantId });
+    const url = "http://localhost/api/v1/bot-config/allowed-origins";
+    const add = (token: string, origin: string) =>
+      addOrigin(write(url, token, { origin }, undefined, "POST"));
+    const added = await add(admin, "https://nueva.test");
+    expect(added.status).toBe(200);
+    expect((await added.json()).allowed_origins).toContain("https://nueva.test");
+    expect((await add(admin, "https://nueva.test")).status).toBe(200);
+
+    const operator = await signToken({ role: "operator", tenantId });
+    expect((await add(operator, "https://otra.test")).status).toBe(403);
+
+    const encoded = encodeURIComponent("https://nueva.test");
+    const removed = await removeOrigin(
+      write(`${url}/${encoded}`, admin, undefined, undefined, "DELETE"),
+      { params: Promise.resolve({ origin: encoded }) },
+    );
+    expect(removed.status).toBe(200);
+    expect((await removed.json()).allowed_origins).not.toContain("https://nueva.test");
+    const events = await prisma.auditEvent.findMany({
+      where: { tenantId },
+      select: { action: true },
+    });
+    expect(events.map((e) => e.action)).toEqual(
+      expect.arrayContaining(["bot_config.origin_added", "bot_config.origin_removed"]),
+    );
   });
 });

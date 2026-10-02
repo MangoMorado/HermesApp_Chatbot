@@ -382,6 +382,19 @@
             "format": "date-time"
           }
         }
+      },
+      "AllowedOriginInput": {
+        "type": "object",
+        "required": [
+          "origin"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "origin": {
+            "type": "string",
+            "description": "https://host[:puerto]"
+          }
+        }
       }
     }
   },
@@ -3814,6 +3827,344 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WidgetSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "validation_failed",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bot-config/allowed-origins": {
+      "post": {
+        "operationId": "addAllowedOrigin",
+        "description": "Agrega un origen (maximo 20). Si ya esta, responde 200 sin cambios.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Identificador de correlacion. Si no viene, el servicio genera uno.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllowedOriginInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotConfig"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "validation_failed",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bot-config/allowed-origins/{origin}": {
+      "delete": {
+        "operationId": "removeAllowedOrigin",
+        "description": "Quita un origen. El origen va codificado (encodeURIComponent).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Identificador de correlacion. Si no viene, el servicio genera uno.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "origin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotConfig"
                 }
               }
             }
