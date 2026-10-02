@@ -30,6 +30,9 @@ const record: MedicalRecord = {
 
 function fakeRecords(rows: MedicalRecord[]): MedicalRecordRepository {
   return {
+    async insertPreRegistered() {
+      throw new Error("no usado en estas pruebas");
+    },
     async findByDocument(tenantId, documentType, documentNumber) {
       return (
         rows.find(

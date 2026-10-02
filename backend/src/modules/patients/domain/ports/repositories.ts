@@ -9,6 +9,8 @@ export type MedicalRecordRepository = {
     documentNumber: string,
   ): Promise<MedicalRecord | null>;
   get(tenantId: TenantId, id: string): Promise<MedicalRecord | null>;
+  /** Inserta un expediente `pre_registered`. Documento ya existente: ConflictError document_taken. */
+  insertPreRegistered(record: MedicalRecord): Promise<void>;
 };
 
 export type AppointmentHistoryFilter = {

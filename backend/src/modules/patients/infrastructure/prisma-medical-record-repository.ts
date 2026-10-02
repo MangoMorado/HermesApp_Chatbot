@@ -1,4 +1,6 @@
+import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
+import { isUniqueViolation } from "@/modules/shared/infrastructure/prisma-errors";
 import type { DocumentType, MedicalRecord, MedicalRecordStatus } from "../domain/entities";
 import type { MedicalRecordRepository } from "../domain/ports/repositories";
 
@@ -45,6 +47,32 @@ export function createPrismaMedicalRecordRepository(db: PrismaExecutor): Medical
     async get(tenantId, id) {
       const row = await db.medicalRecord.findFirst({ where: { tenantId, id } });
       return row ? mapRecord(row) : null;
+    },
+
+    async insertPreRegistered(record) {
+      try {
+        await db.medicalRecord.create({
+          data: {
+            id: record.id,
+            tenantId: record.tenantId,
+            identifierSystem: record.identifier.system,
+            identifierValue: record.identifier.value,
+            documentType: record.documentType,
+            documentNumber: record.documentNumber,
+            givenNames: record.givenNames,
+            familyNames: record.familyNames,
+            birthDate: new Date(`${record.birthDate}T00:00:00.000Z`),
+            phone: record.phone,
+            email: record.email,
+            status: "pre_registered",
+          },
+        });
+      } catch (error) {
+        if (isUniqueViolation(error)) {
+          throw new ConflictError("El documento ya esta registrado", { reason: "document_taken" });
+        }
+        throw error;
+      }
     },
   };
 }
