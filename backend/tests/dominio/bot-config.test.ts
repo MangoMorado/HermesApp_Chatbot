@@ -8,6 +8,7 @@ import {
   PARAM_SPECS,
   parseBotConfigPatch,
   sanitizeOverrides,
+  TEXT_PLACEHOLDERS,
 } from "@/modules/bot-config/domain/bot-config";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 
@@ -25,6 +26,8 @@ describe("conocimiento-config: bot-config efectivo", () => {
       kb_max_results: 3,
       request_hold_minutes: 240,
       max_pending_requests_per_patient: 2,
+      verification_max_attempts: 3,
+      verification_lock_minutes: 30,
     });
     expect(config.allowedOrigins).toEqual([]);
   });
@@ -175,5 +178,39 @@ describe("conocimiento-config: lectura defensiva", () => {
       params: { widget_key_grace_hours: 12 },
       allowedOrigins: ["https://a.test"],
     });
+  });
+});
+
+describe("conocimiento-config: textos del chat", () => {
+  it("cada texto acepta {clinic_name} y solo los marcadores de su clave", () => {
+    const ok = applyPatch(
+      EMPTY_OVERRIDES,
+      { texts: { verify_failed: "Quedan {remaining} en {clinic_name}" } },
+      DEV,
+    );
+    expect(ok.texts.verify_failed).toBe("Quedan {remaining} en {clinic_name}");
+    expect(() =>
+      applyPatch(EMPTY_OVERRIDES, { texts: { welcome: "Quedan {remaining}" } }, DEV),
+    ).toThrow(ValidationError);
+  });
+
+  it("los predeterminados solo usan marcadores admitidos para su clave", () => {
+    for (const [key, value] of Object.entries(DEFAULT_TEXTS)) {
+      const used = [...value.matchAll(/\{([^{}]*)\}/g)].map((m) => m[1]);
+      const allowed = ["clinic_name", ...TEXT_PLACEHOLDERS[key as keyof typeof DEFAULT_TEXTS]];
+      expect(
+        used.filter((name) => !allowed.includes(name ?? "")),
+        key,
+      ).toEqual([]);
+    }
+  });
+
+  it("los params de verificacion respetan su rango", () => {
+    expect(() =>
+      applyPatch(EMPTY_OVERRIDES, { params: { verification_max_attempts: 6 } }, DEV),
+    ).toThrow(ValidationError);
+    expect(
+      applyPatch(EMPTY_OVERRIDES, { params: { verification_lock_minutes: 1440 } }, DEV).params,
+    ).toEqual({ verification_lock_minutes: 1440 });
   });
 });
