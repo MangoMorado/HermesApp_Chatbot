@@ -1,6 +1,7 @@
 # Fase 3.3 — Motor conversacional (diseño)
 
-> Estado: **en diseño** en la rama `fase-3-3-motor-conversacional`.
+> Estado: **en implementación** en la rama `fase-3-3-motor-conversacional`; plan en
+> `docs/superpowers/plans/2026-10-02-fase-3-3-motor-conversacional.md`.
 > Fuente del alcance: `ROADMAP.md` §Fase 3, entregables 3, 4 y 9; corte de sub-proyectos en la
 > §1 de `2026-09-22-fase-3-1-tenant-listo-design.md`; requisito de entrada en su §11 (CORS).
 > Manda `GOBERNANZA.md` ante cualquier conflicto.
@@ -295,3 +296,22 @@ clave.
 - Confirmación del pre-registro por Hermes (Fase 4).
 - Barrido periódico de bloqueos y conversaciones vencidas (Fase 5); todo se evalúa al leer.
 - Store compartido para rate limits (Fase 5).
+
+## 9. Refinamientos del plan
+
+1. **Lecturas por puerto, escrituras declaradas.** En vez de `needs()` + `facts`, los pasos leen por un puerto de solo lectura `ConversationReads` (asíncrono; en pruebas es un objeto en memoria). Las escrituras siguen siendo declarativas: cada `handle` devuelve **a lo sumo un** `Effect` y una continuación pura `then(outcome)`.
+2. **Efectos dentro de un `SAVEPOINT`.** `createAppointmentRequest` puede lanzar una violación de unicidad de Postgres, que aborta la transacción. El ejecutor abre `SAVEPOINT` antes del efecto y hace `ROLLBACK TO SAVEPOINT` si falla: el cupo vuelve a su estado y la conversación sigue avanzando con el fallo traducido.
+3. **El par se guarda al sortearlo** (efecto `open_challenge`), no al primer intento: si se guardara al responder, abandonar antes de contestar permitiría re-sortear hasta dar con el par más fácil.
+4. **`conversation/domain` importa `verification/domain`** (puro, sin E/S) para evaluar respuestas. Nada más de otros módulos.
+5. **Texto libre del paciente siempre redactado**, incluida la consulta a la KB (puede traer datos clínicos). El documento se guarda enmascarado. Las líneas del bot también pueden ir redactadas (resumen del pre-registro): se guardan como `[redactado]` y solo viajan completas en la respuesta del `POST`.
+6. **Forma de las respuestas:** `POST /widget/conversation/messages` → `{ messages: string[], options: [{id,label}], input }`; `GET /widget/conversation` → `{ messages: [{author,text,redacted,created_at}], options, input }`.
+7. **CORS:** una petición previa (`OPTIONS`) no trae cuerpo ni token, así que no puede saber el tenant. Se responde `Access-Control-Allow-Origin` con el origen exacto si está en los `allowed_origins` de **algún** tenant (índice GIN). El control por tenant se mantiene: la apertura lo hace `admitWidget` (`403`) y las rutas con token responden `403 forbidden` si llega `Origin` distinto del de la sesión.
+8. **Auditoría:** no hay `conversation.request_created`; la solicitud ya audita `appointment_request.created` con el actor `widget:<sesión>`. Se añaden `verification.succeeded|failed|locked`, `patient.pre_registered`, `handoff.created`, `bot_config.origin_added|origin_removed`.
+9. **Orden de mensajes por `seq`** (`conversations.message_count`), no por `created_at`.
+10. **Repetición idempotente de mensajes** comprueba la sesión: una `Idempotency-Key` usada por otra sesión del tenant responde `409`, nunca la respuesta ajena.
+11. **Identificador del pre-registro:** `identifier_system = "urn:ingenius:pre-registration"`, `identifier_value` = id del expediente. Hermes asigna el suyo en la Fase 4.
+12. **`email_hint` con señuelos deterministas** por expediente (hash del id): si cambiaran en cada sesión, la intersección de las listas revelaría la respuesta.
+13. **El ticket de handoff solo enlaza el expediente si el paciente ya verificó** en la sesión; un documento solo declarado no se asocia.
+14. **Validación del pre-registro duplicada a propósito:** `conversation` valida campo a campo para la UX y `patients` valida el conjunto (autoritativo). DRY al tercer uso.
+15. **Hash con clave en `idempotency_keys` para el chat.** El hash SHA-256 del cuerpo permitiría recuperar por fuerza bruta una respuesta de 4 dígitos. La ruta de mensajes usa HMAC-SHA256 (clave: el secreto JWT) y guarda la respuesta con las líneas redactadas.
+16. **Sesión de otro tenant → `401`**, no `404`: el token apunta a una sesión que no existe para su tenant, igual que en `POST /widget/sessions/refresh`.
