@@ -63,6 +63,17 @@ describe("flujo: identificacion", () => {
     expect(next?.context.verification?.questionIds).toEqual(stored);
   });
 
+  it("si el efecto open_challenge falla, no pregunta con un par sin guardar", async () => {
+    const handled = await idDocumentNumber.handle(
+      text("1020304050"),
+      ctx({ documentType: "CC" }),
+      makeEnv(reads()),
+    );
+    const next = handled.onOutcome?.({ ok: false, failure: "not_available" });
+    expect(next?.goto).toBe("main_menu");
+    expect(keysOf(next?.lines ?? [])).toEqual(["generic_error"]);
+  });
+
   it("bloqueado o sin preguntas posibles va al bloqueo con su motivo", async () => {
     const locked = {
       ...CHALLENGE,
@@ -111,6 +122,17 @@ describe("flujo: verificacion", () => {
     questionIds: ["birth_day", "phone_last_4"] as const,
     index: 0 as const,
   };
+
+  it("no filtra una respuesta incorrecta a contexto, lineas ni efecto", async () => {
+    const handled = await verifyQuestion.handle(
+      text("29"),
+      ctx({ verification: draft }),
+      makeEnv(reads()),
+    );
+    expect(handled.context.verification?.firstCorrect).toBe(false);
+    const dump = JSON.stringify([handled.context, handled.lines, handled.effect]);
+    expect(dump).not.toContain("29");
+  });
 
   it("la primera respuesta solo deja si fue correcta, nunca el valor", async () => {
     const handled = await verifyQuestion.handle(

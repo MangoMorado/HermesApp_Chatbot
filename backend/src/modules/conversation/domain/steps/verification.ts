@@ -30,6 +30,9 @@ export const verifyQuestion: Step = {
       return prompt(context, ask, [], "text");
     }
     const record = await env.reads.getPatient(env.tenantId, draft.medicalRecordId);
+    if (question.options && !record) {
+      return redirect("main_menu", resetFlow(context), [line("generic_error")]);
+    }
     const options = record && question.options ? question.options(record) : [];
     return prompt(
       context,
@@ -92,10 +95,12 @@ function afterAttempt(
       line("verify_failed", { remaining }),
     ]);
   }
-  if (result?.result === "locked" && result.lockedUntil) {
-    const until = formatWhen(result.lockedUntil, env.timeZone);
+  if (result?.result === "locked") {
     const blocked = { ...resetFlow(context), handoffReason: "verification_locked" as const };
-    return go("verification_blocked", blocked, [line("verify_locked", { until })]);
+    const notice = result.lockedUntil
+      ? line("verify_locked", { until: formatWhen(result.lockedUntil, env.timeZone) })
+      : line("verify_unverifiable");
+    return go("verification_blocked", blocked, [notice]);
   }
   return go("main_menu", resetFlow(context), [line("generic_error")]);
 }

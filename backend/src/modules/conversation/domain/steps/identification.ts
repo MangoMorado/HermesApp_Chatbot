@@ -109,6 +109,8 @@ async function startVerification(
     ...verifying(context, record.id, drawn),
     effect: { kind: "open_challenge", medicalRecordId: record.id, questionIds: drawn },
     onOutcome: (outcome) =>
-      verifying(context, record.id, (outcome.ok && outcome.questionIds) || drawn),
+      outcome.ok && outcome.questionIds
+        ? verifying(context, record.id, outcome.questionIds)
+        : go("main_menu", resetFlow(context), [line("generic_error")]),
   };
 }
