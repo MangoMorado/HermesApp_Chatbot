@@ -8,8 +8,16 @@ import { authedRequest } from "../helpers/token";
 export const CHAT_ORIGIN = "https://clinica-chat.test";
 const BASE = "http://localhost/api/v1/widget";
 
+/** Respuesta de POST /conversation/messages: mensajes como texto. */
 export type ChatBody = {
-  messages: unknown[];
+  messages: string[];
+  options: { id: string; label: string }[];
+  input: string;
+};
+
+/** Respuesta de GET /conversation: historial con metadatos por mensaje. */
+export type HistoryBody = {
+  messages: { author: string; text: string; redacted: boolean; created_at: string }[];
   options: { id: string; label: string }[];
   input: string;
 };

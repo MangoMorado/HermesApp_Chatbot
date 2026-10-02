@@ -36,6 +36,7 @@ import {
   createReadChallenge,
   createRecordVerificationAttempt,
 } from "../modules/verification/application/verification";
+import type { ChallengeRepository } from "../modules/verification/domain/ports";
 import { createPrismaChallengeRepository } from "../modules/verification/infrastructure/prisma-challenge-repository";
 import { createEffectRunner } from "./conversation-effects";
 
@@ -57,11 +58,12 @@ function configReader(
   };
 }
 
-function readsFor(db: PrismaExecutor, prismaReads: PrismaConversationReads): ConversationReads {
-  const readChallenge = createReadChallenge({
-    repo: createPrismaChallengeRepository(db),
-    clock: systemClock,
-  });
+function readsFor(
+  db: PrismaExecutor,
+  prismaReads: PrismaConversationReads,
+  challenges: ChallengeRepository,
+): ConversationReads {
+  const readChallenge = createReadChallenge({ repo: challenges, clock: systemClock });
   const expire = createExpireDueRequests({
     expirer: createPrismaRequestExpirer(db),
     clock: systemClock,
@@ -130,7 +132,7 @@ export function conversationWritePorts(
     conversations: createPrismaConversationRepository(db),
     messages: createPrismaMessageRepository(db, uuidV7Generator),
     config: configReader(botConfigs, prismaReads.clinicName),
-    reads: readsFor(db, prismaReads),
+    reads: readsFor(db, prismaReads, challenges),
     runEffect,
     clock: systemClock,
     ids: uuidV7Generator,

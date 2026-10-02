@@ -55,7 +55,7 @@ export function createPrismaConversationRepository(db: PrismaExecutor): Conversa
 
     async save(input) {
       await db.conversation.update({
-        where: { id: input.id },
+        where: { tenantId_id: { tenantId: input.tenantId, id: input.id } },
         data: {
           step: input.state.step,
           context: asJson(input.state.context),

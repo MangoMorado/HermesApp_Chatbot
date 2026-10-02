@@ -4,7 +4,15 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { GET as listInbox } from "@/app/api/sim/v1/inbox/route";
 import { resetContainer } from "@/composition-root";
 import { authedRequest, signToken } from "../helpers/token";
-import { type ChatBody, enableWidget, getChat, openChat, optionId, sendChat } from "./chat-support";
+import {
+  type ChatBody,
+  enableWidget,
+  getChat,
+  type HistoryBody,
+  openChat,
+  optionId,
+  sendChat,
+} from "./chat-support";
 import { HOUR_MS, seedWorld, type World } from "./pre-agenda-support";
 import { testPrisma, truncateAll } from "./support";
 
@@ -14,6 +22,7 @@ describe("flujo: punta a punta por HTTP", () => {
   let world: World;
   let token: string;
   let body: ChatBody;
+  let history: HistoryBody;
 
   const say = async (message: { option_id: string } | { text: string }) => {
     const response = await sendChat(token, message);
@@ -30,7 +39,12 @@ describe("flujo: punta a punta por HTTP", () => {
     const start = new Date(Math.ceil((Date.now() + 2 * HOUR_MS) / HOUR_MS) * HOUR_MS);
     world = await seedWorld(prisma, "chat", start);
     ({ token } = await openChat(await enableWidget(prisma, world.tenantId, "chat")));
-    body = await (await getChat(token)).json();
+    history = await (await getChat(token)).json();
+    body = {
+      messages: history.messages.map((m) => m.text),
+      options: history.options,
+      input: history.input,
+    };
   });
 
   afterAll(async () => {
@@ -63,7 +77,7 @@ describe("flujo: punta a punta por HTTP", () => {
   }
 
   it("documento nuevo: pre-registro y solicitud que llega a la bandeja", async () => {
-    expect(body.messages[0]).toBe(
+    expect(history.messages[0]?.text).toBe(
       "Hola, soy el asistente virtual de Tenant chat. ¿En qué te puedo ayudar?",
     );
     await choose("Mis citas");
@@ -98,9 +112,9 @@ describe("flujo: punta a punta por HTTP", () => {
     ).json();
     expect(inbox.data.map((r: { id: string }) => r.id)).toContain(request.id);
 
-    const history = await (await getChat(token)).json();
-    expect(JSON.stringify(history)).not.toContain("3001234567");
-    expect(JSON.stringify(history)).not.toContain("Ana Paz");
+    const after = await (await getChat(token)).json();
+    expect(JSON.stringify(after)).not.toContain("3001234567");
+    expect(JSON.stringify(after)).not.toContain("Ana Paz");
   });
 
   it("paciente existente: verificacion y cancelacion sin dejar respuestas en ningun lado", async () => {

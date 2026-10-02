@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import type { NextResponse } from "next/server";
 import { getContainer, type WritePorts } from "@/composition-root";
 import { requireRole } from "@/modules/auth/application/authorize";
@@ -33,6 +34,11 @@ type IdempotentRouteOptions = {
   readonly rebuild?: (stored: IdempotentResult, actor: Actor) => Promise<IdempotentResult>;
 };
 
+/** Clave propia del hash de peticiones, derivada del secreto para no reutilizarlo directamente. */
+function hashKeyFor(secret: string): string {
+  return createHmac("sha256", secret).update("idempotency-request-hash").digest("hex");
+}
+
 /** Escritura autenticada con `Idempotency-Key` obligatoria, en el ambito del tenant del token. */
 export function idempotentRoute(
   allowedRoles: readonly Role[],
@@ -50,7 +56,7 @@ export function idempotentRoute(
         request,
         actor.subject,
         1,
-        options.sensitiveBody ? container.config.jwt.secret : undefined,
+        options.sensitiveBody ? hashKeyFor(container.config.jwt.secret) : undefined,
       );
       const { rebuild } = options;
       const result = await runIdempotent({
