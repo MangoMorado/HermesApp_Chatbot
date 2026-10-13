@@ -1116,3 +1116,11 @@ a.departure:hover {
   overflow-wrap: anywhere;
   font-size: 0.8125rem;
 }
+
+/* ---------- Acciones por fila ---------- */
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
