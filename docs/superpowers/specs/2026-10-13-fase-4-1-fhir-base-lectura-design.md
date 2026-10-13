@@ -1,6 +1,6 @@
 # Fase 4.1 — FHIR: base y lectura (diseño)
 
-> Estado: **en diseño**.
+> Estado: **implementada** en la rama `fase-4-1-fhir-base-lectura`, pendiente de merge.
 > Fuente del alcance: `ROADMAP.md` §Fase 4, entregables 1, 9 y 11, la mitad de lectura del 5 y
 > la parte de `Slot` del 7. Manda `GOBERNANZA.md` ante cualquier conflicto.
 

@@ -6,8 +6,9 @@ Reglas en [`../GOBERNANZA.md`](../GOBERNANZA.md). Aquí solo el mapa.
 
 ```
 src/app/                  Adaptadores de entrada HTTP (route handlers de Next).
-src/http/                 Glue del adaptador REST: envoltura de errores, X-Request-Id,
-                          envoltorios de ruta, fuente del OpenAPI. No es dominio.
+src/app/fhir/[[...path]]/ Única ruta de /fhir. Despacha contra el registro de recursos.
+src/http/                 Glue de los adaptadores HTTP: envoltura de errores REST, X-Request-Id,
+                          envoltorios de ruta (REST y FHIR), fuente del OpenAPI. No es dominio.
 src/composition-root.ts   Único punto que ensambla adaptadores con casos de uso.
 src/config/env.ts         Único punto que lee process.env.
 src/modules/<contexto>/   domain / application / infrastructure (ver src/modules/README.md).
@@ -20,8 +21,20 @@ openapi.json              Generado. No se edita a mano.
 ## Las dos superficies
 
 `/api/v1` responde errores como `{ error: { code, message, request_id, details } }` con
-cabecera `X-Request-Id`. `/fhir` (Fase 4) responde `OperationOutcome` con
-`application/fhir+json`. **Nunca se mezclan.**
+cabecera `X-Request-Id`. `/fhir` responde `OperationOutcome` con `application/fhir+json`
+(`src/http/fhir-route.ts`). **Nunca se mezclan:** `fhir-route.ts` no importa `errors.ts`.
+
+## Al añadir un recurso o un parámetro de búsqueda FHIR
+
+1. Los literales (systems, tags, value sets) van en `src/modules/fhir/domain/profiles.ts` y en
+   ningún otro archivo.
+2. Un mapper por recurso en `src/modules/fhir/domain/mappers/`; no se unifican.
+3. Declara el recurso y sus parámetros en `src/modules/fhir/domain/registry.ts`. De ahí salen
+   la validación de parámetros y `GET /fhir/metadata`: no se edita `metadata` por separado.
+4. `fhir` no importa `scheduling` ni `patients`: añade el puerto en
+   `fhir/domain/ports/sources.ts` y cúmplelo en `src/composition/fhir-wiring.ts`.
+5. La suite `fhir-conformance` recorre `metadata` y exige un valor de muestra por parámetro
+   (`tests/db/fhir-conformance-http.test.ts`, función `sampleValue`).
 
 ## Al escribir una ruta nueva de /api/v1
 

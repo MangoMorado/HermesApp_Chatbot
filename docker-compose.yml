@@ -27,6 +27,7 @@ services:
       JWT_AUDIENCE: ${JWT_AUDIENCE:-chatbot-ingenius-360}
       PLATFORM_SECRET: ${PLATFORM_SECRET:-}
       TRUST_PROXY: ${TRUST_PROXY:-false}
+      FHIR_BASE_URL: ${FHIR_BASE_URL:-}
     ports:
       - "3001:3001"
     depends_on:
