@@ -145,6 +145,9 @@ code,
   display: flex;
   gap: 4px;
   height: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .platform {
@@ -159,6 +162,7 @@ code,
   transition:
     color 160ms var(--ease-out),
     border-color 160ms var(--ease-out);
+  white-space: nowrap;
 }
 
 .platform:hover {
@@ -1029,4 +1033,98 @@ a.departure:hover {
   .board-table tbody tr {
     transition: none;
   }
+}
+
+/* ---------- Página incrustable (/widget) ---------- */
+
+.embed-frame {
+  height: 100dvh;
+}
+
+.embed-empty {
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+/* ---------- Consola del chat ---------- */
+
+.chat-stage {
+  height: min(720px, 75dvh);
+}
+
+/* ---------- Formularios largos ---------- */
+
+.input-area {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+/* ---------- Configuración del bot ---------- */
+
+.setting-row {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.setting-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.origin-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.origin-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 36px;
+}
+
+.snippet {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--slot);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+}
+
+/* ---------- Acciones por fila ---------- */
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
 }

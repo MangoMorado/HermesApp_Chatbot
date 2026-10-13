@@ -45,6 +45,7 @@ services:
     environment:
       NODE_ENV: production
       BACKEND_URL: http://backend:3001
+      PUBLIC_BACKEND_URL: ${PUBLIC_BACKEND_URL:-http://localhost:3001}
     ports:
       - "3000:3000"
     depends_on:

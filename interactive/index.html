@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#140c33" />
+    <title>Chatbot Ingenius 360 — cómo está hecho</title>
+    <meta
+      name="description"
+      content="Relato del chatbot determinista de agenda clínica: arquitectura hexagonal, contratos REST y FHIR, stack y los arneses que sostuvieron la construcción."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..700&family=Martian+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#apertura">Saltar al relato</a>
+    <header class="marquee">
+      <a class="brand" href="#apertura">
+        <img src="logotipo-claro.png" alt="Ingenius 360" width="115" height="28" />
+      </a>
+      <nav aria-label="Capítulos">
+        <a href="#apertura" aria-current="true">Apertura</a>
+        <a href="#conversacion">Conversación</a>
+        <a href="#cupo">Cupo</a>
+        <a href="#hexagono">Hexágono</a>
+        <a href="#contratos">Contratos</a>
+        <a href="#construccion">Construcción</a>
+        <a href="#arneses">Arneses</a>
+        <a href="#puertas">Puertas</a>
+      </nav>
+      <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+    </header>
+
+    <canvas id="stage" width="800" height="900" aria-hidden="true"></canvas>
+
+    <div id="scroller">
+      <main>
+        <section class="chapter is-active" id="apertura" data-scene="hero">
+          <p class="index" data-depth="0.55">01</p>
+          <div class="rule" data-depth="0.9"></div>
+          <div class="copy" data-depth="0.14">
+            <h1 class="hero-rise">La cita la confirma Hermes</h1>
+            <p class="hero-rise">
+              Ingenius 360 atiende la agenda clínica con una máquina de estados. El paciente
+              pide, verifica y deja una solicitud. Hermes es quien confirma, reprograma o
+              cancela la cita en firme. Este servicio origina la solicitud y el pre-registro,
+              y ahí se detiene.
+            </p>
+            <p class="hero-rise">
+              Cada frase sale de la configuración del tenant, de su base de conocimiento o de
+              los datos de dominio. El recorrido es determinista: el mismo paso, con los
+              mismos datos, produce la misma respuesta.
+            </p>
+            <p class="hero-rise">
+              En el repositorio conviven dos piezas que en producción se separan. El chatbot
+              se despliega. El simulador de Hermes se apaga. El chatbot solo usa del
+              simulador lo que Hermes ofrece por FHIR.
+            </p>
+          </div>
+        </section>
+
+        <section class="chapter" id="conversacion" data-scene="talk">
+          <p class="index" data-depth="0.55">02</p>
+          <div class="rule" data-depth="0.9"></div>
+          <div class="copy" data-depth="0.14">
+            <h2>El turno es un paso</h2>
+            <p>
+              El motor guarda un paso y un contexto. El paso dice qué puede ocurrir ahora. El
+              contexto conserva lo justo para seguir: el documento, el borrador del
+              pre-registro, la cita elegida. La respuesta de verificación y el dato clínico
+              no se escriben en el mensaje, ni en la auditoría, ni en el log.
+            </p>
+            <p>
+              El recorrido real pasa por el menú, el tipo y el número de documento, y una
+              verificación con un par fijo de preguntas. Si la verificación falla, el paso
+              queda bloqueado. Si la persona no está en el padrón, lee el aviso de privacidad
+              y completa el pre-registro campo a campo. Para una cita elige servicio,
+              profesional, día, cupo y confirmación. Desde el menú también consulta la base
+              de conocimiento o pide un asesor. Cancelar y reprogramar parten de una cita ya
+              elegida.
+            </p>
+            <p>
+              El mismo widget tiene tres montajes. Los tres hablan directo con el backend por
+              CORS. El origen permitido se administra en la pantalla Bot.
+            </p>
+            <div class="rows">
+              <div>
+                <span>Script</span>
+                <span>Corre en el sitio del tenant. Ese origen es el que ve el backend.</span>
+              </div>
+              <div>
+                <span>Iframe</span>
+                <span>La página <code>/widget</code>. El origen es el del frontend.</span>
+              </div>
+              <div>
+                <span>Consola</span>
+                <span>La ruta <code>/chat</code>, también con el origen del frontend.</span>
+              </div>
+            </div>
+            <pre><code>&lt;script src="https://&lt;frontend&gt;/widget.js"
+  data-key="&lt;clave&gt;"
+  data-api="https://&lt;backend&gt;" async&gt;&lt;/script&gt;</code></pre>
+          </div>
+        </section>
+
+        <section class="chapter" id="cupo" data-scene="slot">
+          <p class="index" data-depth="0.55">03</p>
+          <div class="rule" data-depth="0.9"></div>
+          <div class="copy" data-depth="0.14">
+            <h2>Un hueco, una transacción</h2>
+            <p>
+              Agendar o reprogramar no confirma la cita. Aparta un cupo. El estado pasa de
+              <code>free</code> a <code>busy_tentative</code> dentro de la misma transacción.
+              Si dos solicitudes llegan a la vez, una se queda con el hueco y la otra sigue
+              sin él.
+            </p>
+            <p>
+              El apartado vence. El vencimiento se evalúa al leer, también cuando Hermes lee
+              <code>Slot</code>, <code>Appointment</code> o <code>Task</code>. Un barrido
+              periódico recoge lo que nadie volvió a mirar. Hay un tope de solicitudes
+              pendientes por paciente, para que nadie acapare la agenda.
+            </p>
+            <p>
+              Toda escritura acepta <code>Idempotency-Key</code> persistida en la base. Repetir
+              la misma petición devuelve el mismo resultado y no abre una segunda solicitud.
+            </p>
+          </div>
+        </section>
+
+        <section class="chapter" id="hexagono" data-scene="hex">
+          <p class="index" data-depth="0.55">04</p>
+          <div class="rule" data-depth="0.9"></div>
+          <div class="copy" data-depth="0.14">
+            <h2>Las dependencias apuntan hacia adentro</h2>
+            <p>
+              Cada contexto de negocio vive en <code>modules/&lt;contexto&gt;</code> con tres
+              capas. <code>domain</code> define entidades y puertos. <code>application</code>
+              orquesta casos de uso a través de esos puertos. <code>infrastructure</code> los
+              cumple: Prisma, el reloj, los identificadores, el HTTP que sale.
+            </p>
+            <p>
+              <code>domain</code> y <code>application</code> no importan Next, Prisma ni
+              <code>node:</code>. Lo cierran dos mecanismos a la vez: la regla
+              <code>noRestrictedImports</code> de Biome y la suite <code>fronteras</code>. Si
+              algo hace entrada-salida, vive en infraestructura, aunque el archivo que lo
+              llama no abra un socket.
+            </p>
+            <p>
+              <code>composition-root.ts</code> es el único sitio que une un adaptador concreto
+              con un caso de uso. Los route handlers de <code>src/app/</code> validan,
+              autentican, traducen el error y delegan. Cuando un handler crece más que eso,
+              falta un caso de uso.
+            </p>
+            <p>
+              El frontend no repite reglas de negocio. Consume el cliente generado desde
+              OpenAPI y ese cliente no se edita a mano. La validación de forma —campo vacío,
+              formato— sí vive en la interfaz. La de negocio, no.
+            </p>
+            <p>
+              La skill de arquitectura hexagonal llama <em>adapters</em> a la capa de afuera.
+              En este repositorio esa capa se llama <code>infrastructure</code>. La
+              gobernanza gana el conflicto.
+            </p>
+          </div>
+        </section>
+
+        <section class="chapter" id="contratos" data-scene="contracts">
+          <p class="index" data-depth="0.55">05</p>
+          <div class="rule" data-depth="0.9"></div>
+          <div class="copy" data-depth="0.14">
+            <h2>Un dominio, dos errores distintos</h2>
+            <p>
+              El mismo núcleo tiene dos puertas HTTP. Cada una habla el contrato de quien la
+              llama. Las envolturas no se cruzan.
+            </p>
+            <div class="rows">
+              <div>
+                <span>REST</span>
+                <span>
+                  <code>/api/v1</code> para el widget, el panel y el chat. El fallo llega como
+                  <code>{ error: { code, message, request_id, details } }</code> con la
+                  cabecera <code>X-Request-Id</code>. Si el cliente manda ese id, vuelve el
+                  mismo.
+                </span>
+              </div>
+              <div>
+                <span>FHIR</span>
+                <span>
+                  <code>/fhir</code> para Hermes. El fallo es un
+                  <code>OperationOutcome</code> con <code>application/fhir+json</code>.
+                </span>
+              </div>
+              <div>
+                <span>Plataforma</span>
+                <span>
+                  <code>/api/platform/v1</code> da de alta tenants y emite tokens. Usa la
+                  envoltura REST y el secreto de plataforma.
+                </span>
+              </div>
+            </div>
+            <p>
+              <code>GET /fhir/metadata</code> declara exactamente lo implementado. Los
+              recursos de escritura condicional son <code>Patient</code>,
+              <code>Practitioner</code>, <code>HealthcareService</code>,
+              <code>Schedule</code> y <code>Slot</code>. La pre-agenda viaja como
+              <code>Appointment</code> en estado <code>proposed</code>. La cancelación viaja
+              como <code>Task</code>. El pre-registro es un <code>Patient</code> con la
+              etiqueta <code>pre-registered</code>. Perfiles y constantes viven en un solo
+              módulo. Dos mappers parecidos, de recursos distintos, siguen separados.
+            </p>
+            <p>
+              El tenant sale solo del claim del JWT. Los roles son widget, operator, admin y
+              service. Un recurso de otro tenant responde 404: desde fuera, la ausencia y el
+              acceso ajeno se ven igual. El rol widget alcanza únicamente el chat de su
+              sesión. Las escrituras FHIR quedan para el rol service, y la auditoría las
+              anota como escritas por Hermes.
+            </p>
+          </div>
+        </section>
+
+        <section class="chapter" id="construccion" data-scene="build">
+          <p class="index" data-depth="0.55">06</p>
+          <div class="rule" data-depth="0.9"></div>
+          <div class="copy" data-depth="0.14">
+            <h2>Cinco fases, en ese orden</h2>
+            <p>
+              No se abría la siguiente sin cerrar los criterios de la anterior. El stack del
+              primer día es el que quedó: Next.js con App Router, Prisma y Postgres. Biome,
+              Vitest y React Doctor vigilan cada cambio. Hay dos <code>package.json</code> a
+              propósito, sin workspaces de npm: la raíz solo orquesta. Docker multi-stage
+              levanta Postgres, el backend y el frontend.
+              <code>process.env</code> se lee en un solo módulo de configuración por proyecto.
+            </p>
+            <ol class="phases">
+              <li>
+                <span>1</span>
+                <div>
+                  <strong>Cimientos.</strong> Monorepo, hexágono vacío, JWT, contrato REST
+                  mínimo, Docker, CI y gobernanza.
+                </div>
+              </li>
+              <li>
+                <span>2</span>
+                <div>
+                  <strong>Dominio.</strong> Agenda, historial y ajustes detrás de puertos.
+                  Seed simétrico de dos tenants, con el simulador en el esquema
+                  <code>hermes_sim</code>. El panel llama al cliente generado.
+                </div>
+              </li>
+              <li>
+                <span>3</span>
+                <div>
+                  <strong>Chat.</strong> Sesión del widget, motor determinista, verificación,
+                  pre-agenda, base de conocimiento, bandeja y idempotencia en base de datos.
+                </div>
+              </li>
+              <li>
+                <span>4</span>
+                <div>
+                  <strong>FHIR.</strong> Lectura y escritura condicional. El simulador cierra
+                  el ciclo —maestros, pre-agendas, pre-registro— solo por FHIR, con token
+                  service.
+                </div>
+              </li>
+              <li>
+                <span>5</span>
+                <div>
+                  <strong>Entrega.</strong> Límites de tasa en un store compartido, tickets
+                  de asesor en el panel, barrido de apartados, secretos fuera del compose,
+                  colección Postman y la suite <code>carga-basica</code>.
+                </div>
+              </li>
+            </ol>
+            <ul class="board">
+              <li>Complejidad cognitiva de una función, hasta 15</li>
+              <li>Una función, hasta 40 líneas sin contar blancos</li>
+              <li>Un archivo de lógica, hasta 400 líneas</li>
+              <li>Cero ciclos de importación</li>
+              <li>Se extrae un duplicado al tercer uso real</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="chapter" id="arneses" data-scene="harness">
+          <p class="index" data-depth="0.55">07</p>
+          <div class="rule" data-depth="0.9"></div>
+          <div class="copy" data-depth="0.14">
+            <h2>Personas y agentes, las mismas puertas</h2>
+            <p>
+              El arnés es lo que mantiene el trabajo dentro del producto. Personas y agentes
+              leen los mismos documentos y cruzan las mismas puertas.
+            </p>
+            <ul class="board">
+              <li>
+                <code>GOBERNANZA.md</code> manda. Si una skill contradice la política, se
+                aplica la política.
+              </li>
+              <li>
+                <code>AGENTS.md</code>, en la raíz y en cada proyecto, solo dice dónde está
+                cada cosa.
+              </li>
+              <li>
+                <code>CLAUDE.md</code> fija cómo se lee el repositorio y qué ya está en pie.
+              </li>
+              <li>
+                <code>ROADMAP.md</code> es el plan de fases. Lo que no está en la fase abierta
+                no se construye.
+              </li>
+            </ul>
+            <p>
+              Las skills viven en <code>.agents/skills</code>, con espejo en
+              <code>.claude/skills</code> y <code>.github/skills</code>, clavadas en
+              <code>skills-lock.json</code>. Orientan el trabajo de hexágono, FHIR,
+              seguridad, interfaz, duplicación y revisión de usabilidad. Cuando chocan, ceden:
+              la capa externa se llama infrastructure; FHIR no promete recursos que el roadmap
+              no pidió; la duplicación se extrae al tercer uso; en la interfaz manda
+              impeccable, y sobre impeccable manda la gobernanza.
+            </p>
+            <p>
+              El diseño por spec es obligatorio cuando el cambio toca arquitectura, fronteras
+              de módulo, el contrato REST o FHIR, la idempotencia, los roles o el tenant. El
+              spec y el plan quedan en <code>docs/superpowers</code>.
+            </p>
+            <ul class="board">
+              <li>Un agente no abre una fase que el roadmap no tiene abierta.</li>
+              <li>No apaga una regla ni un test para cruzar una puerta.</li>
+              <li>No toca secretos ni imprime credenciales.</li>
+              <li>No dice que algo funciona sin haber corrido el comando y visto la salida.</li>
+              <li>No hace commit ni push si nadie se lo pidió.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="chapter" id="puertas" data-scene="gates">
+          <p class="index" data-depth="0.55">08</p>
+          <div class="rule" data-depth="0.9"></div>
+          <div class="copy" data-depth="0.14">
+            <h2>Una PR roja no entra</h2>
+            <p>Cada cambio cruza las puertas en este orden. Si una falla, se arregla el código.</p>
+            <ol class="phases">
+              <li>
+                <span>1</span>
+                <div><strong>Biome.</strong> <code>biome ci</code> en los dos proyectos.</div>
+              </li>
+              <li>
+                <span>2</span>
+                <div><strong>Tipos.</strong> <code>tsc --noEmit</code> en lo que se tocó.</div>
+              </li>
+              <li>
+                <span>3</span>
+                <div><strong>Vitest.</strong> Las suites del comportamiento afectado.</div>
+              </li>
+              <li>
+                <span>4</span>
+                <div><strong>React Doctor.</strong> Si el cambio mueve el frontend.</div>
+              </li>
+              <li>
+                <span>5</span>
+                <div>
+                  <strong>OpenAPI.</strong> Si mueve <code>/api/v1</code>, se regenera el
+                  contrato y el cliente del frontend sigue sin edición manual. La suite
+                  <code>contrato-api</code> falla si el JSON quedó atrás o si hay una ruta
+                  sin declarar.
+                </div>
+              </li>
+              <li>
+                <span>6</span>
+                <div>
+                  <strong>Metadata.</strong> Si mueve FHIR, <code>/fhir/metadata</code> y las
+                  suites de conformidad van en la misma PR.
+                </div>
+              </li>
+              <li>
+                <span>7</span>
+                <div>
+                  <strong>Política.</strong> Si cambia una regla de trabajo,
+                  <code>GOBERNANZA.md</code> se actualiza en esa misma PR.
+                </div>
+              </li>
+            </ol>
+            <p>Las suites se nombran por lo que protegen.</p>
+            <ul class="board">
+              <li><code>fronteras</code> el núcleo no importa framework, ORM ni node</li>
+              <li><code>contrato-api</code> envoltura de error, request id y OpenAPI al día</li>
+              <li><code>roles</code> 401 sin token, 404 entre tenants, alcance del widget</li>
+              <li><code>dominio</code> tenant, cursor de paginación, ajustes, seed</li>
+              <li><code>aislamiento-tenant</code> la base impide cruzar tenants</li>
+              <li><code>simetria-seed</code> chatbot y simulador parten de los mismos datos</li>
+              <li><code>flujo</code> el motor, los pasos y el chat por HTTP</li>
+              <li><code>verificacion</code> par fijo, bloqueo y nada persistido</li>
+              <li><code>pre-agenda</code> apartado atómico, tope y vencimiento</li>
+              <li><code>conocimiento-config</code> bot-config, rotación de clave y búsqueda</li>
+              <li><code>alta-chatbot</code> alta de tenant y tokens de plataforma</li>
+              <li><code>sesion-widget</code> clave pública, origen y límite por IP</li>
+              <li><code>idempotencia</code> repetir una escritura no la duplica</li>
+              <li><code>sin-ia</code> ni dependencia ni import de modelo o n8n</li>
+              <li><code>fhir-conformance</code> metadata y recursos, ni más ni menos</li>
+              <li><code>hermes-simulador</code> el ciclo se cierra solo por FHIR</li>
+              <li><code>carga-basica</code> latencia y límites con concurrencia moderada</li>
+              <li><code>cors</code> orígenes del widget, alta y baja</li>
+            </ul>
+            <p>
+              Al cierre siguen en pie cuatro reglas de producto. El texto no sale de un
+              modelo. Hermes es la fuente de verdad de la cita. Los mensajes, la auditoría y
+              los logs no guardan respuestas de verificación ni datos clínicos. El simulador
+              no viaja a producción.
+            </p>
+          </div>
+        </section>
+
+        <footer>
+          <p>Chatbot Ingenius 360. El servicio origina la solicitud. Hermes confirma la cita.</p>
+        </footer>
+      </main>
+    </div>
+    <script src="main.js"></script>
+  </body>
+</html>

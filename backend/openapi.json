@@ -3728,6 +3728,9 @@
     },
     "/widget/sessions": {
       "post": {
+        "tags": [
+          "widget"
+        ],
         "operationId": "openWidgetSession",
         "description": "Publica: la clave del widget resuelve el tenant. Exige cabecera Origin permitida e Idempotency-Key de al menos 32 caracteres (secreto del cliente: no se registra).",
         "security": [],
@@ -3900,6 +3903,9 @@
     },
     "/widget/sessions/refresh": {
       "post": {
+        "tags": [
+          "widget"
+        ],
         "operationId": "refreshWidgetSession",
         "description": "Solo rol widget: renueva la sesion de su propio token.",
         "security": [
@@ -4060,6 +4066,9 @@
     },
     "/widget/conversation": {
       "get": {
+        "tags": [
+          "widget"
+        ],
         "operationId": "getWidgetConversation",
         "description": "Solo rol widget: turno actual e historial redactado de su sesion. Crea la conversacion con la bienvenida si no existe.",
         "security": [
@@ -4193,6 +4202,9 @@
     },
     "/widget/conversation/messages": {
       "post": {
+        "tags": [
+          "widget"
+        ],
         "operationId": "sendWidgetMessage",
         "description": "Solo rol widget: un turno. option_id de una opcion vigente (409 stale_option si no) o text donde el turno lo pide.",
         "security": [

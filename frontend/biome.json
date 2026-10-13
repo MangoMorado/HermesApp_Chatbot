@@ -3,6 +3,6 @@
   "root": false,
   "extends": "//",
   "files": {
-    "includes": ["**", "!src/api", "!src/sim", "!**/node_modules", "!**/.next"]
+    "includes": ["**", "!src/api", "!src/sim", "!src/widget/api", "!**/node_modules", "!**/.next"]
   }
 }

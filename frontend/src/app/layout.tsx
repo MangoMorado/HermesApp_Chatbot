@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree, Martian_Mono } from "next/font/google";
 import type { ReactNode } from "react";
-import { Providers } from "@/components/providers";
-import { Marquee } from "@/components/shell/marquee";
 import "./globals.css";
 
 const ui = Figtree({ subsets: ["latin"], variable: "--font-ui", display: "swap" });
@@ -27,12 +25,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${ui.variable} ${data.variable}`}>
-      <body>
-        <Providers>
-          <Marquee />
-          <main className="page">{children}</main>
-        </Providers>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

@@ -1,0 +1,417 @@
+:root {
+  --ground: #140c33;
+  --board: #1e1450;
+  --cell: #271a63;
+  --cell-hi: #30207a;
+  --slot: #0f0a28;
+  --flap-top: #181040;
+  --rule: #3a2c86;
+  --ink: #f4f1ff;
+  --ink-2: #b9b0e0;
+  --ink-3: #9d94c9;
+  --accent: #8851fa;
+  --accent-hi: #9d6bff;
+  --focus: #c8b0fb;
+  --ok: #4ade9a;
+  --hold: #f2c94c;
+  --busy: #ff7a93;
+  --chrome: 56px;
+  --stage: 34vh;
+  --sans: "Figtree", system-ui, sans-serif;
+  --mono: "Martian Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--chrome);
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  font-weight: 400;
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.skip {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 5;
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.skip:focus {
+  top: 8px;
+}
+
+.marquee {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--chrome);
+  padding: 0 16px;
+  background: var(--board);
+  border-bottom: 1px solid var(--rule);
+}
+
+.marquee .brand {
+  display: flex;
+  align-items: center;
+  flex: none;
+  margin-right: 12px;
+  padding: 0;
+  background: transparent;
+}
+
+.marquee .brand img {
+  display: block;
+  height: 28px;
+  width: auto;
+}
+
+.marquee nav {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.marquee nav::-webkit-scrollbar {
+  display: none;
+}
+
+.marquee a {
+  flex: none;
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+.marquee nav a:hover {
+  background: var(--cell);
+  color: var(--ink);
+}
+
+.marquee nav a[aria-current="true"] {
+  background: var(--cell-hi);
+  color: var(--ink);
+}
+
+.progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+#stage {
+  position: fixed;
+  z-index: 0;
+  top: var(--chrome);
+  left: min(40rem, 46vw);
+  width: calc(100vw - min(40rem, 46vw));
+  height: calc(100vh - var(--chrome));
+  display: block;
+  pointer-events: none;
+  background: var(--ground);
+  border-left: 1px solid var(--rule);
+}
+
+#scroller {
+  position: relative;
+  z-index: 1;
+  width: min(40rem, 46vw);
+}
+
+main {
+  padding: 0 1.75rem 8vh 2rem;
+}
+
+.chapter {
+  min-height: 120vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10vh 0;
+}
+
+.index {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.chapter.is-active .index {
+  color: var(--accent);
+}
+
+.rule {
+  width: 4.5rem;
+  height: 1px;
+  margin: 0.85rem 0 1.25rem;
+  background: var(--rule);
+}
+
+h1,
+h2 {
+  margin: 0 0 0.9rem;
+  color: var(--ink);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+main > footer {
+  padding: 2rem 0 4rem;
+  border-top: 1px solid var(--rule);
+}
+
+main > footer p {
+  margin: 0;
+  max-width: 36em;
+  color: var(--ink-3);
+  font-size: 0.95rem;
+}
+
+h1 {
+  font-size: clamp(2rem, 4vw, 2.7rem);
+}
+
+h2 {
+  font-size: clamp(1.55rem, 3vw, 2rem);
+}
+
+.copy p {
+  margin: 0 0 0.95rem;
+  max-width: 38em;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.copy strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  font-weight: 500;
+}
+
+pre {
+  margin: 1.1rem 0 0;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  background: var(--slot);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+pre code {
+  font-size: inherit;
+  background: transparent;
+  padding: 0;
+}
+
+.board code,
+.phases code,
+.copy p code {
+  color: var(--ink);
+  background: var(--slot);
+  padding: 0.08em 0.35em;
+  border-radius: 4px;
+}
+
+.rows {
+  margin: 1.15rem 0;
+  border-top: 1px solid var(--rule);
+}
+
+.rows div {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+
+.rows span:first-child {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.phases,
+.board {
+  list-style: none;
+  margin: 1.15rem 0 0;
+  padding: 0;
+}
+
+.phases li,
+.board li {
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-2);
+}
+
+.phases li {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr;
+  gap: 0.75rem;
+}
+
+.phases li > span {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--accent);
+  padding-top: 0.2rem;
+}
+
+.phases strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.board li {
+  font-size: 0.95rem;
+}
+
+.board li code {
+  margin-right: 0.35rem;
+}
+
+.hero-rise {
+  animation: rise 0.7s ease both;
+}
+
+.hero-rise:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.hero-rise:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.hero-rise:nth-child(4) {
+  animation-delay: 0.24s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 880px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  #stage {
+    left: 0;
+    width: 100%;
+    height: var(--stage);
+    border-left: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  #scroller {
+    position: fixed;
+    top: calc(var(--chrome) + var(--stage));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    overflow-y: auto;
+    background: var(--ground);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  main {
+    padding: 0 1.15rem 12vh;
+  }
+
+  .chapter {
+    min-height: 92vh;
+    justify-content: flex-start;
+    padding: 1.75rem 0 2.5rem;
+  }
+
+  .rows div {
+    grid-template-columns: 5.5rem 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .hero-rise {
+    animation: none;
+  }
+
+  .index {
+    transition: none;
+  }
+}

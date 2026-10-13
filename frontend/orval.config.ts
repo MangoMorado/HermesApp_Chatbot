@@ -1,8 +1,14 @@
 import { defineConfig } from "orval";
 
+const fetchOverride = { includeHttpResponseReturnType: false };
+
 export default defineConfig({
   chatbot: {
-    input: "../backend/openapi.json",
+    // Las operaciones del widget viven solo en su propio cliente (destino `widget`).
+    input: {
+      target: "../backend/openapi.json",
+      filters: { mode: "exclude", tags: ["widget"] },
+    },
     output: {
       target: "./src/api/endpoints.ts",
       schemas: "./src/api/models",
@@ -11,13 +17,8 @@ export default defineConfig({
       mode: "tags-split",
       baseUrl: "/api/v1",
       override: {
-        mutator: {
-          path: "./src/lib/api-fetcher.ts",
-          name: "apiFetcher",
-        },
-        fetch: {
-          includeHttpResponseReturnType: false,
-        },
+        mutator: { path: "./src/lib/api-fetcher.ts", name: "apiFetcher" },
+        fetch: fetchOverride,
       },
     },
   },
@@ -31,13 +32,27 @@ export default defineConfig({
       mode: "tags-split",
       baseUrl: "/api/sim/v1",
       override: {
-        mutator: {
-          path: "./src/lib/api-fetcher.ts",
-          name: "apiFetcher",
-        },
-        fetch: {
-          includeHttpResponseReturnType: false,
-        },
+        mutator: { path: "./src/lib/api-fetcher.ts", name: "apiFetcher" },
+        fetch: fetchOverride,
+      },
+    },
+  },
+  // Cliente del widget: sin react-query (va en el bundle del script) y con su propio mutator.
+  widget: {
+    input: {
+      target: "../backend/openapi.json",
+      filters: { mode: "include", tags: ["widget"] },
+    },
+    output: {
+      target: "./src/widget/api/endpoints.ts",
+      schemas: "./src/widget/api/models",
+      client: "fetch",
+      clean: true,
+      mode: "single",
+      baseUrl: "/api/v1",
+      override: {
+        mutator: { path: "./src/widget/fetcher.ts", name: "widgetFetcher" },
+        fetch: fetchOverride,
       },
     },
   },
