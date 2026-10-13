@@ -67,6 +67,7 @@ export function BotOrigins({ config, canWrite, onSaved }: BotSectionProps) {
             <Field label="Origen nuevo" apiKey="origin" className="field-wide">
               <input
                 className="input data"
+                aria-label="Origen nuevo"
                 placeholder="https://www.clinica.co"
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
