@@ -1051,3 +1051,27 @@ a.departure:hover {
 .chat-stage {
   height: min(720px, 75dvh);
 }
+
+/* ---------- Formularios largos ---------- */
+
+.input-area {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
