@@ -1,4 +1,4 @@
-import type { Page } from "@/modules/shared/domain/pagination";
+import type { OffsetPage, OffsetWindow, Page } from "@/modules/shared/domain/pagination";
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
 import type { DocumentType, HistoryAppointment, MedicalRecord } from "../entities";
 
@@ -23,4 +23,17 @@ export type AppointmentHistoryFilter = {
 /** Puerto propio de patients: no importa scheduling. */
 export type AppointmentHistory = {
   list(filter: AppointmentHistoryFilter): Promise<Page<HistoryAppointment>>;
+};
+
+/** Un filtro en `null` no restringe. `identifier` es el identificador Hermes. */
+export type MedicalRecordSearch = OffsetWindow & {
+  readonly tenantId: TenantId;
+  readonly identifier: { readonly system: string; readonly value: string } | null;
+  readonly document: { readonly type: DocumentType; readonly number: string } | null;
+  readonly preRegistered: boolean | null;
+};
+
+/** Busqueda por desplazamiento con total. La usa la superficie FHIR. Orden: id. */
+export type MedicalRecordDirectory = {
+  search(search: MedicalRecordSearch): Promise<OffsetPage<MedicalRecord>>;
 };
