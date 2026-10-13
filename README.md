@@ -6,11 +6,11 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fases 1 y 2 cerradas. Fase 3 en curso: la 3.1 (emisión de tokens, sesiones del
-> widget, `bot-config` y base de conocimiento), la 3.2 (pre-agenda) y la 3.3 (motor
-> conversacional) están en `main`. La 3.4 (frontend del chat) está **implementada** en la rama
-> `fase-3-4-frontend-chat`, con tests unitarios y puertas en verde; el recorrido manual en
-> navegador y las suites de BD (`test:db`, también las de la 3.3) siguen pendientes.
+> Estado: Fases 1, 2 y 3 cerradas. La Fase 3 quedó en `main` con sus cuatro sub-proyectos:
+> 3.1 (emisión de tokens, sesiones del widget, `bot-config` y base de conocimiento), 3.2
+> (pre-agenda), 3.3 (motor conversacional) y 3.4 (frontend del chat). Se cerró el 13 de
+> octubre de 2026 con tests unitarios, suites de BD (`test:db`) y puertas en verde, y el
+> recorrido manual en navegador hecho. Sigue la Fase 4 (FHIR e integración con Hermes).
 
 ## Requisitos
 

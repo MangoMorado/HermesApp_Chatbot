@@ -30,7 +30,7 @@ Máquina de estados **sin IA** integrada con **Hermes como única fuente de verd
 - Monorepo `backend/` + `frontend/` (Next.js App Router, Prisma, Postgres); UI en español, código en inglés.
 - Superficies HTTP: REST `/api/v1` (widget, panel, chat) y FHIR R4 `/fhir` (Hermes).
 - Roles JWT: `widget` · `operator` · `admin` · `service`. Tenant solo del claim.
-- Hoy (Fase 3 implementada): panel de lectura y ajustes, base de conocimiento, configuración del bot, simulador CRUD con bandeja, y chat como widget (script, iframe y consola). Tokens de panel emitidos por `/api/platform/v1` y pegados en la franja de sesión; con tests unitarios y puertas en verde, pero el recorrido manual en navegador y las suites de BD (`test:db`) siguen pendientes.
+- Hoy (Fase 3 cerrada): panel de lectura y ajustes, base de conocimiento, configuración del bot, simulador CRUD con bandeja, y chat como widget (script, iframe y consola). Tokens de panel emitidos por `/api/platform/v1` y pegados en la franja de sesión; con tests unitarios, suites de BD (`test:db`) y puertas en verde, y el recorrido manual en navegador hecho.
 - Arranque local: `npm --prefix frontend run dev` → `http://localhost:3000`; backend en `3001`.
 - Despliegue actual: Docker / Easypanel; compose con Postgres.
 

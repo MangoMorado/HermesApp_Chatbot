@@ -1,6 +1,6 @@
 # Fase 3.4 — Frontend del chat: widget, consola y panel (diseño)
 
-> Estado: **implementada** en la rama `fase-3-4-frontend-chat` (pendiente de merge por el usuario), con sus tests unitarios y puertas de calidad en verde; el **recorrido manual en navegador** y las suites de BD (`test:db`) siguen **pendientes**. Plan en `docs/superpowers/plans/2026-10-13-fase-3-4-frontend-chat.md`.
+> Estado: **cerrada** y en `main` (PR #6), con tests unitarios, suites de BD (`test:db`) y puertas de calidad en verde, y el recorrido manual en navegador hecho el 13 de octubre de 2026. Plan en `docs/superpowers/plans/2026-10-13-fase-3-4-frontend-chat.md`.
 > Fuente del alcance: `ROADMAP.md` §Fase 3, entregable 5 y la interfaz de los entregables 7 y 8;
 > corte de sub-proyectos en la §1 de `2026-09-22-fase-3-1-tenant-listo-design.md`.
 > Manda `GOBERNANZA.md` ante cualquier conflicto.
