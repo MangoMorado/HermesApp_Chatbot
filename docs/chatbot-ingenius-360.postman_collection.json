@@ -1,0 +1,1310 @@
+{
+  "info": {
+    "_postman_id": "7c4e1a90-2b6d-4f18-9a3e-a1b2c3d4e5f6",
+    "name": "Chatbot Ingenius 360",
+    "description": "Contrato HTTP implementado: `/api/platform/v1`, `/api/v1` y `/api/sim/v1`.\n\n`/fhir` no está en esta colección: llega en la Fase 4.\n\n## Variables\n\n- `baseUrl`: backend. Local `http://localhost:3001`. Producción `https://mango-chatbot-hermes-backend.dxrulh.easypanel.host`.\n- `platformSecret`: secreto de plataforma (≥ 32 caracteres). Autoriza solo `/api/platform/v1`. No es el JWT del panel.\n- `jwt`: token de panel o servicio (`operator`, `admin` o `service`). Lo guarda **Emitir token**.\n- `widgetToken`: JWT de rol `widget`. Lo guarda **Abrir sesión**.\n- `widgetKey`: clave pública del widget. La guarda **Alta de tenant** (solo se devuelve en el alta).\n- `widgetOrigin`: cabecera `Origin` que el tenant tiene permitida. Obligatoria al abrir sesión.\n\n## Orden\n\n1. Listar tenants, o dar de alta uno si la lista está vacía.\n2. Emitir token con rol `admin`. El script guarda `jwt`.\n3. El resto de `/api/v1` y `/api/sim/v1` usa ese JWT.\n4. Para el chat: abrir sesión del widget (guarda `widgetToken`) y luego conversación.\n\nLas escrituras llevan `Idempotency-Key`. En el widget debe tener al menos 32 caracteres; `{{$guid}}` cumple.\n\nEl simulador responde 404 si `HERMES_SIMULATOR_ENABLED` no es `true`. En producción debe estar apagado.\n\nPaginación: `cursor` y `limit` (50 por defecto, 200 máximo). `from` y `to` son fechas `YYYY-MM-DD`; `from` tiene que ser anterior a `to`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "platformSecret", "value": "" },
+    { "key": "jwt", "value": "" },
+    { "key": "widgetToken", "value": "" },
+    { "key": "widgetKey", "value": "" },
+    { "key": "widgetOrigin", "value": "http://localhost:3000" },
+    { "key": "tenantId", "value": "" },
+    { "key": "tenantSlug", "value": "clinica-demo" },
+    { "key": "practitionerId", "value": "" },
+    { "key": "healthcareServiceId", "value": "" },
+    { "key": "scheduleId", "value": "" },
+    { "key": "patientId", "value": "" },
+    { "key": "medicalRecordId", "value": "" },
+    { "key": "knowledgeEntryId", "value": "" },
+    { "key": "inboxRequestId", "value": "" },
+    { "key": "allowedOrigin", "value": "http%3A%2F%2Flocalhost%3A3000" },
+    { "key": "from", "value": "2026-10-13" },
+    { "key": "to", "value": "2026-10-20" }
+  ],
+  "item": [
+    {
+      "name": "Plataforma",
+      "description": "Autenticada con `PLATFORM_SECRET` en `Authorization: Bearer`. Sin ese secreto toda la superficie responde 404. El `tenant_id` viaja en el cuerpo, no en un JWT.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{platformSecret}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Listar tenants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const first = body.data && body.data[0];",
+                  "if (pm.response.code === 200 && first && first.id) {",
+                  "    pm.collectionVariables.set('tenantId', first.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/platform/v1/tenants?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "platform", "v1", "tenants"],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "cursor", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Guarda el `id` del primer tenant en `tenantId`."
+          }
+        },
+        {
+          "name": "Alta de tenant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 201 && body.tenant) {",
+                  "    pm.collectionVariables.set('tenantId', body.tenant.id);",
+                  "    pm.collectionVariables.set('widgetKey', body.widget_key);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"{{tenantSlug}}\",\n  \"name\": \"Clínica demo\",\n  \"allowed_origins\": [\"{{widgetOrigin}}\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/platform/v1/tenants",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "platform", "v1", "tenants"]
+            },
+            "description": "Crea el tenant con bot-config, una entrada de conocimiento de ejemplo y la primera clave del widget. `widget_key` solo vuelve en esta respuesta (o en una repetición con la misma Idempotency-Key). `slug`: minúsculas, números y guiones."
+          }
+        },
+        {
+          "name": "Emitir token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 200 && body.token) {",
+                  "    pm.collectionVariables.set('jwt', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"role\": \"admin\",\n  \"subject\": \"operacion\",\n  \"ttl_minutes\": 480\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/platform/v1/tokens",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "platform", "v1", "tokens"]
+            },
+            "description": "Emite el JWT de panel o de servicio y lo guarda en `jwt`. `role`: `operator`, `admin` o `service` (nunca `widget`). `subject` no puede empezar por `widget:`. `ttl_minutes` opcional: panel 480 por defecto (tope 720); servicio 60 (tope 1440). No lleva Idempotency-Key: no escribe dominio y el token no se persiste.\n\nEse `token` (empieza por `eyJ`) es el que acepta la franja de sesión. `JWT_SECRET` y `PLATFORM_SECRET` no sirven como sesión."
+          }
+        }
+      ]
+    },
+    {
+      "name": "REST",
+      "description": "Superficie `/api/v1`. Errores `{ error: { code, message, request_id, details } }` y cabecera `X-Request-Id`. El tenant sale solo del JWT.",
+      "item": [
+        {
+          "name": "Salud",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "health"]
+            },
+            "description": "Pública. Responde `{ status: \"ok\", checkedAt }`."
+          }
+        },
+        {
+          "name": "Identidad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "me"]
+            },
+            "description": "Roles: `widget`, `operator`, `admin`, `service`. Devuelve `subject`, `tenant_id`, `role` y, en el widget, `session_id`."
+          }
+        },
+        {
+          "name": "Agenda",
+          "description": "Lectura de dominio. Roles: `operator`, `admin`.",
+          "item": [
+            {
+              "name": "Listar profesionales",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "const first = body.data && body.data[0];",
+                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('practitionerId')) {",
+                      "    pm.collectionVariables.set('practitionerId', first.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/practitioners?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "practitioners"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true },
+                    { "key": "active", "value": "true", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Listar servicios",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "const first = body.data && body.data[0];",
+                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('healthcareServiceId')) {",
+                      "    pm.collectionVariables.set('healthcareServiceId', first.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/healthcare-services?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "healthcare-services"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true },
+                    { "key": "active", "value": "true", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Listar agendas",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "const first = body.data && body.data[0];",
+                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('scheduleId')) {",
+                      "    pm.collectionVariables.set('scheduleId', first.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/schedules?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "schedules"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true },
+                    { "key": "practitioner_id", "value": "{{practitionerId}}", "disabled": true },
+                    {
+                      "key": "healthcare_service_id",
+                      "value": "{{healthcareServiceId}}",
+                      "disabled": true
+                    },
+                    { "key": "active", "value": "true", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Disponibilidad",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/availability?from={{from}}&to={{to}}&limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "availability"],
+                  "query": [
+                    { "key": "from", "value": "{{from}}" },
+                    { "key": "to", "value": "{{to}}" },
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true },
+                    {
+                      "key": "healthcare_service_id",
+                      "value": "{{healthcareServiceId}}",
+                      "disabled": true
+                    },
+                    { "key": "practitioner_id", "value": "{{practitionerId}}", "disabled": true },
+                    { "key": "schedule_id", "value": "{{scheduleId}}", "disabled": true }
+                  ]
+                },
+                "description": "`from` y `to` son obligatorios."
+              }
+            },
+            {
+              "name": "Cupos de una agenda",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/schedules/{{scheduleId}}/slots?from={{from}}&to={{to}}&limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "schedules", "{{scheduleId}}", "slots"],
+                  "query": [
+                    { "key": "from", "value": "{{from}}" },
+                    { "key": "to", "value": "{{to}}" },
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Citas de una agenda",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/appointments?schedule_id={{scheduleId}}&from={{from}}&to={{to}}&limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "appointments"],
+                  "query": [
+                    { "key": "schedule_id", "value": "{{scheduleId}}" },
+                    { "key": "from", "value": "{{from}}" },
+                    { "key": "to", "value": "{{to}}" },
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true }
+                  ]
+                },
+                "description": "`schedule_id`, `from` y `to` son obligatorios."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expedientes",
+          "description": "Roles: `operator`, `admin`. El documento va en el cuerpo para que no quede en la URL.",
+          "item": [
+            {
+              "name": "Buscar por documento",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "if (pm.response.code === 200 && body.id) {",
+                      "    pm.collectionVariables.set('medicalRecordId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"document_type\": \"CC\",\n  \"document_number\": \"1234567890\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/medical-records/search",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "medical-records", "search"]
+                },
+                "description": "No escribe. `document_type`: `CC`, `TI`, `CE`, `PA` o `RC`. Guarda `medicalRecordId` si la respuesta trae `id`."
+              }
+            },
+            {
+              "name": "Leer expediente",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/medical-records/{{medicalRecordId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "medical-records", "{{medicalRecordId}}"]
+                }
+              }
+            },
+            {
+              "name": "Citas del expediente",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/medical-records/{{medicalRecordId}}/appointments?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "medical-records", "{{medicalRecordId}}", "appointments"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ajustes del tenant",
+          "item": [
+            {
+              "name": "Leer ajustes",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tenant-settings",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tenant-settings"]
+                },
+                "description": "Roles: `operator`, `admin`."
+              }
+            },
+            {
+              "name": "Actualizar ajustes",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"max_query_range_days\": 31\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tenant-settings",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tenant-settings"]
+                },
+                "description": "Rol: `admin`. `max_query_range_days` entre 1 y 366."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bot",
+          "description": "Lectura: `operator` y `admin`. Escritura: `admin`.",
+          "item": [
+            {
+              "name": "Leer configuración",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/bot-config",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "bot-config"]
+                },
+                "description": "Textos efectivos (valor y si está sobrescrito), parámetros, orígenes permitidos y claves del widget (vigente y en gracia)."
+              }
+            },
+            {
+              "name": "Actualizar configuración",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"texts\": {\n    \"welcome\": \"Hola, te atiende {clinic_name}.\"\n  },\n  \"params\": {\n    \"kb_max_results\": 3\n  }\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/bot-config",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "bot-config"]
+                },
+                "description": "Parche parcial. Un texto o parámetro en `null` vuelve al predeterminado. Parámetros: `widget_session_ttl_minutes`, `widget_sessions_per_ip_per_minute`, `widget_key_grace_hours`, `kb_max_results`, `request_hold_minutes`, `max_pending_requests_per_patient`, `verification_max_attempts`, `verification_lock_minutes`."
+              }
+            },
+            {
+              "name": "Rotar clave del widget",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/bot-config/widget-keys/rotate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "bot-config", "widget-keys", "rotate"]
+                },
+                "description": "La clave vigente pasa a gracia (`widget_key_grace_hours`) y la que ya estaba en gracia deja de valer. La clave nueva va en la respuesta, no se guarda sola en `widgetKey`."
+              }
+            },
+            {
+              "name": "Agregar origen permitido",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"origin\": \"{{widgetOrigin}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/bot-config/allowed-origins",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "bot-config", "allowed-origins"]
+                },
+                "description": "Máximo 20 orígenes. Si ya está, responde 200 sin cambios. Forma: `https://host` o `http://host[:puerto]`."
+              }
+            },
+            {
+              "name": "Quitar origen permitido",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/bot-config/allowed-origins/{{allowedOrigin}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "bot-config", "allowed-origins", "{{allowedOrigin}}"]
+                },
+                "description": "`allowedOrigin` va codificado con `encodeURIComponent`. El valor de ejemplo es `http://localhost:3000`."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Conocimiento",
+          "description": "Lectura: `operator` y `admin`. Alta, cambio y baja: `admin`. Máximo 500 entradas por tenant.",
+          "item": [
+            {
+              "name": "Listar entradas",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "const first = body.data && body.data[0];",
+                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('knowledgeEntryId')) {",
+                      "    pm.collectionVariables.set('knowledgeEntryId', first.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/knowledge-entries?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "knowledge-entries"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true },
+                    { "key": "category", "value": "", "disabled": true },
+                    { "key": "active", "value": "true", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear entrada",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "if (pm.response.code === 201 && body.id) {",
+                      "    pm.collectionVariables.set('knowledgeEntryId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category\": \"horarios\",\n  \"question\": \"¿Cuál es el horario de atención?\",\n  \"answer\": \"Atendemos de lunes a viernes de 7:00 a 17:00.\",\n  \"detail\": null,\n  \"keywords\": [\"horario\", \"atención\"],\n  \"position\": 0,\n  \"active\": true\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/knowledge-entries",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "knowledge-entries"]
+                },
+                "description": "`category`, `question` y `answer` son obligatorios."
+              }
+            },
+            {
+              "name": "Leer entrada",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/knowledge-entries/{{knowledgeEntryId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "knowledge-entries", "{{knowledgeEntryId}}"]
+                }
+              }
+            },
+            {
+              "name": "Actualizar entrada",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"answer\": \"Atendemos de lunes a viernes de 8:00 a 16:00.\",\n  \"active\": true\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/knowledge-entries/{{knowledgeEntryId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "knowledge-entries", "{{knowledgeEntryId}}"]
+                }
+              }
+            },
+            {
+              "name": "Borrar entrada",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/knowledge-entries/{{knowledgeEntryId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "knowledge-entries", "{{knowledgeEntryId}}"]
+                },
+                "description": "Responde `{ deleted: true }`."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Widget",
+      "description": "El chat habla directo con el backend. Abrir sesión es público: la clave resuelve el tenant y `Origin` tiene que estar permitido. El resto exige el JWT de rol `widget`.",
+      "item": [
+        {
+          "name": "Abrir sesión",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 201 && body.token) {",
+                  "    pm.collectionVariables.set('widgetToken', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Origin", "value": "{{widgetOrigin}}" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"widget_key\": \"{{widgetKey}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/widget/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "widget", "sessions"]
+            },
+            "description": "Pública. `Idempotency-Key` de al menos 32 caracteres. Hay límite por IP (`widget_sessions_per_ip_per_minute`); si se pasa, 429 con `Retry-After`. Guarda `widgetToken`."
+          }
+        },
+        {
+          "name": "Renovar sesión",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 200 && body.token) {",
+                  "    pm.collectionVariables.set('widgetToken', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{widgetToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/widget/sessions/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "widget", "sessions", "refresh"]
+            },
+            "description": "Solo rol `widget`: renueva la sesión de su propio token."
+          }
+        },
+        {
+          "name": "Leer conversación",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{widgetToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/widget/conversation",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "widget", "conversation"]
+            },
+            "description": "Solo rol `widget`. Si no hay conversación, la crea con la bienvenida. El historial va redactado."
+          }
+        },
+        {
+          "name": "Enviar opción",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{widgetToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"option_id\": \"option_kb\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/widget/conversation/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "widget", "conversation", "messages"]
+            },
+            "description": "Exactamente uno de `option_id` o `text`. `option_id` tiene que ser una opción vigente del turno; si no, 409 `stale_option`. Cambia el id por el que devolvió la lectura."
+          }
+        },
+        {
+          "name": "Enviar texto",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{widgetToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"horario de atención\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/widget/conversation/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "widget", "conversation", "messages"]
+            },
+            "description": "Solo cuando el turno pide `input` `text` o `date`. `text` de 1 a 500 caracteres."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Simulador",
+      "description": "`/api/sim/v1`. Rol `admin`. Responde 404 si `HERMES_SIMULATOR_ENABLED` no es `true`. Misma envoltura de error que `/api/v1`.",
+      "item": [
+        {
+          "name": "Profesionales",
+          "item": [
+            {
+              "name": "Listar",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/practitioners?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "practitioners"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "if (pm.response.code === 200 && body.id) {",
+                      "    pm.collectionVariables.set('practitionerId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"identifier_value\": \"prac-001\",\n  \"name\": \"Ana Pérez\",\n  \"active\": true\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/practitioners",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "practitioners"]
+                },
+                "description": "`identifier_value` y `name` son obligatorios. El sistema de identificador lo fija el servidor (`urn:hermes:practitioner`)."
+              }
+            },
+            {
+              "name": "Leer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/practitioners/{{practitionerId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "practitioners", "{{practitionerId}}"]
+                }
+              }
+            },
+            {
+              "name": "Actualizar",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ana Pérez Gómez\",\n  \"active\": true\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/practitioners/{{practitionerId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "practitioners", "{{practitionerId}}"]
+                },
+                "description": "Acepta `name` y `active`."
+              }
+            },
+            {
+              "name": "Borrar",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/practitioners/{{practitionerId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "practitioners", "{{practitionerId}}"]
+                },
+                "description": "409 si el profesional tiene agendas asociadas."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Servicios",
+          "item": [
+            {
+              "name": "Listar",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "healthcare-services"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "if (pm.response.code === 200 && body.id) {",
+                      "    pm.collectionVariables.set('healthcareServiceId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"identifier_value\": \"svc-medicina-general\",\n  \"name\": \"Medicina general\",\n  \"active\": true\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "healthcare-services"]
+                },
+                "description": "`identifier_value` y `name` son obligatorios."
+              }
+            },
+            {
+              "name": "Leer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services/{{healthcareServiceId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "healthcare-services", "{{healthcareServiceId}}"]
+                }
+              }
+            },
+            {
+              "name": "Actualizar",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Medicina general\",\n  \"active\": true\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services/{{healthcareServiceId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "healthcare-services", "{{healthcareServiceId}}"]
+                },
+                "description": "Acepta `name` y `active`."
+              }
+            },
+            {
+              "name": "Borrar",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services/{{healthcareServiceId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "healthcare-services", "{{healthcareServiceId}}"]
+                },
+                "description": "409 si el servicio tiene agendas asociadas."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agendas",
+          "item": [
+            {
+              "name": "Listar",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/schedules?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "schedules"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "if (pm.response.code === 200 && body.id) {",
+                      "    pm.collectionVariables.set('scheduleId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"identifier_value\": \"sch-001\",\n  \"practitioner_id\": \"{{practitionerId}}\",\n  \"healthcare_service_id\": \"{{healthcareServiceId}}\",\n  \"active\": true\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/schedules",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "schedules"]
+                },
+                "description": "`identifier_value`, `practitioner_id` y `healthcare_service_id` son obligatorios."
+              }
+            },
+            {
+              "name": "Leer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/schedules/{{scheduleId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "schedules", "{{scheduleId}}"]
+                }
+              }
+            },
+            {
+              "name": "Actualizar",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"active\": true\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/schedules/{{scheduleId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "schedules", "{{scheduleId}}"]
+                },
+                "description": "Solo cambia `active`."
+              }
+            },
+            {
+              "name": "Generar cupos",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"from\": \"{{from}}\",\n  \"to\": \"{{to}}\",\n  \"duration_minutes\": 20,\n  \"windows\": [\n    { \"weekday\": 1, \"start_time\": \"08:00\", \"end_time\": \"12:00\" }\n  ]\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/schedules/{{scheduleId}}/slots/generate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "schedules", "{{scheduleId}}", "slots", "generate"]
+                },
+                "description": "`weekday` de 0 (domingo) a 6 (sábado). Responde `{ created }`."
+              }
+            },
+            {
+              "name": "Borrar",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/schedules/{{scheduleId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "schedules", "{{scheduleId}}"]
+                },
+                "description": "409 si la agenda tiene cupos o citas."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pacientes",
+          "item": [
+            {
+              "name": "Listar",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/patients?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "patients"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Crear",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "if (pm.response.code === 200 && body.id) {",
+                      "    pm.collectionVariables.set('patientId', body.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"identifier_value\": \"pat-001\",\n  \"document_type\": \"CC\",\n  \"document_number\": \"1234567890\",\n  \"given_names\": \"Luis\",\n  \"family_names\": \"Gómez\",\n  \"birth_date\": \"1990-04-12\",\n  \"phone\": \"3000000000\",\n  \"email\": \"luis@example.com\",\n  \"status\": \"active\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/patients",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "patients"]
+                },
+                "description": "`document_type`: `CC`, `TI`, `CE`, `PA` o `RC`. `status`: `active` o `pre_registered`."
+              }
+            },
+            {
+              "name": "Leer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/patients/{{patientId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "patients", "{{patientId}}"]
+                }
+              }
+            },
+            {
+              "name": "Actualizar",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"phone\": \"3000000001\",\n  \"email\": \"luis@example.com\",\n  \"status\": \"active\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/patients/{{patientId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "patients", "{{patientId}}"]
+                },
+                "description": "Acepta `given_names`, `family_names`, `phone`, `email` y `status`."
+              }
+            },
+            {
+              "name": "Borrar",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/patients/{{patientId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "patients", "{{patientId}}"]
+                },
+                "description": "409 si el paciente tiene citas asociadas."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bandeja",
+          "description": "Solicitudes de pre-agenda que el chat originó. Aprobar reserva el cupo si sigue libre; si no, rechaza por `slot_unavailable`. Rechazar libera el cupo (`declined`).",
+          "item": [
+            {
+              "name": "Listar pendientes",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "const first = body.data && body.data[0];",
+                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('inboxRequestId')) {",
+                      "    pm.collectionVariables.set('inboxRequestId', first.id);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/inbox?limit=50",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "inbox"],
+                  "query": [
+                    { "key": "limit", "value": "50" },
+                    { "key": "cursor", "value": "", "disabled": true }
+                  ]
+                },
+                "description": "Vence las solicitudes caducadas antes de responder."
+              }
+            },
+            {
+              "name": "Aprobar",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/inbox/{{inboxRequestId}}/approve",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "inbox", "{{inboxRequestId}}", "approve"]
+                }
+              }
+            },
+            {
+              "name": "Rechazar",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sim/v1/inbox/{{inboxRequestId}}/reject",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sim", "v1", "inbox", "{{inboxRequestId}}", "reject"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -6,11 +6,11 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fases 1 y 2 cerradas. Fase 3 en curso: la 3.1 (emisión de tokens, sesiones del
-> widget, `bot-config` y base de conocimiento), la 3.2 (pre-agenda) y la 3.3 (motor
-> conversacional) están en `main`. La 3.4 (frontend del chat) está **implementada** en la rama
-> `fase-3-4-frontend-chat`, con tests unitarios y puertas en verde; el recorrido manual en
-> navegador y las suites de BD (`test:db`, también las de la 3.3) siguen pendientes.
+> Estado: Fases 1, 2 y 3 cerradas. La Fase 3 quedó en `main` con sus cuatro sub-proyectos:
+> 3.1 (emisión de tokens, sesiones del widget, `bot-config` y base de conocimiento), 3.2
+> (pre-agenda), 3.3 (motor conversacional) y 3.4 (frontend del chat). Se cerró el 13 de
+> octubre de 2026 con tests unitarios, suites de BD (`test:db`) y puertas en verde, y el
+> recorrido manual en navegador hecho. Sigue la Fase 4 (FHIR e integración con Hermes).
 
 ## Requisitos
 
@@ -78,6 +78,26 @@ El `tenant_id` sale **solo** del claim. Un recurso de otro tenant responde `404`
 tenants es `POST /api/platform/v1/tenants`. El widget obtiene su token abriendo una sesión en
 `POST /api/v1/widget/sessions` con la clave pública del tenant. `token:dev` sigue disponible
 en desarrollo y aborta con `NODE_ENV=production`.
+
+### Token de panel en producción
+
+`JWT_SECRET` y `PLATFORM_SECRET` no se pegan en la franja de sesión. El primero firma los
+JWT; el segundo solo autoriza `/api/platform/v1`. El valor que acepta el panel es el campo
+`token` de la respuesta (empieza por `eyJ`).
+
+El id del tenant sale de `GET /api/platform/v1/tenants`. Con ese id:
+
+```bash
+curl -X POST https://<backend>/api/platform/v1/tokens \
+  -H "Authorization: Bearer <PLATFORM_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{"tenant_id":"<id>","role":"admin","subject":"operacion"}'
+```
+
+`role` es `admin` u `operator` para el panel, o `service` para Hermes. `subject` identifica
+a quién se le emitió (hasta 120 caracteres; no puede empezar por `widget:`). `ttl_minutes`
+es opcional: 480 por defecto en el panel (tope 720) y 60 en servicio (tope 1440). Ese JWT
+se pega en la franja de sesión del frontend; el panel lo comprueba con `GET /api/v1/me`.
 
 ## Widget del chat
 

@@ -1,8 +1,7 @@
 # Fase 3.3 — Motor conversacional (diseño)
 
-> Estado: **implementada** en la rama `fase-3-3-motor-conversacional` (pendiente de merge por
-> el usuario); **suites de BD de la 3.3 pendientes de ejecutar** (Postgres local caído durante
-> la implementación). Plan en `docs/superpowers/plans/2026-10-02-fase-3-3-motor-conversacional.md`.
+> Estado: **cerrada** y en `main` (PR #5); sus suites de BD se ejecutaron en verde el 13 de
+> octubre de 2026, al cierre de la Fase 3. Plan en `docs/superpowers/plans/2026-10-02-fase-3-3-motor-conversacional.md`.
 > Fuente del alcance: `ROADMAP.md` §Fase 3, entregables 3, 4 y 9; corte de sub-proyectos en la
 > §1 de `2026-09-22-fase-3-1-tenant-listo-design.md`; requisito de entrada en su §11 (CORS).
 > Manda `GOBERNANZA.md` ante cualquier conflicto.
