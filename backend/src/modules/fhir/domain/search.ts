@@ -106,7 +106,8 @@ type Prefix = "eq" | "ge" | "gt" | "le" | "lt";
 
 const PREFIXED = /^(eq|ge|gt|le|lt)?(.*)$/;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+const INSTANT =
+  /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d(:[0-5]\d(\.\d+)?)?(Z|[+-]([01]\d|2[0-3]):[0-5]\d)$/;
 
 /** `2026-02-31` no existe: `Date` lo desbordaria a marzo sin avisar. */
 function isRealDate(date: string): boolean {
@@ -164,7 +165,8 @@ function boundsOf(name: string, raw: string, timeZone: string): DateBound[] {
     }
     return dayBounds(prefix, value, timeZone);
   }
-  const at = INSTANT.test(value) ? new Date(value) : null;
+  // `new Date` desbordaria 2026-02-31 a marzo sin avisar: se valida el dia del instante.
+  const at = INSTANT.test(value) && isRealDate(value.slice(0, 10)) ? new Date(value) : null;
   if (!at || Number.isNaN(at.getTime())) {
     throw invalid;
   }

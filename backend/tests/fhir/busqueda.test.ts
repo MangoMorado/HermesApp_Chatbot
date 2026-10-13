@@ -171,7 +171,18 @@ describe("fhir-conformance: fechas", () => {
   });
 
   it("rechaza fechas imposibles, sin offset o mal formadas", () => {
-    for (const raw of ["2026-02-31", "2026-06-15T09:00:00", "ayer", "ge", "xx2026-06-15", ""]) {
+    for (const raw of [
+      "2026-02-31",
+      "2026-06-15T09:00:00",
+      "ayer",
+      "ge",
+      "xx2026-06-15",
+      "",
+      "2026-02-31T10:00:00Z",
+      "ge2026-04-31T10:00:00-05:00",
+      "2026-06-15T24:00:00Z",
+      "2026-06-15T23:60:00Z",
+    ]) {
       expect(failure(() => parseDateBounds("start", [raw], ZONE))).toEqual(INVALID);
     }
   });
