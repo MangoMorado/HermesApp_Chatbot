@@ -155,6 +155,31 @@ describe("fhir-conformance: fechas", () => {
     ]);
   });
 
+  it("acepta un instante sin segundos y uno con fracciones", () => {
+    expect(parseDateBounds("start", ["ge2026-06-15T14:00Z"], ZONE)).toEqual([
+      { op: "ge", at: new Date("2026-06-15T14:00:00.000Z") },
+    ]);
+    expect(parseDateBounds("start", ["ge2026-06-15T14:00:00.500Z"], ZONE)).toEqual([
+      { op: "ge", at: new Date("2026-06-15T14:00:00.500Z") },
+    ]);
+  });
+
+  it("rechaza anios fuera de 1900-2999 y acepta los bordes", () => {
+    for (const raw of [
+      "0001-01-01",
+      "ge0099-12-31",
+      "1899-12-31",
+      "3000-01-01",
+      "0001-01-01T00:00:00Z",
+      "3000-01-01T00:00:00Z",
+    ]) {
+      expect(failure(() => parseDateBounds("start", [raw], ZONE))).toEqual(INVALID);
+    }
+    expect(parseDateBounds("start", ["1900-01-01"], ZONE)).toHaveLength(2);
+    expect(parseDateBounds("start", ["2999-12-31"], ZONE)).toHaveLength(2);
+    expect(parseDateBounds("start", ["2999-12-31T23:59:59Z"], ZONE)).toHaveLength(2);
+  });
+
   it("varias cotas forman un rango", () => {
     expect(parseDateBounds("start", ["ge2026-06-15", "lt2026-06-16"], ZONE)).toEqual([
       { op: "ge", at: day },

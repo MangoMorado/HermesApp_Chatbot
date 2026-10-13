@@ -60,7 +60,7 @@ describe("aislamiento-tenant: /fhir no filtra datos ajenos", () => {
   it("cada busqueda devuelve solo los recursos del tenant del token", async () => {
     for (const [type, ids] of Object.entries(idsByType(a))) {
       const { body } = await fhirGet(type, tokenA);
-      const found: string[] = body.entry.map(
+      const found: string[] = (body.entry ?? []).map(
         (entry: { resource: { id: string } }) => entry.resource.id,
       );
       expect([type, found.sort()]).toEqual([type, [...ids].sort()]);
@@ -83,7 +83,8 @@ describe("aislamiento-tenant: /fhir no filtra datos ajenos", () => {
         tokenA,
       );
       expect(response.status).toBe(200);
-      expect([type, body.total, body.entry]).toEqual([type, 0, []]);
+      expect([type, body.total]).toEqual([type, 0]);
+      expect(body).not.toHaveProperty("entry");
     }
   });
 
@@ -121,8 +122,8 @@ describe("aislamiento-tenant: /fhir no filtra datos ajenos", () => {
       { params: Promise.resolve({ path: ["Practitioner"] }) },
     );
     const body = await response.json();
-    expect(body.entry.map((entry: { resource: { id: string } }) => entry.resource.id)).toEqual([
-      a.practitionerId,
-    ]);
+    expect(
+      (body.entry ?? []).map((entry: { resource: { id: string } }) => entry.resource.id),
+    ).toEqual([a.practitionerId]);
   });
 });

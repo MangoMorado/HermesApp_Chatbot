@@ -56,7 +56,22 @@ function platformSecret(): string | null {
 
 function fhirBaseUrl(): string | null {
   const value = process.env.FHIR_BASE_URL?.trim();
-  return value ? value.replace(/\/+$/, "") : null;
+  if (!value) {
+    return null;
+  }
+  if (!isAbsoluteHttpUrl(value)) {
+    throw new Error("FHIR_BASE_URL debe ser una URL absoluta http(s), p. ej. https://host/fhir");
+  }
+  return value.replace(/\/+$/, "");
+}
+
+function isAbsoluteHttpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export function loadConfig(): AppConfig {

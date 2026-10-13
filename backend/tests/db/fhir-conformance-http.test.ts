@@ -10,8 +10,8 @@ const PRE_TAG = encodeURIComponent("urn:ingenius:patient-tag|pre-registered");
 
 type Entry = { resource: { id: string; status?: string } };
 
-function idsOf(body: { entry: Entry[] }): string[] {
-  return body.entry.map((entry) => entry.resource.id);
+function idsOf(body: { entry?: Entry[] }): string[] {
+  return (body.entry ?? []).map((entry) => entry.resource.id);
 }
 
 describe("fhir-conformance: lectura por HTTP", () => {
@@ -119,7 +119,7 @@ describe("fhir-conformance: lectura por HTTP", () => {
       const { response, body } = await fhirGet(type, token);
       expect(response.status).toBe(200);
       expect(body).toMatchObject({ resourceType: "Bundle", type: "searchset" });
-      expect(body.total).toBe(body.entry.length);
+      expect(body.total).toBe((body.entry ?? []).length);
       expect(body.entry[0].fullUrl).toBe(
         `http://localhost/fhir/${type}/${body.entry[0].resource.id}`,
       );

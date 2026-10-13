@@ -109,6 +109,15 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const INSTANT =
   /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d(:[0-5]\d(\.\d+)?)?(Z|[+-]([01]\d|2[0-3]):[0-5]\d)$/;
 
+/** Rango de anios aceptado: `Date.UTC` mapea 0-99 a 1900-1999 y fuera de el no hay citas reales. */
+const MIN_YEAR = 1900;
+const MAX_YEAR = 2999;
+
+function isSaneYear(value: string): boolean {
+  const year = Number(value.slice(0, 4));
+  return year >= MIN_YEAR && year <= MAX_YEAR;
+}
+
 /** `2026-02-31` no existe: `Date` lo desbordaria a marzo sin avisar. */
 function isRealDate(date: string): boolean {
   const parsed = new Date(`${date}T00:00:00.000Z`);
@@ -160,13 +169,14 @@ function boundsOf(name: string, raw: string, timeZone: string): DateBound[] {
   // Un `+` sin codificar en la URL llega como espacio antes del offset.
   const value = (match?.[2] ?? "").replace(/ (\d{2}:\d{2})$/, "+$1");
   if (DATE_ONLY.test(value)) {
-    if (!isRealDate(value)) {
+    if (!isSaneYear(value) || !isRealDate(value)) {
       throw invalid;
     }
     return dayBounds(prefix, value, timeZone);
   }
   // `new Date` desbordaria 2026-02-31 a marzo sin avisar: se valida el dia del instante.
-  const at = INSTANT.test(value) && isRealDate(value.slice(0, 10)) ? new Date(value) : null;
+  const day = value.slice(0, 10);
+  const at = INSTANT.test(value) && isSaneYear(day) && isRealDate(day) ? new Date(value) : null;
   if (!at || Number.isNaN(at.getTime())) {
     throw invalid;
   }

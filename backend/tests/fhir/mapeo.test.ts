@@ -63,6 +63,12 @@ describe("fhir-conformance: Patient", () => {
     });
   });
 
+  it("sin nombres de pila no lleva given", () => {
+    const [name] = toPatient({ ...patient, givenNames: "  " }).name;
+    expect(name).toEqual({ family: "Perez Gomez" });
+    expect(name).not.toHaveProperty("given");
+  });
+
   it("sin telefono ni correo no lleva telecom", () => {
     expect(toPatient({ ...patient, phone: null })).not.toHaveProperty("telecom");
   });

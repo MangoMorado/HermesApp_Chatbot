@@ -173,7 +173,7 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 | `JWT_ISSUER` / `JWT_AUDIENCE` | backend | Emisor y audiencia esperados |
 | `PLATFORM_SECRET` | backend | Secreto de la superficie de plataforma (≥ 32 caracteres). Sin él, `/api/platform/v1` responde 404 |
 | `TRUST_PROXY` | backend | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible |
-| `FHIR_BASE_URL` | backend | Base pública de `/fhir` (p. ej. `https://api.clinica.com/fhir`) para los enlaces y `fullUrl` de los `Bundle`. Opcional: sin ella se usa el origen de la petición, que detrás de un proxy puede ser interno |
+| `FHIR_BASE_URL` | backend | Base pública de `/fhir` para los enlaces y `fullUrl` de los `Bundle`. Debe ser una URL absoluta `http(s)` que **incluya** la ruta `/fhir` (p. ej. `https://api.clinica.com/fhir`); si no es una URL absoluta, el backend se niega a arrancar. Opcional, pero detrás de un proxy que termina TLS (Traefik/Easypanel) conviene definirla: sin ella los enlaces se construyen con el origen de la petición y pueden salir como `http://` |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose | Credenciales del contenedor de Postgres |
 | `BACKEND_URL` | frontend | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio) |
 | `PUBLIC_BACKEND_URL` | frontend | URL del backend alcanzable desde el navegador; la usa el widget del chat (CORS). Por defecto `http://localhost:3001` |

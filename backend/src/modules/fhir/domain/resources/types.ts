@@ -12,7 +12,7 @@ export type FhirPatient = {
   readonly meta?: { readonly tag: readonly FhirCoding[] };
   readonly identifier: readonly FhirIdentifier[];
   readonly active: boolean;
-  readonly name: readonly { readonly family: string; readonly given: readonly string[] }[];
+  readonly name: readonly { readonly family: string; readonly given?: readonly string[] }[];
   readonly birthDate: string;
   readonly telecom?: readonly { readonly system: "phone" | "email"; readonly value: string }[];
 };
@@ -97,7 +97,7 @@ export type FhirBundle = {
   readonly type: "searchset";
   readonly total: number;
   readonly link: readonly BundleLink[];
-  readonly entry: readonly {
+  readonly entry?: readonly {
     readonly fullUrl: string;
     readonly resource: FhirResource;
     readonly search: { readonly mode: "match" };

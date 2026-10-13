@@ -42,11 +42,18 @@ function linksOf(input: SearchBundleInput): BundleLink[] {
 }
 
 export function searchBundle(input: SearchBundleInput): FhirBundle {
-  return {
+  const bundle: FhirBundle = {
     resourceType: "Bundle",
     type: "searchset",
     total: input.total,
     link: linksOf(input),
+  };
+  // R4 JSON prohibe arreglos vacios: sin resultados no se emite `entry`.
+  if (input.resources.length === 0) {
+    return bundle;
+  }
+  return {
+    ...bundle,
     entry: input.resources.map((resource) => ({
       fullUrl: `${input.baseUrl}/${input.type}/${resource.id}`,
       resource,

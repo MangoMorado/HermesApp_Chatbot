@@ -73,12 +73,12 @@ describe("fhir-conformance: vencimiento al leer en Slot", () => {
   it("buscar cupos tambien vence antes de responder", async () => {
     const tentative = await fhirGet("Slot?status=busy-tentative", token);
     expect(
-      tentative.body.entry.map((entry: { resource: { id: string } }) => entry.resource.id),
+      (tentative.body.entry ?? []).map((entry: { resource: { id: string } }) => entry.resource.id),
     ).toEqual([liveSlotId]);
 
     const free = await fhirGet(`Slot?status=free&schedule=Schedule/${world.scheduleId}`, token);
     expect(
-      free.body.entry.map((entry: { resource: { id: string } }) => entry.resource.id),
+      (free.body.entry ?? []).map((entry: { resource: { id: string } }) => entry.resource.id),
     ).toContain(expiredSlotId);
   });
 

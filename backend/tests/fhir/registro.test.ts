@@ -237,6 +237,22 @@ describe("fhir-conformance: Bundle", () => {
     expect(bundle.link).toEqual([{ relation: "self", url: `${BASE}/Slot?_count=50&_offset=0` }]);
   });
 
+  it("una busqueda vacia no lleva la clave entry", () => {
+    const bundle = searchBundle({
+      baseUrl: BASE,
+      type: "Slot",
+      filters: [],
+      resources: [],
+      total: 0,
+      offset: 0,
+      limit: 50,
+    });
+    expect(bundle.total).toBe(0);
+    expect(bundle.link).toEqual([{ relation: "self", url: `${BASE}/Slot?_count=50&_offset=0` }]);
+    expect(bundle).not.toHaveProperty("entry");
+    expect("entry" in bundle).toBe(false);
+  });
+
   it("next y previous conservan los filtros y mueven el desplazamiento", () => {
     const bundle = searchBundle({
       baseUrl: BASE,

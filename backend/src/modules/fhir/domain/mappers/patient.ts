@@ -12,6 +12,7 @@ function telecomOf(record: PatientRecord): FhirPatient["telecom"] {
 
 export function toPatient(record: PatientRecord): FhirPatient {
   const telecom = telecomOf(record);
+  const given = record.givenNames.split(/\s+/).filter(Boolean);
   return {
     resourceType: "Patient",
     id: record.id,
@@ -21,7 +22,7 @@ export function toPatient(record: PatientRecord): FhirPatient {
       { system: documentSystem(record.documentType), value: record.documentNumber },
     ],
     active: true,
-    name: [{ family: record.familyNames, given: record.givenNames.split(/\s+/).filter(Boolean) }],
+    name: [{ family: record.familyNames, ...(given.length > 0 ? { given } : {}) }],
     birthDate: record.birthDate,
     ...(telecom ? { telecom } : {}),
   };
