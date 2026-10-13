@@ -187,7 +187,7 @@ lectura.
 
 ```bash
 curl http://localhost:3001/fhir/metadata                 # publico: que existe
-curl -H "Authorization: Bearer $TOKEN" \r
+curl -H "Authorization: Bearer $TOKEN" \
   "http://localhost:3001/fhir/Slot?status=free&start=ge2026-06-15&_count=20"
 curl -H "Authorization: Bearer $TOKEN" http://localhost:3001/fhir/Patient/<id>
 ```
@@ -250,5 +250,5 @@ con `-t "<nombre>"`.
 | `sin-ia` | Ninguna dependencia ni import de IA o n8n |
 | `fhir-conformance` | Forma R4 de los recursos, búsqueda y paginación, `OperationOutcome`, `metadata` igual a lo implementado y vencimiento al leer en `Slot` |
 
-Las demás (`flujo`, `verificacion`, `fhir-conformance`…) llegan con sus fases; están
+Las demás (`flujo`, `verificacion`…) llegan con sus fases; están
 listadas en `GOBERNANZA.md`.
