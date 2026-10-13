@@ -1,10 +1,10 @@
 # Roadmap — Chatbot Ingenius 360
 
-Plan de producto en **cinco fases**, desde repositorio vacío hasta MVP desplegable.
-Arranca con hexágono, gobernanza, skills, puertas de calidad y Docker listos en la
-primera versión.
+Plan de producto en **cinco fases** hasta el MVP desplegable, y una fase posterior
+de correcciones y features. Arranca con hexágono, gobernanza, skills, puertas de
+calidad y Docker listos en la primera versión.
 
-> Última revisión: 22 de septiembre de 2026.
+> Última revisión: 13 de octubre de 2026.
 
 ---
 
@@ -51,9 +51,10 @@ primera versión.
 
 ---
 
-## 2. Las cinco fases
+## 2. Las fases
 
-**Orden estricto:** 1 → 2 → 3 → 4 → 5. No se abre una fase sin cerrar el criterio de la anterior.
+**Orden estricto:** 1 → 2 → 3 → 4 → 5 cierran el MVP. La Fase 6 se abre solo con
+la Fase 5 cerrada. No se abre una fase sin cerrar el criterio de la anterior.
 
 ### Fase 1 — Cimientos y contrato base
 
@@ -217,6 +218,39 @@ primera versión.
 
 ---
 
+### Fase 6 — Fixes y nuevas features
+
+**Objetivo:** pasar la administración de identidades y el manejo de JWT y sesiones
+a Keycloak, sin cambiar las reglas de tenant ni el alcance de los roles. Esta fase
+queda fuera del Definition of Done del MVP (sección 3.6).
+
+**Entregables**
+
+1. Keycloak como proveedor de identidad para quienes operan el panel (`admin`, `operator`) y para el cliente de servicio de Hermes (`service`).
+2. El backend deja de firmar los JWT de panel y de plataforma con el secreto local. Verifica los tokens de Keycloak (JWKS) detrás del puerto de verificación; el núcleo no importa el proveedor.
+3. Alta, cambio de rol y baja de admins y operadores se hacen en Keycloak. No hay tabla local de usuarios de panel ni emisión propia para esos roles.
+4. Sesión de panel en Keycloak: login, renovación y logout. Un token expirado o de una sesión cerrada no autentica.
+5. El rol `widget` conserva su alcance (solo el chat de su sesión). Si su JWT también lo emite Keycloak, el `session_id` y el `tenant_id` siguen siendo claims; el widget no gana datos de dominio ni `/fhir`.
+6. Los roles del producto (`widget` · `operator` · `admin` · `service`) se leen de los claims de Keycloak. El `tenant_id` sale solo del claim. Recurso de otro tenant → `404`.
+7. Secretos y clientes de Keycloak fuera del YAML versionado; arranque local y despliegue documentados en `README.md`. `token:dev` deja de ser camino de admins y operadores.
+
+**Criterios de aceptación**
+
+| # | Criterio |
+| --- | --- |
+| 1 | Admin y operador entran por Keycloak; el API acepta ese JWT y rechaza uno firmado con el secreto local de panel |
+| 2 | Alta y cambio de rol se reflejan en el siguiente token, sin usuarios de panel persistidos en Postgres |
+| 3 | Logout cierra la sesión; token expirado o de sesión cerrada → `401` |
+| 4 | `tenant_id` solo del claim; recurso de otro tenant → `404` |
+| 5 | El rol `widget` no alcanza datos de dominio ni `/fhir` |
+| 6 | Suites `roles` y `aislamiento-tenant` en verde contra el verificador de Keycloak |
+
+**Verificación:** `roles`, `aislamiento-tenant`, `sesion-widget`.
+
+**SDD:** obligatorio (arquitectura de auth, roles, tenant y sesiones).
+
+---
+
 ## 3. Calidad, hexágono, Docker y Definition of Done
 
 ### 3.1 Fronteras hexagonales
@@ -298,8 +332,8 @@ Artefactos: `docs/superpowers/specs/`, `docs/superpowers/plans/`, ledger en `.su
 
 | Decisión | Elección |
 | --- | --- |
-| Alcance | Cinco fases hasta MVP completo (chatbot, panel, simulador, FHIR, entrega) |
-| Corte de fases | Cimientos → Dominio → Chat / pre-agenda → FHIR / Hermes → Endurecimiento |
+| Alcance | Cinco fases hasta el MVP (chatbot, panel, simulador, FHIR, entrega); después, Fixes y nuevas features |
+| Corte de fases | Cimientos → Dominio → Chat / pre-agenda → FHIR / Hermes → Endurecimiento → Keycloak (JWT y sesiones) |
 | Superficies HTTP | REST + FHIR |
 | Stack día 1 | Next.js + Prisma + Postgres |
 | Persistencia de este plan | `ROADMAP.md` en el repositorio limpio |

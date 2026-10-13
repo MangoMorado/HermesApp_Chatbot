@@ -44,7 +44,7 @@ Máquina de estados **sin IA** integrada con **Hermes como única fuente de verd
 - No divulgación: no persistir respuestas de verificación ni datos clínicos en mensajes, auditoría o logs.
 - Idempotencia de escrituras con `Idempotency-Key`.
 - Chatbot desplegable vs simulador Hermes (apagable en producción); el chatbot no depende de nada del simulador que Hermes no ofrezca por FHIR.
-- Roadmap en cinco fases estrictas (`ROADMAP.md`); no abrir una fase sin cerrar la anterior.
+- Roadmap en cinco fases estrictas hasta el MVP y una Fase 6 posterior (`ROADMAP.md`); no abrir una fase sin cerrar la anterior.
 
 **Abiertos / por fase**
 
