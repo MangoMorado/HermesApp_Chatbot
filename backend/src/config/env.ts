@@ -17,6 +17,8 @@ export type AppConfig = {
   };
   readonly platformSecret: string | null;
   readonly trustProxy: boolean;
+  /** Base publica de `/fhir` para los enlaces del Bundle. `null`: el origen de la peticion. */
+  readonly fhirBaseUrl: string | null;
 };
 
 function required(name: string): string {
@@ -52,6 +54,11 @@ function platformSecret(): string | null {
   return value;
 }
 
+function fhirBaseUrl(): string | null {
+  const value = process.env.FHIR_BASE_URL?.trim();
+  return value ? value.replace(/\/+$/, "") : null;
+}
+
 export function loadConfig(): AppConfig {
   return {
     nodeEnv: parseEnvironment(optional("NODE_ENV", "development")),
@@ -65,5 +72,6 @@ export function loadConfig(): AppConfig {
     },
     platformSecret: platformSecret(),
     trustProxy: optional("TRUST_PROXY", "false") === "true",
+    fhirBaseUrl: fhirBaseUrl(),
   };
 }

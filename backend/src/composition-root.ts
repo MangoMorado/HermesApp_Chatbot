@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { conversationWritePorts } from "./composition/conversation-wiring";
+import { type FhirReads, fhirReads } from "./composition/fhir-wiring";
 import {
   type PreAgendaReads,
   preAgendaReads,
@@ -138,6 +139,7 @@ export type Container = {
   readonly platformIdempotencyStore: PlatformIdempotencyStore;
   readonly expireDueRequests: PreAgendaReads["expireDueRequests"];
   readonly listInbox: PreAgendaReads["listInbox"];
+  readonly fhir: FhirReads["fhir"];
   readonly listPractitioners: ReturnType<typeof createListPractitioners>;
   readonly listHealthcareServices: ReturnType<typeof createListHealthcareServices>;
   readonly listSchedules: ReturnType<typeof createListSchedules>;
@@ -365,6 +367,7 @@ export function getContainer(): Container {
       ...knowledgeReads(prisma),
       ...platformReads(prisma, config),
       ...widgetReads(prisma, config),
+      ...fhirReads(prisma, config, preAgenda.expireDueRequests),
       withWriteTransaction: (fn) => {
         if (!prisma) {
           throw new Error("Prisma no inicializado");
