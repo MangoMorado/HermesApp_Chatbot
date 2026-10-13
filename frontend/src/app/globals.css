@@ -385,6 +385,10 @@ kbd {
   padding: 16px 20px 20px;
 }
 
+.board-body + .board-body {
+  border-top: 1px solid var(--rule);
+}
+
 .board-scroll {
   max-height: min(640px, 70vh);
   overflow: auto;

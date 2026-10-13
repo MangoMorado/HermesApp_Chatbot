@@ -55,3 +55,13 @@ Un solo test: `npx vitest run tests/roles.test.ts`, o por nombre con `-t "<nombr
 `domain/` y `application/` no importan `next`, `@prisma/client`, `react` ni `node:*`. Lo
 vigilan la regla `noRestrictedImports` de `biome.json` **y** la suite `fronteras`. Si
 necesitas algo de fuera desde el núcleo, la respuesta es un puerto, no una excepción.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

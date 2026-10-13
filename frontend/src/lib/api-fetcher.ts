@@ -34,36 +34,28 @@ function parseJson(text: string): unknown {
   }
 }
 
-/**
- * Mutator orval: fetch + Bearer desde sessionStorage. Las URLs son relativas
- * (`/api/v1/...`): las atiende el proxy same-origin de `app/api/[...path]`.
- */
-export async function apiFetcher<T>(url: string, options?: RequestInit): Promise<T> {
+function jsonHeaders(options?: RequestInit): Headers {
   const headers = new Headers(options?.headers);
   if (!headers.has("Content-Type") && options?.body) {
     headers.set("Content-Type", "application/json");
   }
-  const token = getToken();
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
+  return headers;
+}
 
-  const response = await fetch(url, { ...options, headers });
-  const idempotencyKey = headers.get(IDEMPOTENCY_HEADER);
+async function readJson<T>(response: Response, requestHeaders: Headers): Promise<T> {
+  const idempotencyKey = requestHeaders.get(IDEMPOTENCY_HEADER);
   if (response.ok && idempotencyKey) {
     settleIdempotencyKey(idempotencyKey);
   }
   if (response.status === 204) {
     return undefined as T;
   }
-
   const text = await response.text();
   const data = parseJson(text);
   if (data === undefined) {
     // Una página HTML (proxy caído, error del servidor de desarrollo) no es el contrato REST.
     throw new ApiClientError(response.status, null, `HTTP ${response.status}: respuesta sin JSON`);
   }
-
   if (!response.ok) {
     throw new ApiClientError(
       response.status,
@@ -71,6 +63,27 @@ export async function apiFetcher<T>(url: string, options?: RequestInit): Promise
       `HTTP ${response.status}`,
     );
   }
-
   return data as T;
+}
+
+/**
+ * Mutator orval: fetch + Bearer desde sessionStorage. Las URLs son relativas
+ * (`/api/v1/...`): las atiende el proxy same-origin de `app/api/[...path]`.
+ */
+export async function apiFetcher<T>(url: string, options?: RequestInit): Promise<T> {
+  const headers = jsonHeaders(options);
+  const token = getToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return readJson<T>(await fetch(url, { ...options, headers }), headers);
+}
+
+/**
+ * Mutator de `/api/platform/v1`. No toca el JWT de la sesión: el secreto de
+ * plataforma viaja solo en el `Authorization` que pase quien llama, y no se guarda.
+ */
+export async function platformFetcher<T>(url: string, options?: RequestInit): Promise<T> {
+  const headers = jsonHeaders(options);
+  return readJson<T>(await fetch(url, { ...options, headers }), headers);
 }

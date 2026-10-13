@@ -4,6 +4,7 @@ import { type KeyboardEvent, useRef, useState } from "react";
 import { SimCrud } from "@/components/simulador/sim-crud";
 import { SlotsPanel } from "@/components/simulador/slots-panel";
 import { PATIENTS, PRACTITIONERS, SCHEDULES, SERVICES } from "@/components/simulador/specs";
+import { TenantsPanel } from "@/components/simulador/tenants-panel";
 
 const TABS = [
   { id: "practitioners", label: "Profesionales", body: <SimCrud spec={PRACTITIONERS} /> },
@@ -11,6 +12,7 @@ const TABS = [
   { id: "schedules", label: "Agendas", body: <SimCrud spec={SCHEDULES} /> },
   { id: "patients", label: "Pacientes", body: <SimCrud spec={PATIENTS} /> },
   { id: "slots", label: "Cupos", body: <SlotsPanel /> },
+  { id: "tenants", label: "Tenants", body: <TenantsPanel /> },
 ] as const;
 
 export default function SimuladorPage() {

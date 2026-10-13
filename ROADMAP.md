@@ -221,8 +221,9 @@ la Fase 5 cerrada. No se abre una fase sin cerrar el criterio de la anterior.
 ### Fase 6 — Fixes y nuevas features
 
 **Objetivo:** pasar la administración de identidades y el manejo de JWT y sesiones
-a Keycloak, sin cambiar las reglas de tenant ni el alcance de los roles. Esta fase
-queda fuera del Definition of Done del MVP (sección 3.6).
+a Keycloak, y dejar pipelines que prueben la aplicación en todas sus superficies.
+Las reglas de tenant y el alcance de los roles se mantienen. Esta fase queda fuera
+del Definition of Done del MVP (sección 3.6).
 
 **Entregables**
 
@@ -233,6 +234,43 @@ queda fuera del Definition of Done del MVP (sección 3.6).
 5. El rol `widget` conserva su alcance (solo el chat de su sesión). Si su JWT también lo emite Keycloak, el `session_id` y el `tenant_id` siguen siendo claims; el widget no gana datos de dominio ni `/fhir`.
 6. Los roles del producto (`widget` · `operator` · `admin` · `service`) se leen de los claims de Keycloak. El `tenant_id` sale solo del claim. Recurso de otro tenant → `404`.
 7. Secretos y clientes de Keycloak fuera del YAML versionado; arranque local y despliegue documentados en `README.md`. `token:dev` deja de ser camino de admins y operadores.
+8. Pipelines de CI, uno por superficie. El workflow de la Fase 1 (Biome, typecheck, tests, React Doctor, `test:db`) se conserva y se reparte en jobs que fallan el PR por separado. Cada job corre las suites de su fila enteras, no un subconjunto de humo:
+
+| Pipeline | Superficie que prueba |
+| --- | --- |
+| Lint | `biome ci` en raíz, `backend/` y `frontend/` |
+| Calidad | typecheck de ambos proyectos, Vitest unitario de backend y frontend, React Doctor, umbrales de Clean Code (complejidad cognitiva, líneas por función, tamaño de archivo, ciclos de importación), suite `fronteras` y cobertura de código al 100% |
+| Seguridad | auditoría de dependencias, secretos en el árbol versionado, y suites `sin-ia`, `verificacion` (respuestas y datos clínicos fuera de mensajes, auditoría y logs) y `cors` |
+| JWT | verificación JWKS de Keycloak; suites `roles`, `sesion-widget` y `aislamiento-tenant`: token expirado o de sesión cerrada → `401`, roles `widget` · `operator` · `admin` · `service`, `tenant_id` solo del claim, recurso de otro tenant → `404`, alcance del widget |
+| Contrato | suites `contrato-api` y `fhir-conformance`: rutas `/api/v1` alineadas con OpenAPI, `GET /fhir/metadata` igual a lo implementado, envoltura REST y `OperationOutcome` cada una en su superficie |
+| Persistencia | `test:db` contra Postgres: `dominio`, `simetria-seed`, `idempotencia`, `aislamiento-tenant` y `pre-agenda` |
+| HTTP | `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `hermes-simulador` y `cors`, con token de Keycloak en los roles que ya no firma el backend |
+| Runtime | health de los contenedores, suite `carga-basica` y la colección Postman de la Fase 5 contra el entorno desplegado |
+
+9. Suites completas y cobertura al 100%. Al cerrar la fase corren las dieciocho de `GOBERNANZA.md` §5.1: casos unitarios y, cuando la suite toca Postgres o HTTP, el proyecto Vitest `db`. No se apaga un caso para dejar el pipeline en verde. El Vitest del frontend (widget, proxy, idempotencia de cliente y panel) corre con el pipeline de Calidad.
+
+   La cobertura la mide Vitest sobre la unión de los tests unitarios y de `test:db`. El umbral es **100%** en sentencias, ramas, funciones y líneas, en `backend/src` y en `frontend/src`. Quedan fuera el cliente de Prisma y los clientes generados por orval (`frontend/src/api`, `frontend/src/sim`, `frontend/src/platform`, `frontend/src/widget/api`): no se editan a mano. Por debajo de 100% el pipeline de Calidad deja el PR en rojo. No se excluye un archivo para alcanzar el umbral.
+
+| Suite | Pipeline | Cobertura completa |
+| --- | --- | --- |
+| `fronteras` | Calidad | `domain` y `application` no importan Next, Prisma ni `node:*`; `fhir` solo importa `shared` y `auth`, y ningún otro módulo importa `fhir` |
+| `contrato-api` | Contrato | Envoltura `{ error: { code, message, request_id, details } }`, `X-Request-Id`, y OpenAPI sin desfase: toda ruta `/api/v1` declarada y ninguna ruta sin declarar |
+| `roles` | JWT | Sin token → `401`; JWT de panel firmado con el secreto local → `401`; token de Keycloak con `widget` · `operator` · `admin` · `service`; el widget no alcanza datos de dominio ni `/fhir`; recurso de otro tenant → `404` |
+| `dominio` | Persistencia | Tenant id, paginación por cursor, ajustes del tenant, agenda, historial y datos del seed |
+| `simetria-seed` | Persistencia | Simulador y chatbot parten de los mismos datos deterministas |
+| `aislamiento-tenant` | Persistencia, JWT | La base impide referencias entre tenants; REST, `/fhir`, chat, bandeja y KB no devuelven datos ajenos, tampoco con token de Keycloak |
+| `flujo` | HTTP | Motor, pasos, recorrido completo (identificación → verificación o pre-registro → agendar / reprogramar / cancelar / consultas / asesor) y chat por HTTP |
+| `verificacion` | Seguridad, HTTP | Banco de preguntas, par fijo, bloqueo por intentos y redacción; las respuestas no se persisten en mensajes, auditoría ni logs |
+| `pre-agenda` | Persistencia, HTTP | Apartado atómico `free` → `busy_tentative`, tope por paciente, vencimiento al leer y al crear, y bandeja que resuelve sin tomar dos veces el mismo cupo |
+| `conocimiento-config` | HTTP | `bot-config`, rotación de clave, CRUD de la base de conocimiento, búsqueda por tokens y orígenes permitidos |
+| `alta-chatbot` | HTTP | Alta de tenant con predeterminados; emisión de tokens de plataforma solo para lo que Keycloak no administra |
+| `sesion-widget` | JWT, HTTP | Clave pública, `Origin`, límite por IP, renovación e idempotencia; token expirado o de sesión cerrada → `401` |
+| `idempotencia` | Persistencia, HTTP | Repetir `Idempotency-Key` no duplica efectos en escrituras REST ni FHIR |
+| `sin-ia` | Seguridad | Ninguna dependencia ni import de LLM, embeddings, RAG ni n8n |
+| `fhir-conformance` | Contrato | Mappers R4, `OperationOutcome`, `Bundle`, búsqueda y paginación; `CapabilityStatement` declara exactamente lo implementado, escrituras incluidas |
+| `hermes-simulador` | HTTP | El simulador cierra el ciclo (maestros, pre-agendas, aprobación o rechazo, pre-registro) solo por `/fhir` con token `service` de Keycloak |
+| `carga-basica` | Runtime | Latencia y límites bajo concurrencia moderada, con el store compartido de rate limit |
+| `cors` | Seguridad, HTTP | Respuestas CORS de las rutas del widget y alta / baja de orígenes |
 
 **Criterios de aceptación**
 
@@ -243,9 +281,13 @@ queda fuera del Definition of Done del MVP (sección 3.6).
 | 3 | Logout cierra la sesión; token expirado o de sesión cerrada → `401` |
 | 4 | `tenant_id` solo del claim; recurso de otro tenant → `404` |
 | 5 | El rol `widget` no alcanza datos de dominio ni `/fhir` |
-| 6 | Suites `roles` y `aislamiento-tenant` en verde contra el verificador de Keycloak |
+| 6 | Suites `roles`, `sesion-widget` y `aislamiento-tenant` en verde contra el verificador de Keycloak |
+| 7 | Los ocho pipelines corren en CI; cualquiera en rojo deja el PR en rojo |
+| 8 | Lint, calidad, seguridad, JWT, contrato, persistencia, HTTP y runtime tienen job propio |
+| 9 | Las dieciocho suites de la tabla anterior están en verde, con su parte unitaria y su parte `test:db` cuando la suite toca base o HTTP |
+| 10 | Cobertura de código al 100% en sentencias, ramas, funciones y líneas, en `backend/src` y en `frontend/src` (sin Prisma ni clientes orval) |
 
-**Verificación:** `roles`, `aislamiento-tenant`, `sesion-widget`.
+**Verificación:** las dieciocho suites (`fronteras`, `contrato-api`, `roles`, `dominio`, `simetria-seed`, `aislamiento-tenant`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`), cobertura al 100% y el workflow con los ocho pipelines en verde.
 
 **SDD:** obligatorio (arquitectura de auth, roles, tenant y sesiones).
 
@@ -281,6 +323,8 @@ queda fuera del Definition of Done del MVP (sección 3.6).
 5. Si toca `/api/v1`: OpenAPI regenerado + cliente frontend sin edición manual
 6. Si toca FHIR: `/fhir/metadata` y suites de conformidad alineadas
 7. Si cambia política: actualizar `GOBERNANZA.md` en la misma PR
+
+Ese mínimo rige desde la Fase 1. La matriz completa (lint, calidad, seguridad, JWT, contrato, persistencia, HTTP y runtime) se construye en la Fase 6, y con ella corren enteras las dieciocho suites de `GOBERNANZA.md` §5.1 y la cobertura de código queda en el 100%.
 
 ### 3.4 Docker
 
@@ -333,7 +377,7 @@ Artefactos: `docs/superpowers/specs/`, `docs/superpowers/plans/`, ledger en `.su
 | Decisión | Elección |
 | --- | --- |
 | Alcance | Cinco fases hasta el MVP (chatbot, panel, simulador, FHIR, entrega); después, Fixes y nuevas features |
-| Corte de fases | Cimientos → Dominio → Chat / pre-agenda → FHIR / Hermes → Endurecimiento → Keycloak (JWT y sesiones) |
+| Corte de fases | Cimientos → Dominio → Chat / pre-agenda → FHIR / Hermes → Endurecimiento → Keycloak (JWT y sesiones) y pipelines de todas las superficies |
 | Superficies HTTP | REST + FHIR |
 | Stack día 1 | Next.js + Prisma + Postgres |
 | Persistencia de este plan | `ROADMAP.md` en el repositorio limpio |
