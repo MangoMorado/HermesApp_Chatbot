@@ -6,11 +6,11 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fases 1, 2 y 3 cerradas. La Fase 3 quedó en `main` con sus cuatro sub-proyectos:
-> 3.1 (emisión de tokens, sesiones del widget, `bot-config` y base de conocimiento), 3.2
-> (pre-agenda), 3.3 (motor conversacional) y 3.4 (frontend del chat). Se cerró el 13 de
-> octubre de 2026 con tests unitarios, suites de BD (`test:db`) y puertas en verde, y el
-> recorrido manual en navegador hecho. Sigue la Fase 4 (FHIR e integración con Hermes).
+> Estado: Fases 1, 2 y 3 cerradas. La Fase 4 (FHIR e integración con Hermes) va en cuatro
+> sub-proyectos: la 4.1 deja `/fhir` en solo lectura (`read` y `search` de `Patient`,
+> `Practitioner`, `HealthcareService`, `Schedule`, `Slot` y `Appointment`, más
+> `GET /fhir/metadata`). Siguen la 4.2 (escritura de maestros), la 4.3 (pre-agenda por FHIR) y
+> la 4.4 (simulador por FHIR).
 
 ## Requisitos
 
@@ -121,6 +121,37 @@ script. Los fragmentos listos para copiar están en la pantalla **Bot**.
 Para probar el script desde otro origen: `npm --prefix frontend run host:demo -- <clave>` y
 abrir `http://localhost:4000` (con ese origen añadido a los permitidos).
 
+### Orígenes en producción
+
+Con `NODE_ENV=production` un origen válido es `https://host[:puerto]`. `http://localhost:3000`
+no entra. El seed lo deja en `bot_configs.allowed_origins` y no lo pisa si la fila ya existe
+(`createMany` + `skipDuplicates`).
+
+`POST /api/v1/bot-config/allowed-origins` (el botón **Añadir este origen** de `/chat`) vuelve
+a validar la lista completa. Si el primer valor guardado es inválido en producción, un alta
+de un origen correcto responde `422` con
+`allowed_origins.0 no es un origen valido (https://host[:puerto])`. El índice es el valor ya
+guardado, no el que se está añadiendo.
+
+Hay que reemplazar la lista, con rol `admin`, por el origen público del frontend (sin camino
+ni barra final):
+
+```bash
+curl -X PATCH https://<backend>/api/v1/bot-config \
+  -H "Authorization: Bearer <token-admin>" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: <uuid>" \
+  -d '{"allowed_origins":["https://<frontend>"]}'
+```
+
+`<frontend>` es el origen de la consola (`/chat`) y del iframe. El del script es el sitio del
+tenant, y va en la misma lista. Comprobación: `OPTIONS /api/v1/widget/sessions` con
+`Origin: https://<frontend>` devuelve `Access-Control-Allow-Origin` con ese valor. Sin la
+cabecera, el origen no está en ningún tenant.
+
+Para sumar otro sitio se repite el `PATCH` con la lista entera. El botón de alta sigue
+fallando mientras la lista guardada contenga un origen que producción rechaza.
+
 ## Docker
 
 ```bash
@@ -142,11 +173,28 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 | `JWT_ISSUER` / `JWT_AUDIENCE` | backend | Emisor y audiencia esperados |
 | `PLATFORM_SECRET` | backend | Secreto de la superficie de plataforma (≥ 32 caracteres). Sin él, `/api/platform/v1` responde 404 |
 | `TRUST_PROXY` | backend | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible |
+| `FHIR_BASE_URL` | backend | Base pública de `/fhir` para los enlaces y `fullUrl` de los `Bundle`. Debe ser una URL absoluta `http(s)` que **incluya** la ruta `/fhir` (p. ej. `https://api.clinica.com/fhir`); si no es una URL absoluta, el backend se niega a arrancar. Opcional, pero detrás de un proxy que termina TLS (Traefik/Easypanel) conviene definirla: sin ella los enlaces se construyen con el origen de la petición y pueden salir como `http://` |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose | Credenciales del contenedor de Postgres |
 | `BACKEND_URL` | frontend | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio) |
 | `PUBLIC_BACKEND_URL` | frontend | URL del backend alcanzable desde el navegador; la usa el widget del chat (CORS). Por defecto `http://localhost:3001` |
 
 `process.env` solo se lee en `backend/src/config/env.ts`, `frontend/src/config/env.ts` y en configs de herramientas.
+
+## FHIR
+
+`/fhir` es la superficie de Hermes: R4, solo JSON y solo rol `service`. En la 4.1 es de
+lectura.
+
+```bash
+curl http://localhost:3001/fhir/metadata                 # publico: que existe
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:3001/fhir/Slot?status=free&start=ge2026-06-15&_count=20"
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3001/fhir/Patient/<id>
+```
+
+El token `service` se emite por `/api/platform/v1/tokens` (o `npm --prefix backend run token:dev`
+en local). Los errores son `OperationOutcome` con `application/fhir+json`; un parámetro de
+búsqueda no declarado en `metadata` responde `400`.
 
 ## Mapa del código
 
@@ -158,6 +206,8 @@ backend/
   openapi-platform.json       # contrato de /api/platform/v1; generado
   src/app/                    # adaptadores de entrada HTTP (route handlers)
   src/http/                   # envoltura de errores, X-Request-Id, fuente del OpenAPI
+  src/app/fhir/[[...path]]/   # unica ruta de /fhir; despacha contra el registro de recursos
+  src/modules/fhir/           # perfiles, mappers, busqueda y registro FHIR (sin infrastructure)
   src/composition-root.ts     # unico punto que ensambla adaptadores con casos de uso
   src/config/env.ts           # unico punto que lee process.env
   src/modules/<contexto>/     # domain / application / infrastructure
@@ -198,6 +248,7 @@ con `-t "<nombre>"`.
 | `sesion-widget` | Clave pública, `Origin`, límite por IP, renovación e idempotencia sin JWT persistido |
 | `idempotencia` | Repetición sin efectos duplicados en todas las escrituras |
 | `sin-ia` | Ninguna dependencia ni import de IA o n8n |
+| `fhir-conformance` | Forma R4 de los recursos, búsqueda y paginación, `OperationOutcome`, `metadata` igual a lo implementado y vencimiento al leer en `Slot` |
 
-Las demás (`flujo`, `verificacion`, `fhir-conformance`…) llegan con sus fases; están
+Las demás (`flujo`, `verificacion`…) llegan con sus fases; están
 listadas en `GOBERNANZA.md`.

@@ -3,7 +3,7 @@ import { afterIdCursor, pageByIdAsc } from "@/modules/shared/infrastructure/pris
 import type { Practitioner } from "../domain/entities";
 import type { PractitionerRepository } from "../domain/ports/repositories";
 
-function mapPractitioner(row: {
+export function mapPractitioner(row: {
   id: string;
   tenantId: string;
   identifierSystem: string;

@@ -79,3 +79,8 @@ export function toPage<T>(
     nextCursor: hasMore && last !== undefined ? encodeCursor(positionOf(last)) : null,
   };
 }
+
+/** Ventana por desplazamiento (FHIR `_count`/`_offset`). REST sigue paginando por cursor. */
+export type OffsetWindow = { readonly offset: number; readonly limit: number };
+
+export type OffsetPage<T> = { readonly data: readonly T[]; readonly total: number };

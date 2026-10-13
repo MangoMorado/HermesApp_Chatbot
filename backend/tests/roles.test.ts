@@ -10,6 +10,7 @@ import { AuthError } from "@/modules/auth/domain/auth-error";
 import { createJoseTokenIssuer } from "@/modules/auth/infrastructure/jose-token-issuer";
 import { createJoseTokenVerifier } from "@/modules/auth/infrastructure/jose-token-verifier";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
+import { fhirGet, fhirSend, serviceToken } from "./helpers/fhir";
 import { authorized, signToken, TEST_JWT } from "./helpers/token";
 
 const operator: Actor = {
@@ -235,5 +236,88 @@ describe("roles: bandeja del simulador", () => {
     const token = await signToken({ role: "admin", tenantId: "tenant-a" });
     const response = await getSimInbox(authorized(token));
     expect(response.status).toBe(404);
+  });
+});
+
+describe("roles: /fhir", () => {
+  const FHIR_MIME = "application/fhir+json";
+
+  it("operator, admin y widget reciben 403 con OperationOutcome", async () => {
+    for (const role of ["operator", "admin", "widget"] as const) {
+      const token = await signToken({
+        role,
+        tenantId: "tenant-a",
+        sessionId: role === "widget" ? "s-1" : undefined,
+      });
+      const { response, body } = await fhirGet("Patient", token);
+
+      expect(response.status).toBe(403);
+      expect(response.headers.get("Content-Type")).toBe(FHIR_MIME);
+      expect(body.resourceType).toBe("OperationOutcome");
+      expect(body.issue[0].code).toBe("forbidden");
+      expect(body.error).toBeUndefined();
+    }
+  });
+
+  it("sin token responde 401 login sin revelar la causa", async () => {
+    const { response, body } = await fhirGet("Patient/mr-1");
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("Content-Type")).toBe(FHIR_MIME);
+    expect(body.issue[0]).toEqual({
+      severity: "error",
+      code: "login",
+      diagnostics: "Credenciales ausentes o invalidas",
+    });
+  });
+
+  it("un token expirado o de otro emisor responde 401 con el mismo mensaje", async () => {
+    const expired = await signToken({ role: "service", tenantId: "tenant-a", expiresIn: "-1s" });
+    const foreign = await signToken({ role: "service", tenantId: "tenant-a", issuer: "otro" });
+    for (const token of [expired, foreign]) {
+      const { response, body } = await fhirGet("Slot", token);
+      expect(response.status).toBe(401);
+      expect(body.issue[0].diagnostics).toBe("Credenciales ausentes o invalidas");
+    }
+  });
+
+  it("sin rol service una ruta inexistente responde 401 o 403, nunca 404", async () => {
+    const operator = await signToken({ role: "operator", tenantId: "tenant-a" });
+    expect((await fhirGet("Inventado/x")).response.status).toBe(401);
+    expect((await fhirGet("")).response.status).toBe(401);
+    expect((await fhirGet("Inventado/x", operator)).response.status).toBe(403);
+  });
+
+  it("una escritura sin rol service responde 403, no 405", async () => {
+    const operator = await signToken({ role: "operator", tenantId: "tenant-a" });
+    const { response, body } = await fhirSend("PUT", "Patient/mr-1", operator);
+
+    expect(response.status).toBe(403);
+    expect(body.issue[0].code).toBe("forbidden");
+    expect((await fhirSend("POST", "metadata")).response.status).toBe(401);
+  });
+
+  it("metadata responde 200 sin token", async () => {
+    const { response, body } = await fhirGet("metadata");
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe(FHIR_MIME);
+    expect(response.headers.get("X-Request-Id")).toEqual(expect.any(String));
+    expect(body.resourceType).toBe("CapabilityStatement");
+  });
+
+  it("con rol service, un tipo desconocido responde 404 y una escritura 405", async () => {
+    const token = await serviceToken("tenant-a");
+    const unknown = await fhirGet("Inventado/x", token);
+    expect(unknown.response.status).toBe(404);
+    expect(unknown.body.issue[0].code).toBe("not-found");
+    expect((await fhirGet("", token)).response.status).toBe(404);
+    expect((await fhirGet("Patient/a/b", token)).response.status).toBe(404);
+
+    const write = await fhirSend("PUT", "Patient/mr-1", token);
+    expect(write.response.status).toBe(405);
+    expect(write.response.headers.get("Allow")).toBe("GET");
+    expect(write.body.issue[0].code).toBe("not-supported");
+    expect((await fhirSend("DELETE", "Inventado/x", token)).response.status).toBe(404);
   });
 });

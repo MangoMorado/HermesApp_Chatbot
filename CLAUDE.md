@@ -6,7 +6,7 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 
 ## Estado actual
 
-**Fase 1 cerrada.** Docker se verificó desplegando backend y frontend en Easypanel (VPS, proyecto `mango`): health 200, `/me` 401 sin token y 200 con token válido. Easypanel levanta cada Dockerfile por separado, así que `docker-compose.yml` sigue sin ejecutarse de punta a punta; se dio por bueno. Están en pie: monorepo, hexágono con composition root, auth JWT con roles, contrato REST con envoltura de errores y `X-Request-Id`, OpenAPI generado, Biome + CI, Dockerfiles y compose, `AGENTS.md` y las skills del inventario.
+**Fase 1 cerrada.** Docker se verificó desplegando backend y frontend en el VPS: health 200, `/me` 401 sin token y 200 con token válido. Easypanel levanta cada Dockerfile por separado, así que `docker-compose.yml` sigue sin ejecutarse de punta a punta; se dio por bueno. Están en pie: monorepo, hexágono con composition root, auth JWT con roles, contrato REST con envoltura de errores y `X-Request-Id`, OpenAPI generado, Biome + CI, Dockerfiles y compose, `AGENTS.md` y las skills del inventario.
 
 **Fase 2 cerrada** (spec en `docs/superpowers/specs/2026-09-22-fase-2-dominio-persistido-design.md`): esquema `public` + `hermes_sim`, casos de uso de lectura de agenda/historial, ajustes del tenant, simulador CRUD, seed simétrico, panel y simulador en frontend con clientes orval, suites `dominio`, `aislamiento-tenant` (HTTP), `idempotencia` (HTTP), `simetria-seed` y `test:db` en CI. Desde la 3.1 los tokens los emite el servidor (`/api/platform/v1`); `token:dev` queda solo como atajo local.
 

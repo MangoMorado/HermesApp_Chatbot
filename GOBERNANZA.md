@@ -150,6 +150,10 @@ son efectos que cumple `composition/conversation-effects.ts`. Solo `request_appo
 `pre_register` corren en un `SAVEPOINT` (pueden fallar por unicidad y el turno sigue); si
 otro efecto lanza, el turno entero se revierte.
 
+`fhir` solo importa `shared` y `auth`, y ningún módulo importa `fhir`. Declara sus propios
+puertos de lectura (`fhir/domain/ports/sources.ts`) y `composition/fhir-wiring.ts` los cumple
+con `scheduling` y `patients`. No tiene `infrastructure/`: no hace I/O propio.
+
 ### 2.3 Composition root
 
 `backend/src/composition-root.ts` es el **único** lugar que ensambla adaptadores concretos
@@ -177,7 +181,7 @@ se mezclan**:
 | Superficie | Consumidores | Errores |
 | --- | --- | --- |
 | REST `/api/v1` | widget, panel, chat | `{ error: { code, message, request_id, details } }` + cabecera `X-Request-Id` |
-| FHIR R4 `/fhir` | Hermes (solo rol `service` para escrituras) | `OperationOutcome` con `application/fhir+json` |
+| FHIR R4 `/fhir` | Hermes (solo rol `service`, en lectura y escritura) | `OperationOutcome` con `application/fhir+json` |
 | Plataforma `/api/platform/v1` | Operación (alta de tenants, tokens) | Misma envoltura que REST `/api/v1` |
 
 ### 3.1 Reglas FHIR
@@ -191,6 +195,13 @@ se mezclan**:
 - Los vencimientos se evalúan **al leer**, también en lecturas FHIR de `Slot`,
   `Appointment` y `Task`: Hermes nunca debe ver un apartado vencido como vigente.
 - La escritura FHIR queda en auditoría como escrita por Hermes.
+- `/fhir` es exclusivo del rol `service`. `operator`, `admin` y `widget` reciben `403`, también
+  en lectura. La única ruta pública es `GET /fhir/metadata`.
+- Autenticación y rol se comprueban **antes** de enrutar: sin token `service`, ninguna ruta de
+  `/fhir` responde `404`, para que no se pueda sondear qué recursos existen.
+- El registro de recursos (`fhir/domain/registry.ts`) es la única fuente de qué se puede leer
+  y buscar: de ahí salen la validación de parámetros y `metadata`.
+- Un parámetro de búsqueda que el recurso no declara responde `400`; no se ignora.
 
 ---
 

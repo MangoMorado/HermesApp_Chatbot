@@ -4,7 +4,7 @@ import { isUniqueViolation } from "@/modules/shared/infrastructure/prisma-errors
 import type { DocumentType, MedicalRecord, MedicalRecordStatus } from "../domain/entities";
 import type { MedicalRecordRepository } from "../domain/ports/repositories";
 
-function mapRecord(row: {
+export function mapRecord(row: {
   id: string;
   tenantId: string;
   identifierSystem: string;
