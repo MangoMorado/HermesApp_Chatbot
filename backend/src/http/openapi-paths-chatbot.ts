@@ -197,6 +197,7 @@ export const CHATBOT_PATHS = {
   },
   "/widget/sessions": {
     post: {
+      tags: ["widget"],
       operationId: "openWidgetSession",
       description:
         "Publica: la clave del widget resuelve el tenant. Exige cabecera Origin permitida e " +
@@ -239,6 +240,7 @@ export const CHATBOT_PATHS = {
   },
   "/widget/sessions/refresh": {
     post: {
+      tags: ["widget"],
       operationId: "refreshWidgetSession",
       description: "Solo rol widget: renueva la sesion de su propio token.",
       security: bearer,

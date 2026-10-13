@@ -66,6 +66,7 @@ export const CONVERSATION_SCHEMAS = {
 export const CONVERSATION_PATHS = {
   "/widget/conversation": {
     get: {
+      tags: ["widget"],
       operationId: "getWidgetConversation",
       description:
         "Solo rol widget: turno actual e historial redactado de su sesion. Crea la conversacion con la bienvenida si no existe.",
@@ -76,6 +77,7 @@ export const CONVERSATION_PATHS = {
   },
   "/widget/conversation/messages": {
     post: {
+      tags: ["widget"],
       operationId: "sendWidgetMessage",
       description:
         "Solo rol widget: un turno. option_id de una opcion vigente (409 stale_option si no) o text donde el turno lo pide.",

@@ -6,7 +6,7 @@ import { defineConfig } from "react-doctor/api";
  */
 export default defineConfig({
   ignore: {
-    files: ["src/api/**", "src/sim/**"],
+    files: ["src/api/**", "src/sim/**", "src/widget/api/**"],
   },
   rules: {
     "react-doctor/auth-token-in-web-storage": "off",
