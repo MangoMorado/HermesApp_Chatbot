@@ -11,3 +11,6 @@ coverage/
 
 .DS_Store
 Thumbs.db
+
+# Bundle del widget del chat: lo genera `npm --prefix frontend run build:widget`.
+frontend/public/widget.js
