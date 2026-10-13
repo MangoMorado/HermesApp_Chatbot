@@ -14,6 +14,7 @@
       "!**/.impeccable",
       "!**/frontend/src/api",
       "!**/frontend/src/sim",
+      "!**/frontend/src/platform",
       "!**/frontend/src/widget/api",
       "!**/openapi.json",
       "!**/openapi-sim.json",

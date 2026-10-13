@@ -249,7 +249,7 @@ asesor, sin que dos solicitudes concurrentes aparten el mismo cupo.
 | Documento | Contenido |
 | --- | --- |
 | [`README.md`](../README.md) | Arranque local, variables, Docker |
-| [`ROADMAP.md`](../ROADMAP.md) | Plan de las cinco fases y criterios del MVP |
+| [`ROADMAP.md`](../ROADMAP.md) | Plan de las cinco fases del MVP, la Fase 6 y los criterios de cierre |
 | [`GOBERNANZA.md`](../GOBERNANZA.md) | Reglas de trabajo y no negociables |
 | [`DESIGN.md`](../DESIGN.md) | Sistema visual del panel |
 | `docs/superpowers/specs/` | Diseños detallados por sub-fase (p. ej. 3.1, 3.2) |

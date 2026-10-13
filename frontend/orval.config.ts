@@ -37,6 +37,21 @@ export default defineConfig({
       },
     },
   },
+  platform: {
+    input: "../backend/openapi-platform.json",
+    output: {
+      target: "./src/platform/endpoints.ts",
+      schemas: "./src/platform/models",
+      client: "react-query",
+      clean: true,
+      mode: "tags-split",
+      baseUrl: "/api/platform/v1",
+      override: {
+        mutator: { path: "./src/lib/api-fetcher.ts", name: "platformFetcher" },
+        fetch: fetchOverride,
+      },
+    },
+  },
   // Cliente del widget: sin react-query (va en el bundle del script) y con su propio mutator.
   widget: {
     input: {

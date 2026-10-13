@@ -23,7 +23,7 @@ Fuera del plan de fases, `main` incluye el rediseño del panel operativo (tabler
 
 Lo que aún no existe está descrito como destino, no como hecho. Verifica antes de asumir que un archivo o comando está.
 
-`ROADMAP.md` es la fuente del plan: cinco fases en orden estricto (1→2→3→4→5), sin abrir una sin cerrar los criterios de aceptación de la anterior. Tanto `ROADMAP.md` como `GOBERNANZA.md` (Fase 1) viven en la raíz.
+`ROADMAP.md` es la fuente del plan: cinco fases hasta el MVP (1→2→3→4→5) y, después, la Fase 6 (Fixes y nuevas features: Keycloak para administración, JWT y sesiones). No se abre una fase sin cerrar los criterios de aceptación de la anterior. Tanto `ROADMAP.md` como `GOBERNANZA.md` (Fase 1) viven en la raíz.
 
 ## No negociables (aplican a todo cambio)
 
