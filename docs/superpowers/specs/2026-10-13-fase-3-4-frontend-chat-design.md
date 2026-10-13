@@ -1,6 +1,6 @@
 # Fase 3.4 — Frontend del chat: widget, consola y panel (diseño)
 
-> Estado: **diseño aprobado**, sin implementar. Rama `fase-3-4-frontend-chat`.
+> Estado: **implementada** en la rama `fase-3-4-frontend-chat` (pendiente de merge por el usuario), con sus tests unitarios y puertas de calidad en verde; el **recorrido manual en navegador** y las suites de BD (`test:db`) siguen **pendientes**. Plan en `docs/superpowers/plans/2026-10-13-fase-3-4-frontend-chat.md`.
 > Fuente del alcance: `ROADMAP.md` §Fase 3, entregable 5 y la interfaz de los entregables 7 y 8;
 > corte de sub-proyectos en la §1 de `2026-09-22-fase-3-1-tenant-listo-design.md`.
 > Manda `GOBERNANZA.md` ante cualquier conflicto.
@@ -60,7 +60,11 @@ frontend/src/widget/
   chat-client.ts  # cargar conversación y enviar un turno; reintentos
   use-chat.ts     # estado de React sobre chat-client
   chat-widget.tsx # interfaz
-  styles.css      # estilos propios, sin depender de globals.css
+  styles.ts       # estilos como cadena (ver §10.1)
+  widget-api.ts   # puerto sobre el cliente generado (ver §10.2)
+  failure.ts      # errores -> mensaje para el paciente (ver §10.2)
+  embed-config.ts # lectura pura de data-key/data-api (ver §10.2)
+  settled.ts      # foco y vaciado del borrador tras un envio (ver §10.8)
   embed.tsx       # punto de entrada del script
 ```
 
@@ -219,3 +223,16 @@ transporte), no del flujo: no salen de `bot-config`.
 `README.md` (variable nueva, cómo incrustar el widget, mapa de páginas), `CLAUDE.md` y
 `frontend/AGENTS.md` (estado y mapa), `GOBERNANZA.md` si la decisión del iframe sin control de
 origen se considera política, y `PRODUCT.md` (el contexto operativo quedó en la Fase 2).
+
+## 10. Refinamientos al implementar
+
+Salen de leer el código al planificar e implementar.
+
+1. **CSS como cadena, no `styles.css`.** `styles.ts` exporta `WIDGET_CSS` y `ChatWidget` lo pinta en un `<style>`. Así el mismo código sirve dentro del Shadow DOM y en las páginas Next, sin cargadores de CSS en esbuild.
+2. **Archivos añadidos al núcleo:** `widget-api.ts` (puerto sobre el cliente generado; evita el choque de nombre con la carpeta `api/`), `failure.ts` (errores → mensaje para el paciente) y `embed-config.ts` (lectura pura de `data-key`/`data-api`, separada del arranque con efectos).
+3. **`429` sin cabecera.** `Retry-After` no es legible por CORS (el backend solo expone `X-Request-Id`). El widget usa `error.details.retry_after_seconds`, que el backend ya envía en el cuerpo. El `429` solo puede ocurrir al abrir sesión.
+4. **Eco del texto libre:** tras el `200` se pide `GET /widget/conversation` y se toma el **último mensaje del paciente** como eco. Las líneas del bot salen siempre de la respuesta del `POST` (pueden ir completas ahí y redactadas en el historial).
+5. **Grupos de rutas con un solo layout raíz.** `app/layout.tsx` conserva `<html>`, fuentes y `globals.css`; `(console)/layout.tsx` añade `Providers`, `Marquee` y `<main>`; `(embed)` no añade nada.
+6. **El destino orval `chatbot` excluye el tag `widget`** (`filters.mode: "exclude"`), para que las operaciones del widget existan en un único cliente.
+7. **Listas con «Cargar más»** (`useInfiniteQuery`) en conocimiento y bandeja: es la paginación por cursor de la spec.
+8. **`settled.ts`:** el foco pasa al primer control solo tras un envío del paciente, y el borrador solo se vacía cuando el turno avanza (no ante un 422).

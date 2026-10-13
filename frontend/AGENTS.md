@@ -5,8 +5,12 @@ Reglas en [`../GOBERNANZA.md`](../GOBERNANZA.md). Aquí solo el mapa.
 ## Dónde va cada cosa
 
 ```
-src/app/    App Router. Panel (Fase 2) y consola /chat (Fase 3).
-tests/      Vitest.
+src/app/(console)/   Consola con cabecera: panel, conocimiento, bot, ajustes, /chat, simulador, bandeja.
+src/app/(embed)/     Páginas sin cabecera: /widget (para iframe).
+src/widget/          Núcleo del chat, compartido por script, iframe y consola. Habla directo al
+                     backend por CORS con su propio cliente (src/widget/api, generado).
+scripts/             build-widget.mjs (bundle del script) y serve-host.mjs (sitio de prueba).
+tests/               Vitest.
 ```
 
 ## La regla que define este proyecto

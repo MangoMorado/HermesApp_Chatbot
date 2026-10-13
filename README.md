@@ -6,9 +6,11 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fases 1 y 2 cerradas. Fase 3 en curso: la 3.1 (emisión de tokens por
-> `/api/platform/v1`, sesiones del widget, `bot-config` y base de conocimiento) está en
-> `main`; siguen la 3.2 (pre-agenda), la 3.3 (motor conversacional) y la 3.4 (frontend del chat).
+> Estado: Fases 1 y 2 cerradas. Fase 3 en curso: la 3.1 (emisión de tokens, sesiones del
+> widget, `bot-config` y base de conocimiento), la 3.2 (pre-agenda) y la 3.3 (motor
+> conversacional) están en `main`. La 3.4 (frontend del chat) está **implementada** en la rama
+> `fase-3-4-frontend-chat`, con tests unitarios y puertas en verde; el recorrido manual en
+> navegador y las suites de BD (`test:db`, también las de la 3.3) siguen pendientes.
 
 ## Requisitos
 
@@ -77,6 +79,24 @@ tenants es `POST /api/platform/v1/tenants`. El widget obtiene su token abriendo 
 `POST /api/v1/widget/sessions` con la clave pública del tenant. `token:dev` sigue disponible
 en desarrollo y aborta con `NODE_ENV=production`.
 
+## Widget del chat
+
+Un solo widget con tres montajes; los tres hablan directo con el backend por CORS.
+
+| Montaje | Cómo se usa | Origen que ve el backend |
+| --- | --- | --- |
+| Script | `<script src="https://<frontend>/widget.js" data-key="<clave>" data-api="https://<backend>" async></script>` | El del sitio del tenant |
+| Iframe | `<iframe src="https://<frontend>/widget?key=<clave>"></iframe>` | El del frontend |
+| Consola | `/chat` en el frontend | El del frontend |
+
+El origen correspondiente debe estar en los orígenes permitidos del tenant (pantalla **Bot**).
+En modo iframe no se controla qué sitio lo incrusta: la protección por origen es del modo
+script. Los fragmentos listos para copiar están en la pantalla **Bot**.
+
+`widget.js` es generado (`npm --prefix frontend run build:widget`; lo hacen `dev` y `build`).
+Para probar el script desde otro origen: `npm --prefix frontend run host:demo -- <clave>` y
+abrir `http://localhost:4000` (con ese origen añadido a los permitidos).
+
 ## Docker
 
 ```bash
@@ -100,6 +120,7 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 | `TRUST_PROXY` | backend | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose | Credenciales del contenedor de Postgres |
 | `BACKEND_URL` | frontend | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio) |
+| `PUBLIC_BACKEND_URL` | frontend | URL del backend alcanzable desde el navegador; la usa el widget del chat (CORS). Por defecto `http://localhost:3001` |
 
 `process.env` solo se lee en `backend/src/config/env.ts`, `frontend/src/config/env.ts` y en configs de herramientas.
 
@@ -121,6 +142,9 @@ frontend/
   src/app/                    # panel y consola; sin reglas de negocio
   src/app/api/[...path]/      # proxy same-origin hacia BACKEND_URL (sin CORS)
   src/api/, src/sim/          # clientes orval generados; no se editan a mano
+  src/app/(console)/          # consola con cabecera: panel, conocimiento, bot, /chat, simulador
+  src/app/(embed)/            # paginas sin cabecera: /widget (iframe)
+  src/widget/                 # nucleo del chat: fetcher -> widget-api -> session -> chat-client -> interfaz
 ```
 
 ## Calidad
