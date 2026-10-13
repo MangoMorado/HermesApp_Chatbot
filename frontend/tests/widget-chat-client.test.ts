@@ -34,10 +34,27 @@ function setup(overrides: Partial<WidgetApi> = {}) {
     token: vi.fn<SessionManager["token"]>(async () => "t1"),
     reopen: vi.fn<SessionManager["reopen"]>(async () => "t2"),
     clear: vi.fn<SessionManager["clear"]>(),
+    expired: vi.fn<SessionManager["expired"]>(() => false),
   };
   let keys = 0;
   const client = createChatClient({ api, session, newKey: () => `key-${++keys}` });
   return { api, session, client };
+}
+
+/** Historial tras elegir una opción: el backend guarda la etiqueta del paciente (o `[redactado]`). */
+function afterOption(text: string): ConversationHistory {
+  return {
+    ...WELCOME,
+    messages: [...WELCOME.messages, { author: "patient", text, redacted: false, created_at: AT }],
+  };
+}
+
+function historyThen(...next: ConversationHistory[]) {
+  const mock = vi.fn<WidgetApi["getConversation"]>().mockResolvedValueOnce(WELCOME);
+  for (const history of next) {
+    mock.mockResolvedValueOnce(history);
+  }
+  return mock;
 }
 
 const AGENDAR = { kind: "option", option: { id: "1.1", label: "Agendar una cita" } } as const;
@@ -63,8 +80,9 @@ describe("cliente del chat", () => {
     expect(getConversation).toHaveBeenCalledTimes(2);
   });
 
-  it("enviar una opción añade su etiqueta como eco y las líneas del bot", async () => {
-    const { api, client } = setup();
+  it("enviar una opción añade el eco del historial y las líneas del bot", async () => {
+    const getConversation = historyThen(afterOption("Agendar una cita"));
+    const { api, client } = setup({ getConversation });
     await client.load();
     const outcome = await client.send(AGENDAR);
     expect(api.sendMessage).toHaveBeenCalledWith("t1", { option_id: "1.1" }, "key-1");
@@ -76,6 +94,38 @@ describe("cliente del chat", () => {
     ]);
     expect(client.view().input).toBe("text");
     expect(new Set(client.view().messages.map((m) => m.id)).size).toBe(3);
+  });
+
+  it("el eco de una opción redactada por el backend no muestra la etiqueta elegida", async () => {
+    const getConversation = historyThen(afterOption("[redactado]"));
+    const { client } = setup({ getConversation });
+    await client.load();
+    await client.send({ kind: "option", option: { id: "v.3", label: "Marzo" } });
+    const texts = client.view().messages.map((m) => m.text);
+    expect(texts).toContain("[redactado]");
+    expect(texts).not.toContain("Marzo");
+  });
+
+  it("si falla la lectura del eco de una opción, no se pinta eco", async () => {
+    const getConversation = vi
+      .fn<WidgetApi["getConversation"]>()
+      .mockResolvedValueOnce(WELCOME)
+      .mockRejectedValueOnce(apiError(0));
+    const { client } = setup({ getConversation });
+    await client.load();
+    await client.send(AGENDAR);
+    expect(client.view().messages.map((m) => m.author)).toEqual(["bot", "bot"]);
+  });
+
+  it("con la sesión vencida no envía el turno: reabre y recarga", async () => {
+    const { api, session, client } = setup();
+    session.expired.mockReturnValue(true);
+    await client.load();
+    const outcome = await client.send(AGENDAR);
+    expect(outcome.kind).toBe("reopened");
+    expect(api.sendMessage).not.toHaveBeenCalled();
+    expect(session.reopen).toHaveBeenCalledTimes(1);
+    expect(api.getConversation).toHaveBeenCalledTimes(2);
   });
 
   it("el eco del texto libre es el que guardó el backend, no lo que se escribió", async () => {
@@ -200,7 +250,9 @@ describe("cliente del chat", () => {
   });
 
   it("un doble clic manda una sola petición", async () => {
-    const { api, client } = setup();
+    const { api, client } = setup({
+      getConversation: historyThen(afterOption("Agendar una cita")),
+    });
     await client.load();
     const [first, second] = await Promise.all([client.send(AGENDAR), client.send(AGENDAR)]);
     expect(api.sendMessage).toHaveBeenCalledTimes(1);

@@ -88,11 +88,8 @@ export function createChatClient(deps: ChatDeps): ChatClient {
     return pending.key;
   }
 
-  /** Opción: su etiqueta. Texto libre: lo que el backend guardó (redactado o enmascarado). */
-  async function echoOf(outgoing: Outgoing): Promise<Line[]> {
-    if (outgoing.kind === "option") {
-      return [{ author: "patient", text: outgoing.option.label }];
-    }
+  /** El eco sale siempre de lo que el backend guardó (redactado o enmascarado), no de lo enviado. */
+  async function echoOf(): Promise<Line[]> {
     try {
       const last = (await history()).messages.filter((m) => m.author === "patient").at(-1);
       return last ? [{ author: "patient", text: last.text }] : [];
@@ -119,14 +116,24 @@ export function createChatClient(deps: ChatDeps): ChatClient {
     throw error;
   }
 
+  /** Sesión vencida en local: igual que un `401`, sin enviar el turno a una conversación nueva. */
+  async function reopenExpired(): Promise<SendOutcome> {
+    pending = null;
+    await deps.session.reopen();
+    return { kind: "reopened", view: await reload() };
+  }
+
   async function deliver(outgoing: Outgoing): Promise<SendOutcome> {
+    if (deps.session.expired()) {
+      return reopenExpired();
+    }
     const body: ConversationMessageInput =
       outgoing.kind === "option" ? { option_id: outgoing.option.id } : { text: outgoing.text };
     try {
       const turn = await deps.api.sendMessage(await deps.session.token(), body, keyFor(body));
       pending = null;
       const bot = turn.messages.map((text): Line => ({ author: "bot", text }));
-      const lines = [...current.messages, ...(await echoOf(outgoing)), ...bot];
+      const lines = [...current.messages, ...(await echoOf()), ...bot];
       current = { messages: numbered(lines), options: turn.options, input: turn.input };
       return { kind: "turn", view: current };
     } catch (error) {

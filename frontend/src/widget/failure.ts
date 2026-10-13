@@ -22,7 +22,10 @@ export function describeFailure(error: unknown): Failure {
     return GENERIC;
   }
   if (error.status === 0) {
-    return { ...GENERIC, text: "No hay conexión con el servidor. Revisa tu internet y reintenta." };
+    return {
+      ...GENERIC,
+      text: "No pudimos conectar con el chat. Inténtalo de nuevo en un momento.",
+    };
   }
   if (error.status === 403) {
     return { text: "Este sitio no está autorizado para el chat.", terminal: true, waitSeconds: 0 };

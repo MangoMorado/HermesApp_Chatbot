@@ -79,14 +79,15 @@ export async function widgetFetcher<T>(url: string, options?: WidgetRequestInit)
   } catch {
     throw new WidgetApiError(0, null, "Sin conexión con el servidor");
   }
-  const data = parseJson(await response.text());
   if (!response.ok) {
+    const body = parseJson(await response.text());
     throw new WidgetApiError(
       response.status,
-      isRecord(data) ? data : null,
+      isRecord(body) ? body : null,
       `HTTP ${response.status}`,
     );
   }
+  const data = parseJson(await response.text());
   if (data === undefined) {
     throw new WidgetApiError(response.status, null, "Respuesta sin JSON");
   }

@@ -13,5 +13,5 @@ export function backendUrl(): string {
  * También se lee en runtime: las páginas que la usan son dinámicas.
  */
 export function publicBackendUrl(): string {
-  return (process.env.PUBLIC_BACKEND_URL ?? "http://localhost:3001").replace(/\/+$/, "");
+  return (process.env.PUBLIC_BACKEND_URL || "http://localhost:3001").replace(/\/+$/, "");
 }

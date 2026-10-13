@@ -11,6 +11,11 @@ describe("configuración del frontend", () => {
     expect(publicBackendUrl()).toBe("http://localhost:3001");
   });
 
+  it("una variable vacía cae al valor por defecto", () => {
+    vi.stubEnv("PUBLIC_BACKEND_URL", "");
+    expect(publicBackendUrl()).toBe("http://localhost:3001");
+  });
+
   it("usa PUBLIC_BACKEND_URL y le quita la barra final", () => {
     vi.stubEnv("PUBLIC_BACKEND_URL", "https://api.clinica.co/");
     expect(publicBackendUrl()).toBe("https://api.clinica.co");

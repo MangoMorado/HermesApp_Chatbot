@@ -12,7 +12,7 @@ describe("fallos que ve el paciente", () => {
     const failure = describeFailure(new WidgetApiError(0, null, "Sin conexión con el servidor"));
     expect(failure.terminal).toBe(false);
     expect(failure.waitSeconds).toBe(0);
-    expect(failure.text).toMatch(/conexión/i);
+    expect(failure.text).toBe("No pudimos conectar con el chat. Inténtalo de nuevo en un momento.");
   });
 
   it("403: el sitio no está autorizado y no hay reintento", () => {

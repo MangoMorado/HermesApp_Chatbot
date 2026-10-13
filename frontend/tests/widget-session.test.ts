@@ -25,11 +25,26 @@ function memoryStorage(initial: Record<string, string> = {}) {
   return { data, storage };
 }
 
+/** Sesión guardada en el formato anterior: sin `obtained_at`. */
 function stored(token: string, expiresAt: number): Record<string, string> {
   return { [KEY]: JSON.stringify({ token, expires_at: new Date(expiresAt).toISOString() }) };
 }
 
-function setup(storage: SessionStorageLike | null, overrides: Partial<WidgetApi> = {}) {
+function storedAt(token: string, obtainedAt: number, expiresAt: number): Record<string, string> {
+  return {
+    [KEY]: JSON.stringify({
+      token,
+      expires_at: new Date(expiresAt).toISOString(),
+      obtained_at: obtainedAt,
+    }),
+  };
+}
+
+function setup(
+  storage: SessionStorageLike | null,
+  overrides: Partial<WidgetApi> = {},
+  now: () => number = () => NOW,
+) {
   const api = {
     openSession: vi.fn<WidgetApi["openSession"]>(async () => session("opened", NOW + 30 * MINUTE)),
     refreshSession: vi.fn<WidgetApi["refreshSession"]>(async () =>
@@ -44,7 +59,7 @@ function setup(storage: SessionStorageLike | null, overrides: Partial<WidgetApi>
     api,
     widgetKey: "wk_demo",
     storage,
-    now: () => NOW,
+    now,
     newKey: () => `key-${++keys}`,
   });
   return { api, manager };
@@ -65,6 +80,51 @@ describe("sesión del widget", () => {
     expect(await manager.token()).toBe("saved");
     expect(api.openSession).not.toHaveBeenCalled();
     expect(api.refreshSession).not.toHaveBeenCalled();
+  });
+
+  it("recién obtenido, un token de 30 minutos se restaura sin renovar", async () => {
+    const { data, storage } = memoryStorage();
+    const { api, manager } = setup(storage);
+    await manager.token();
+    expect(JSON.parse(data.get(KEY) ?? "{}")).toMatchObject({ obtained_at: NOW });
+    expect(await manager.token()).toBe("opened");
+    expect(api.refreshSession).not.toHaveBeenCalled();
+  });
+
+  it("pasada la mitad de la vida del token, renueva", async () => {
+    const { storage } = memoryStorage(storedAt("saved", NOW - 16 * MINUTE, NOW + 14 * MINUTE));
+    const { api, manager } = setup(storage);
+    expect(await manager.token()).toBe("refreshed");
+    expect(api.refreshSession).toHaveBeenCalledWith("saved", "key-1");
+  });
+
+  it("antes de la mitad de la vida del token, no renueva", async () => {
+    const { storage } = memoryStorage(storedAt("saved", NOW - 14 * MINUTE, NOW + 16 * MINUTE));
+    const { api, manager } = setup(storage);
+    expect(await manager.token()).toBe("saved");
+    expect(api.refreshSession).not.toHaveBeenCalled();
+  });
+
+  it("sin obtained_at (formato anterior) solo cuenta el margen", async () => {
+    const { storage } = memoryStorage(stored("saved", NOW + 2 * MINUTE));
+    const { api, manager } = setup(storage);
+    expect(await manager.token()).toBe("saved");
+    expect(api.refreshSession).not.toHaveBeenCalled();
+  });
+
+  it("expired: sin sesión guardada es false", () => {
+    const { manager } = setup(memoryStorage().storage);
+    expect(manager.expired()).toBe(false);
+  });
+
+  it("expired: con sesión vigente es false", () => {
+    const { manager } = setup(memoryStorage(stored("saved", NOW + MINUTE)).storage);
+    expect(manager.expired()).toBe(false);
+  });
+
+  it("expired: con sesión vencida es true", () => {
+    const { manager } = setup(memoryStorage(stored("saved", NOW - MINUTE)).storage);
+    expect(manager.expired()).toBe(true);
   });
 
   it("a menos de un minuto del vencimiento renueva", async () => {

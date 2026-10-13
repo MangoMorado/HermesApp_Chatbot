@@ -3,9 +3,14 @@ import type { WidgetApi, WidgetSession } from "./widget-api";
 
 export type SessionStorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-type StoredSession = { readonly token: string; readonly expiresAt: number };
+type StoredSession = {
+  readonly token: string;
+  readonly expiresAt: number;
+  /** `null` en sesiones guardadas con el formato anterior. */
+  readonly obtainedAt: number | null;
+};
 
-/** Con menos de un minuto de vida, el token se renueva antes de usarlo. */
+/** Se renueva a la mitad de la vida del token o, como mínimo, con menos de un minuto restante. */
 export const REFRESH_MARGIN_MS = 60_000;
 
 export function storageKey(widgetKey: string): string {
@@ -34,11 +39,19 @@ function parseStored(raw: string | null): StoredSession | null {
     return null;
   }
   try {
-    const value = JSON.parse(raw) as { token?: unknown; expires_at?: unknown } | null;
+    const value = JSON.parse(raw) as {
+      token?: unknown;
+      expires_at?: unknown;
+      obtained_at?: unknown;
+    } | null;
     const expiresAt =
       typeof value?.expires_at === "string" ? Date.parse(value.expires_at) : Number.NaN;
     return typeof value?.token === "string" && Number.isFinite(expiresAt)
-      ? { token: value.token, expiresAt }
+      ? {
+          token: value.token,
+          expiresAt,
+          obtainedAt: typeof value.obtained_at === "number" ? value.obtained_at : null,
+        }
       : null;
   } catch {
     return null;
@@ -46,7 +59,7 @@ function parseStored(raw: string | null): StoredSession | null {
 }
 
 /** Guarda en el almacenamiento y en memoria: si el primero falla, la sesión no se pierde. */
-function createStore(widgetKey: string, storage: SessionStorageLike | null) {
+function createStore(widgetKey: string, storage: SessionStorageLike | null, now: () => number) {
   const key = storageKey(widgetKey);
   let memory: string | null = null;
   return {
@@ -58,7 +71,11 @@ function createStore(widgetKey: string, storage: SessionStorageLike | null) {
       }
     },
     write(session: WidgetSession): void {
-      memory = JSON.stringify({ token: session.token, expires_at: session.expires_at });
+      memory = JSON.stringify({
+        token: session.token,
+        expires_at: session.expires_at,
+        obtained_at: now(),
+      });
       try {
         storage?.setItem(key, memory);
       } catch {
@@ -85,11 +102,13 @@ export type SessionManager = {
   token(): Promise<string>;
   /** Descarta la sesión guardada y abre una nueva (tras un `401`). */
   reopen(): Promise<string>;
+  /** `true` si hay sesión guardada y ya venció (se trata como un `401`). */
+  expired(): boolean;
   clear(): void;
 };
 
 export function createSessionManager(deps: SessionDeps): SessionManager {
-  const store = createStore(deps.widgetKey, deps.storage);
+  const store = createStore(deps.widgetKey, deps.storage, deps.now);
   let inFlight: Promise<string> | null = null;
 
   async function open(): Promise<string> {
@@ -112,13 +131,24 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
     }
   }
 
+  function needsRefresh(current: StoredSession, now: number): boolean {
+    const remaining = current.expiresAt - now;
+    if (remaining < REFRESH_MARGIN_MS) {
+      return true;
+    }
+    return (
+      current.obtainedAt !== null &&
+      now - current.obtainedAt >= (current.expiresAt - current.obtainedAt) / 2
+    );
+  }
+
   function resolve(): Promise<string> {
     const current = store.read();
-    const remaining = current ? current.expiresAt - deps.now() : 0;
-    if (!current || remaining <= 0) {
+    const now = deps.now();
+    if (!current || current.expiresAt - now <= 0) {
       return open();
     }
-    return remaining < REFRESH_MARGIN_MS ? refresh(current) : Promise.resolve(current.token);
+    return needsRefresh(current, now) ? refresh(current) : Promise.resolve(current.token);
   }
 
   /** Varias llamadas a la vez comparten una sola apertura o renovación. */
@@ -136,6 +166,10 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
         store.clear();
         return open();
       }),
+    expired() {
+      const current = store.read();
+      return current !== null && current.expiresAt - deps.now() <= 0;
+    },
     clear: () => store.clear(),
   };
 }

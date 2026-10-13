@@ -92,4 +92,11 @@ describe("fetcher del widget", () => {
     expect(error.code).toBeNull();
     expect(error.retryable).toBe(true);
   });
+
+  it("un 2xx con cuerpo que no es JSON lanza WidgetApiError con ese status", async () => {
+    stubFetch(new Response("<html>ok</html>", { status: 200 }));
+    const error = await failure(widgetFetcher("/x", { apiBase: "https://api.test" }));
+    expect(error.status).toBe(200);
+    expect(error.code).toBeNull();
+  });
 });
