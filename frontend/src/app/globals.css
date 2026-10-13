@@ -1045,3 +1045,9 @@ a.departure:hover {
   text-align: center;
   color: var(--ink-2);
 }
+
+/* ---------- Consola del chat ---------- */
+
+.chat-stage {
+  height: min(720px, 75dvh);
+}
