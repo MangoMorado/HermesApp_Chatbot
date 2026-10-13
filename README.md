@@ -37,6 +37,11 @@ Comprobación rápida: `curl http://localhost:3001/api/v1/health` responde
 ## Base de datos
 
 - Desarrollo: `DATABASE_URL` apunta a `chatbot_dev` (Postgres local de Laragon o `docker compose up postgres -d`).
+- **Laragon / Postgres inestable (`0xC0000142`):** Windows mata un backend al fallar la carga de DLL y el postmaster apaga todo el cluster. Mitigaciones locales ya aplicadas/recomendadas:
+  1. **Defender (imprescindible):** PowerShell **como Administrador** → `powershell -ExecutionPolicy Bypass -File backend\scripts\pg-defender-exclusions.ps1`
+  2. Pulsar **Start All** en Laragon (o `npm --prefix backend run db:pg:start` = PATH limpio sin el `libpq.dll` de PHP). Estado/parar: `db:pg:status` / `db:pg:stop`.
+  3. `autovacuum = off` en `C:\laragon\data\postgresql\postgresql.conf` (evita crashes del worker en idle; reactivar cuando esté estable).
+  4. Binarios en `C:\laragon\bin\postgresql\postgresql` actualizados a **18.1** (backup en `postgresql-18.0-bak`).
 - Migraciones: `npm --prefix backend exec prisma migrate dev` (desarrollo) · el contenedor ejecuta `prisma migrate deploy` al arrancar.
 - Seed determinista de dos tenants: `npm --prefix backend run db:seed -- --anchor YYYY-MM-DD` (sin `--anchor`, usa hoy en `APP_TIMEZONE`). En el contenedor: `cd /app/tools && npm run db:seed`. Si falla a mitad de camino, se puede volver a correr: es idempotente por ancla y repara cualquier asimetría entre el chatbot y el simulador.
 - Pruebas contra Postgres: `npm --prefix backend run test:db` usa `TEST_DATABASE_URL` (por defecto `postgresql://postgres@localhost:5432/chatbot_test`); la suite borra y recrea los schemas de esa base.

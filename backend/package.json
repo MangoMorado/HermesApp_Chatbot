@@ -15,6 +15,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed/index.ts",
+    "db:pg:start": "scripts\\pg-start.cmd",
+    "db:pg:stop": "scripts\\pg-stop.cmd",
+    "db:pg:status": "scripts\\pg-status.cmd",
     "demo": "tsx scripts/demo.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "token:dev": "tsx scripts/token-dev.ts"
