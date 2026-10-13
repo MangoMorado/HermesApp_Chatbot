@@ -5,7 +5,7 @@
       "source": "kucherenko/jscpd",
       "sourceType": "github",
       "skillPath": "skills/dry-refactoring/SKILL.md",
-      "computedHash": "9770e254debf7978d722e56e6b823f588033d068440e035d9edda2cd75fbf56e"
+      "computedHash": "57deff6865d7bdb3f42990fefe9becf07d53ff7d5474610ed9ce80616c662b22"
     },
     "fhir-developer-skill": {
       "source": "anthropics/healthcare",
@@ -29,7 +29,7 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/grilling/SKILL.md",
-      "computedHash": "4fa026e5979770347b3357ff5139e1e41d21c3a9f7335e9cd2811cb5b8d32f2f"
+      "computedHash": "c3b3e67f18495984385413bc6be7e2acbf2139c6cf52ef42abdda7242a791822"
     },
     "hexagonal-architecture": {
       "source": "lexler/skill-factory",
@@ -41,13 +41,13 @@
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "skillPath": ".agents/skills/impeccable/SKILL.md",
-      "computedHash": "ec48c58ca973b42c826d5d3be9069b7023d2361ebf7f89ee56b0bae7eb92390a"
+      "computedHash": "de0ad62df4a20451e6f9715b6861b068ac8f558b1829a5c7b947c58ae94f0c6f"
     },
     "nielsen-usability-heuristics": {
       "source": "dembrandt/dembrandt-skills",
       "sourceType": "github",
       "skillPath": "skills/nielsen-usability-heuristics/SKILL.md",
-      "computedHash": "ecb1580cb9c72202b843b5b33ee495f677717208ba66ca9affd6e034f8552ecc"
+      "computedHash": "4fc656c7934dec5e6904bcdffcd112e7396f15e745a846d4cc739cbac3d33f5a"
     },
     "security-best-practices": {
       "source": "openai/skills",
