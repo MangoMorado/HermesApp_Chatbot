@@ -1030,3 +1030,18 @@ a.departure:hover {
     transition: none;
   }
 }
+
+/* ---------- Página incrustable (/widget) ---------- */
+
+.embed-frame {
+  height: 100dvh;
+}
+
+.embed-empty {
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-2);
+}
