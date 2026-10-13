@@ -93,6 +93,10 @@ El origen correspondiente debe estar en los orígenes permitidos del tenant (pan
 En modo iframe no se controla qué sitio lo incrusta: la protección por origen es del modo
 script. Los fragmentos listos para copiar están en la pantalla **Bot**.
 
+- Si el origen no está registrado en ningún tenant, el chat muestra «No pudimos conectar con
+  el chat…» (el preflight CORS falla), no un error de autorización.
+- El widget requiere HTTPS (o `localhost`), porque usa `crypto.randomUUID`.
+
 `widget.js` es generado (`npm --prefix frontend run build:widget`; lo hacen `dev` y `build`).
 Para probar el script desde otro origen: `npm --prefix frontend run host:demo -- <clave>` y
 abrir `http://localhost:4000` (con ese origen añadido a los permitidos).

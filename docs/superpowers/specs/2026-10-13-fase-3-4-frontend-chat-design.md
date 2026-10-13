@@ -85,12 +85,15 @@ control del turno nuevo, todo se opera con teclado y el panel flotante se cierra
 
 ### 4.2 Sesión
 
-- Clave de almacenamiento: `ingenius.widget.<widgetKey>` → `{ token, expires_at }`.
+- Clave de almacenamiento: `ingenius.widget.<widgetKey>` → `{ token, expires_at, obtained_at }`.
 - **Arranque:** si hay token vigente, `GET /widget/conversation` restaura historial y turno. Si
   no hay o el backend responde `401`, `POST /widget/sessions` con la clave y un
   `Idempotency-Key` de 32+ caracteres, y después `GET /widget/conversation`.
-- **Renovación:** `POST /widget/sessions/refresh` cuando falta menos de un minuto para
-  `expires_at`, comprobado antes de cada envío.
+- **Renovación:** `POST /widget/sessions/refresh` cuando ha pasado la mitad de la vida del
+  token (`obtained_at` → `expires_at`) o falta menos de un minuto para `expires_at`,
+  comprobado antes de cada envío. Una sesión guardada sin `obtained_at` (formato anterior)
+  solo usa la regla del minuto. El vencimiento local al enviar se trata como un `401`: se abre
+  sesión nueva, se recarga la conversación y no se reenvía el turno.
 - Si `sessionStorage` no está disponible (iframe con almacenamiento bloqueado), la sesión vive
   en memoria: funciona, pero no sobrevive a la recarga.
 
@@ -105,15 +108,15 @@ clave se descarta al recibir una respuesta `2xx` o `4xx`.
 | `200` | Añade el eco del paciente y las líneas del bot; reemplaza opciones y entrada |
 | `409` con `details.reason = "stale_option"` | Recarga la conversación y muestra el turno vigente |
 | `401` | Abre sesión nueva y recarga la conversación; no reenvía el turno |
-| `403` | Estado terminal «Este sitio no está autorizado para el chat» |
+| `403` | Estado terminal «Este sitio no está autorizado para el chat»; solo se alcanza cuando el origen pertenece a otro tenant |
 | `422` | Muestra el mensaje del backend junto al campo; el turno sigue vigente |
 | `429` | Bloquea el envío los segundos de `Retry-After` |
-| Red / `5xx` | Aviso con botón «Reintentar» |
+| Red / `5xx` | Aviso con botón «Reintentar»; un origen no registrado por ningún tenant también se ve así (el preflight CORS falla) |
 
-El eco del paciente se pinta con la etiqueta de la opción elegida. Para el texto libre no se
-pinta lo que el paciente escribió: tras el `200` se recarga la conversación y se muestra el eco
-que el backend persistió (redactado o enmascarado). Así el widget nunca enseña más que el
-historial.
+El eco del paciente se toma siempre del historial del backend, sea opción o texto: tras el
+`200` se recarga la conversación y se muestra el último mensaje del paciente tal como el
+backend lo persistió (redactado o enmascarado). Las líneas del bot salen de la respuesta del
+`POST`. Así el widget nunca enseña más que el historial.
 
 ## 5. Montajes
 
@@ -236,3 +239,6 @@ Salen de leer el código al planificar e implementar.
 6. **El destino orval `chatbot` excluye el tag `widget`** (`filters.mode: "exclude"`), para que las operaciones del widget existan en un único cliente.
 7. **Listas con «Cargar más»** (`useInfiniteQuery`) en conocimiento y bandeja: es la paginación por cursor de la spec.
 8. **`settled.ts`:** el foco pasa al primer control solo tras un envío del paciente, y el borrador solo se vacía cuando el turno avanza (no ante un 422).
+9. **Eco siempre del historial.** También para las opciones: el backend guarda `[redactado]` en los pasos con eco redactado (verificación, pre-registro), y la burbuja no debe enseñar la etiqueta elegida.
+10. **Renovación a media vida y vencimiento local.** El token se renueva pasada la mitad de su vida (el TTL configurable baja hasta 5 minutos) y un envío con la sesión ya vencida se trata como un `401`, sin mandar el turno a una conversación recién creada.
+11. **Origen sin registrar = fallo de conexión.** Si ningún tenant tiene el origen, el preflight CORS falla y el navegador lo entrega como status 0; el paciente ve «No pudimos conectar con el chat…», no un error de autorización.
