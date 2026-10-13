@@ -3,7 +3,7 @@ import { afterIdCursor, pageByIdAsc } from "@/modules/shared/infrastructure/pris
 import type { HealthcareService } from "../domain/entities";
 import type { HealthcareServiceRepository } from "../domain/ports/repositories";
 
-function mapService(row: {
+export function mapService(row: {
   id: string;
   tenantId: string;
   identifierSystem: string;
