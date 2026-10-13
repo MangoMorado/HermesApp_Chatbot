@@ -79,6 +79,26 @@ tenants es `POST /api/platform/v1/tenants`. El widget obtiene su token abriendo 
 `POST /api/v1/widget/sessions` con la clave pública del tenant. `token:dev` sigue disponible
 en desarrollo y aborta con `NODE_ENV=production`.
 
+### Token de panel en producción
+
+`JWT_SECRET` y `PLATFORM_SECRET` no se pegan en la franja de sesión. El primero firma los
+JWT; el segundo solo autoriza `/api/platform/v1`. El valor que acepta el panel es el campo
+`token` de la respuesta (empieza por `eyJ`).
+
+El id del tenant sale de `GET /api/platform/v1/tenants`. Con ese id:
+
+```bash
+curl -X POST https://<backend>/api/platform/v1/tokens \
+  -H "Authorization: Bearer <PLATFORM_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{"tenant_id":"<id>","role":"admin","subject":"operacion"}'
+```
+
+`role` es `admin` u `operator` para el panel, o `service` para Hermes. `subject` identifica
+a quién se le emitió (hasta 120 caracteres; no puede empezar por `widget:`). `ttl_minutes`
+es opcional: 480 por defecto en el panel (tope 720) y 60 en servicio (tope 1440). Ese JWT
+se pega en la franja de sesión del frontend; el panel lo comprueba con `GET /api/v1/me`.
+
 ## Widget del chat
 
 Un solo widget con tres montajes; los tres hablan directo con el backend por CORS.
