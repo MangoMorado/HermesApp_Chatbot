@@ -121,6 +121,37 @@ script. Los fragmentos listos para copiar están en la pantalla **Bot**.
 Para probar el script desde otro origen: `npm --prefix frontend run host:demo -- <clave>` y
 abrir `http://localhost:4000` (con ese origen añadido a los permitidos).
 
+### Orígenes en producción
+
+Con `NODE_ENV=production` un origen válido es `https://host[:puerto]`. `http://localhost:3000`
+no entra. El seed lo deja en `bot_configs.allowed_origins` y no lo pisa si la fila ya existe
+(`createMany` + `skipDuplicates`).
+
+`POST /api/v1/bot-config/allowed-origins` (el botón **Añadir este origen** de `/chat`) vuelve
+a validar la lista completa. Si el primer valor guardado es inválido en producción, un alta
+de un origen correcto responde `422` con
+`allowed_origins.0 no es un origen valido (https://host[:puerto])`. El índice es el valor ya
+guardado, no el que se está añadiendo.
+
+Hay que reemplazar la lista, con rol `admin`, por el origen público del frontend (sin camino
+ni barra final):
+
+```bash
+curl -X PATCH https://<backend>/api/v1/bot-config \
+  -H "Authorization: Bearer <token-admin>" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: <uuid>" \
+  -d '{"allowed_origins":["https://<frontend>"]}'
+```
+
+`<frontend>` es el origen de la consola (`/chat`) y del iframe. El del script es el sitio del
+tenant, y va en la misma lista. Comprobación: `OPTIONS /api/v1/widget/sessions` con
+`Origin: https://<frontend>` devuelve `Access-Control-Allow-Origin` con ese valor. Sin la
+cabecera, el origen no está en ningún tenant.
+
+Para sumar otro sitio se repite el `PATCH` con la lista entera. El botón de alta sigue
+fallando mientras la lista guardada contenga un origen que producción rechaza.
+
 ## Docker
 
 ```bash
