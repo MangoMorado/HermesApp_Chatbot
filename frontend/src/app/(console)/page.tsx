@@ -1,38 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { PLATFORMS, SESSION_SHORTCUT } from "@/components/shell/platforms";
 import { Flap } from "@/components/ui/flap";
 import { useIdentity, useToken } from "@/lib/use-session";
-
-const DESTINATIONS = [
-  {
-    key: "1",
-    href: "/panel",
-    title: "Panel",
-    detail: "Agenda, cupos libres y expediente por documento.",
-    roles: "operator · admin",
-  },
-  {
-    key: "2",
-    href: "/panel/ajustes",
-    title: "Ajustes del tenant",
-    detail: "Tope del rango de consulta.",
-    roles: "admin",
-  },
-  {
-    key: "3",
-    href: "/simulador",
-    title: "Simulador Hermes",
-    detail: "Maestros y cupos de prueba. Se apaga en producción.",
-    roles: "admin",
-  },
-] as const;
 
 function SessionRow() {
   const token = useToken();
   const identity = useIdentity();
   let status = "session_off";
-  let detail = "Pega un JWT en la franja de sesión (tecla 4).";
+  let detail = `Pega un JWT en la franja de sesión (tecla ${SESSION_SHORTCUT}).`;
   if (token && identity.data) {
     status = "session_on";
     detail = `${identity.data.role} en el tenant ${identity.data.tenant_id}`;
@@ -44,7 +21,7 @@ function SessionRow() {
   }
   return (
     <div className="departure">
-      <span className="departure-key">4</span>
+      <span className="departure-key">{SESSION_SHORTCUT}</span>
       <div>
         <strong>Sesión</strong>
         <span>{detail}</span>
@@ -68,11 +45,11 @@ export default function HomePage() {
       </div>
       <nav className="departures" aria-label="Destinos">
         <SessionRow />
-        {DESTINATIONS.map((item) => (
+        {PLATFORMS.map((item) => (
           <Link key={item.href} href={item.href} className="departure">
             <span className="departure-key">{item.key}</span>
             <div>
-              <strong>{item.title}</strong>
+              <strong>{item.label}</strong>
               <span>{item.detail}</span>
             </div>
             <span className="departure-roles">{item.roles}</span>

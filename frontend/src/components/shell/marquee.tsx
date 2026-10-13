@@ -6,13 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useIdentity, useToken } from "@/lib/use-session";
 import { Clock } from "./clock";
+import { PLATFORMS, SESSION_SHORTCUT } from "./platforms";
 import { SessionDrawer } from "./session-drawer";
-
-const PLATFORMS = [
-  { href: "/panel", label: "Panel", key: "1" },
-  { href: "/panel/ajustes", label: "Ajustes", key: "2" },
-  { href: "/simulador", label: "Simulador", key: "3" },
-] as const;
 
 function isTyping(target: EventTarget | null): boolean {
   return (
@@ -21,7 +16,7 @@ function isTyping(target: EventTarget | null): boolean {
   );
 }
 
-/** Atajos 1–3 para cambiar de pantalla y 4 para abrir/cerrar la sesión. */
+/** Atajos 1–7 para cambiar de pantalla y 0 para abrir/cerrar la sesión. */
 function useShortcuts(toggleSession: () => void) {
   const router = useRouter();
   useEffect(() => {
@@ -32,7 +27,7 @@ function useShortcuts(toggleSession: () => void) {
       const platform = PLATFORMS.find((item) => item.key === event.key);
       if (platform) {
         router.push(platform.href);
-      } else if (event.key === "4") {
+      } else if (event.key === SESSION_SHORTCUT) {
         toggleSession();
       }
     }
@@ -67,14 +62,14 @@ function SessionChip({
       className="session-chip"
       aria-expanded={open}
       aria-controls="session"
-      aria-keyshortcuts="4"
+      aria-keyshortcuts={SESSION_SHORTCUT}
       onClick={onToggle}
     >
       <span className="session-dot" data-state={state} aria-hidden="true" />
       <span className="session-label">{label}</span>
       <span className="session-role">{identity.data?.role ?? ""}</span>
       <span className="visually-hidden">— abrir sesión</span>
-      <kbd>4</kbd>
+      <kbd>{SESSION_SHORTCUT}</kbd>
     </button>
   );
 }
