@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChatInputMode, ChatMessage, ChatView } from "./chat-client";
 import type { Failure } from "./failure";
+import { type Settled, shouldFocus } from "./settled";
 import { WIDGET_CSS } from "./styles";
 import { useChat } from "./use-chat";
 import type { ConversationOption, WidgetConfig } from "./widget-api";
@@ -55,7 +56,6 @@ function InputForm({
         const value = draft.trim();
         if (value) {
           onSubmit(value);
-          setDraft("");
         }
       }}
     >
@@ -78,30 +78,36 @@ function InputForm({
 
 function Controls({
   view,
+  settled,
   disabled,
   onChoose,
   onSubmit,
 }: {
   readonly view: ChatView;
+  readonly settled: Settled | null;
   readonly disabled: boolean;
   readonly onChoose: (option: ConversationOption) => void;
   readonly onSubmit: (text: string) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
-  const first = useRef(true);
-  // El foco pasa al primer control del turno nuevo; no al montar, para no robarlo a la página.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: se dispara al cambiar de turno
+  const seen = useRef(settled?.seq ?? 0);
+  // El foco vuelve al primer control tras un envío resuelto (también `invalid`); nunca por la
+  // carga inicial ni por recargar, para no robárselo a la página.
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
+    if (shouldFocus(settled, seen.current)) {
+      seen.current = settled?.seq ?? 0;
+      box.current?.querySelector<HTMLElement>("input, button")?.focus();
     }
-    box.current?.querySelector<HTMLElement>("input, button")?.focus();
-  }, [view]);
+  }, [settled]);
   return (
     <div className="iw-controls" ref={box}>
       {view.input === "none" ? null : (
-        <InputForm mode={view.input} disabled={disabled} onSubmit={onSubmit} />
+        <InputForm
+          key={settled?.turns ?? 0}
+          mode={view.input}
+          disabled={disabled}
+          onSubmit={onSubmit}
+        />
       )}
       {view.options.length > 0 ? (
         <div className="iw-options">
@@ -179,6 +185,7 @@ function ChatPanel({
       ) : (
         <Controls
           view={state.view}
+          settled={state.settled}
           disabled={state.phase !== "ready"}
           onChoose={chat.choose}
           onSubmit={chat.submit}

@@ -11,6 +11,7 @@ import {
 } from "./chat-client";
 import { describeFailure, type Failure } from "./failure";
 import { browserStorage, createSessionManager } from "./session";
+import { nextSettled, type Settled } from "./settled";
 import { type ConversationOption, createWidgetApi, type WidgetConfig } from "./widget-api";
 
 export type ChatState = {
@@ -19,9 +20,17 @@ export type ChatState = {
   /** Aviso del turno (dato inválido, opción caducada, sesión vencida). */
   readonly notice: string | null;
   readonly failure: Failure | null;
+  /** Último envío resuelto; `null` mientras solo se ha cargado. */
+  readonly settled: Settled | null;
 };
 
-const INITIAL: ChatState = { phase: "loading", view: EMPTY_VIEW, notice: null, failure: null };
+const INITIAL: ChatState = {
+  phase: "loading",
+  view: EMPTY_VIEW,
+  notice: null,
+  failure: null,
+  settled: null,
+};
 
 const NOTICES = {
   stale: "Esa opción ya no estaba vigente. Estas son las opciones actuales.",
@@ -41,12 +50,13 @@ function buildClient(config: WidgetConfig): ChatClient {
   return createChatClient({ api, session, newKey });
 }
 
-function afterSend(outcome: SendOutcome, previous: ChatView): ChatState {
+function afterSend(outcome: SendOutcome, previous: ChatState): ChatState {
+  const settled = nextSettled(previous.settled, outcome.kind);
   if (outcome.kind === "invalid") {
-    return { phase: "ready", view: previous, notice: outcome.message, failure: null };
+    return { phase: "ready", view: previous.view, notice: outcome.message, failure: null, settled };
   }
   const notice = outcome.kind === "turn" ? null : NOTICES[outcome.kind];
-  return { phase: "ready", view: outcome.view, notice, failure: null };
+  return { phase: "ready", view: outcome.view, notice, failure: null, settled };
 }
 
 /** Estado de React sobre el cliente del chat. El cliente se crea una vez por montaje. */
@@ -64,7 +74,7 @@ export function useChat(config: WidgetConfig) {
     setState((s) => ({ ...s, phase: "loading", failure: null }));
     try {
       const view = await client.load();
-      setState({ phase: "ready", view, notice: null, failure: null });
+      setState((s) => ({ phase: "ready", view, notice: null, failure: null, settled: s.settled }));
     } catch (error) {
       fail(error);
     }
@@ -77,7 +87,7 @@ export function useChat(config: WidgetConfig) {
       try {
         const outcome = await client.send(outgoing);
         lastSend.current = null;
-        setState((s) => afterSend(outcome, s.view));
+        setState((s) => afterSend(outcome, s));
       } catch (error) {
         fail(error);
       }
