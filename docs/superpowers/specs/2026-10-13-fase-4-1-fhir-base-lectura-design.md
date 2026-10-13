@@ -229,3 +229,22 @@ Toda escritura FHIR (`PUT` condicional, idempotencia, auditoría) y la confirmac
 pre-registro (4.2); `Appointment` `proposed`, `Task` y sus vencimientos (4.3); el cliente FHIR
 del simulador y la sincronización de maestros (4.4); la colección Postman del ciclo Hermes y el
 barrido periódico (Fase 5); Keycloak (Fase 6).
+
+## 8. Refinamientos al planificar
+
+1. **Ruta `[[...path]]` (comodín opcional)** en vez de `[...path]`: `GET /fhir` sin segmentos
+   también responde `OperationOutcome`.
+2. **`FHIR_BASE_URL` opcional.** Base pública de los enlaces y `fullUrl` del `Bundle`; sin ella
+   se usa `<origen de la petición>/fhir`.
+3. **`_tag` desconocido → `400` `invalid`.**
+4. **Sin casos de uso nuevos en `scheduling` ni `patients`:** el wiring conecta los puertos de
+   `fhir` directo con los adaptadores Prisma de lectura por desplazamiento.
+5. **Fechas sin hora** (día en `APP_TIMEZONE`): `eq` todo el día; `ge` desde el inicio del día;
+   `gt` desde el inicio del día siguiente; `le` antes del inicio del día siguiente; `lt` antes
+   del inicio del día. Una fecha con hora exige offset.
+6. **Parámetro repetido** solo en `start` y `date`; en los demás, repetido o vacío → `400`
+   `invalid`. Sin `OR` por comas ni modificadores.
+7. **`405` lleva `Allow: GET`.**
+8. **Documentación de la PR:** `GOBERNANZA.md`, `README.md`, `backend/AGENTS.md` y los
+   `.env.example`. `CLAUDE.md` y `ROADMAP.md` los edita el usuario por separado.
+9. **Tipos R4 en un solo archivo** `fhir/domain/resources/types.ts`.

@@ -144,4 +144,25 @@ describe("fronteras de capas", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("fhir solo importa shared y auth, y ningun modulo importa fhir", () => {
+    const allowed = new Set(["fhir", "shared", "auth"]);
+    const outgoing = listFiles(join(MODULES_DIR, "fhir")).flatMap((file) =>
+      importsOf(file)
+        .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
+        .filter(({ module }) => module !== undefined && !allowed.has(module))
+        .map(({ specifier }) => `${file} -> ${specifier}`),
+    );
+    const incoming = readdirSync(MODULES_DIR)
+      .filter((entry) => entry !== "fhir" && statSync(join(MODULES_DIR, entry)).isDirectory())
+      .flatMap((mod) => listFiles(join(MODULES_DIR, mod)))
+      .flatMap((file) =>
+        importsOf(file)
+          .filter((specifier) => /(^|\/)modules\/fhir(\/|$)/.test(specifier))
+          .map((specifier) => `${file} -> ${specifier}`),
+      );
+
+    expect(listFiles(join(MODULES_DIR, "fhir")).length).toBeGreaterThan(0);
+    expect([...outgoing, ...incoming]).toEqual([]);
+  });
 });
