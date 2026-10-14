@@ -1,25 +1,33 @@
-import { fhirInvalid } from "../fhir-error";
+import { fhirUnprocessable } from "../fhir-error";
 import type { ScheduleWriteCommand } from "../ports/writers";
 import type { FhirIdentifier } from "../resources/types";
 import {
-  assertNoExtraKeys,
   assertObject,
+  pickKnown,
+  readBodyId,
   readReference,
   readSingleIdentifier,
   requireBoolean,
   requireResourceType,
 } from "./body";
 
-type SchedulePayload = Omit<ScheduleWriteCommand, "tenantId" | "actor">;
+type SchedulePayload = Omit<ScheduleWriteCommand, "tenantId" | "actor"> & {
+  readonly bodyId: string | null;
+};
 
 export function parseScheduleBody(body: unknown, queryIdentifier: FhirIdentifier): SchedulePayload {
   const resource = assertObject(body);
-  assertNoExtraKeys(resource, ["resourceType", "id", "identifier", "active", "actor"]);
-  requireResourceType(resource, "Schedule");
-  const actors = readActors(resource.actor);
+  const fields = pickKnown(
+    resource,
+    ["resourceType", "id", "identifier", "active", "actor"],
+    ["meta", "text", "extension"],
+  );
+  requireResourceType(fields, "Schedule");
+  const actors = readActors(fields.actor);
   return {
-    identifier: readSingleIdentifier(resource.identifier, queryIdentifier),
-    active: requireBoolean(resource.active, "active"),
+    bodyId: readBodyId(fields.id),
+    identifier: readSingleIdentifier(fields.identifier, queryIdentifier),
+    active: requireBoolean(fields.active, "active"),
     ...actors,
   };
 }
@@ -29,24 +37,27 @@ function readActors(value: unknown): {
   healthcareServiceId: string;
 } {
   if (!Array.isArray(value) || value.length !== 2) {
-    throw fhirInvalid("Schedule.actor debe tener profesional y servicio");
+    throw fhirUnprocessable("processing", "Schedule.actor debe tener profesional y servicio");
   }
   const references = value.map((item) => {
-    const row = assertObject(item);
-    assertNoExtraKeys(row, ["reference"]);
-    return row.reference;
+    if (item === null || typeof item !== "object" || Array.isArray(item)) {
+      throw fhirUnprocessable("processing", "Schedule.actor debe contener referencias");
+    }
+    const row = item as Record<string, unknown>;
+    pickKnown(row, ["reference"], ["display", "type", "extension"]);
+    return row;
   });
   const practitioner = references.filter(
-    (reference) => typeof reference === "string" && reference.startsWith("Practitioner/"),
+    (item) => typeof item.reference === "string" && item.reference.startsWith("Practitioner/"),
   );
   const service = references.filter(
-    (reference) => typeof reference === "string" && reference.startsWith("HealthcareService/"),
+    (item) => typeof item.reference === "string" && item.reference.startsWith("HealthcareService/"),
   );
   if (practitioner.length !== 1 || service.length !== 1) {
-    throw fhirInvalid("Schedule.actor debe tener profesional y servicio");
+    throw fhirUnprocessable("processing", "Schedule.actor debe tener profesional y servicio");
   }
   return {
-    practitionerId: readReference({ reference: practitioner[0] }, "Practitioner", "actor"),
-    healthcareServiceId: readReference({ reference: service[0] }, "HealthcareService", "actor"),
+    practitionerId: readReference(practitioner[0], "Practitioner", "actor"),
+    healthcareServiceId: readReference(service[0], "HealthcareService", "actor"),
   };
 }

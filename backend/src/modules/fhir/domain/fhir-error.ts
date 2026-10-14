@@ -41,7 +41,18 @@ export function fhirConflict(message: string): FhirError {
 }
 
 export function fhirMultipleMatches(message: string): FhirError {
-  return new FhirError(412, "conflict", message);
+  return new FhirError(412, "multiple-matches", message);
+}
+
+export function fhirUnprocessable(
+  code: "processing" | "business-rule" | "structure",
+  message: string,
+): FhirError {
+  return new FhirError(422, code, message);
+}
+
+export function fhirUnsupportedMediaType(): FhirError {
+  return new FhirError(415, "not-supported", "Content-Type no soportado");
 }
 
 export function fhirMethodNotAllowed(allow: string): FhirError {

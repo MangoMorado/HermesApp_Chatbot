@@ -77,6 +77,10 @@ export type IssueCode =
   | "not-supported"
   | "invalid"
   | "conflict"
+  | "multiple-matches"
+  | "processing"
+  | "business-rule"
+  | "structure"
   | "exception";
 
 export type OperationOutcome = {

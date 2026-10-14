@@ -8,9 +8,9 @@ import {
   fhirConflict,
   fhirException,
   fhirForbidden,
-  fhirInvalid,
   fhirLogin,
   fhirNotFound,
+  fhirUnprocessable,
 } from "@/modules/fhir/domain/fhir-error";
 import { operationOutcome } from "@/modules/fhir/domain/operation-outcome";
 import { FHIR_MIME } from "@/modules/fhir/domain/profiles";
@@ -63,7 +63,7 @@ export function toFhirError(error: unknown): FhirError {
     return fhirNotFound();
   }
   if (error instanceof ValidationError) {
-    return fhirInvalid(error.message);
+    return fhirUnprocessable("processing", error.message);
   }
   return fhirException();
 }
