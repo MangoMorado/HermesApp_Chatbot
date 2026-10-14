@@ -1,14 +1,27 @@
 import type { PrismaClient } from "@prisma/client";
 import type { AppConfig } from "../config/env";
+import { createConditionalPut } from "../modules/fhir/application/conditional-put";
 import { createGetCapabilityStatement } from "../modules/fhir/application/get-capability-statement";
 import { createReadResource } from "../modules/fhir/application/read-resource";
 import { createResourceHandlers } from "../modules/fhir/application/resource-handlers";
 import { createSearchResources } from "../modules/fhir/application/search-resources";
 import type { FhirSources } from "../modules/fhir/domain/ports/sources";
+import type { FhirWriters } from "../modules/fhir/domain/ports/writers";
+import { createUpsertPatientFromHermes } from "../modules/patients/application/upsert-patient-from-hermes";
 import { createPrismaMedicalRecordDirectory } from "../modules/patients/infrastructure/prisma-medical-record-directory";
 import { createPrismaMedicalRecordRepository } from "../modules/patients/infrastructure/prisma-medical-record-repository";
 import type { ExpireDueRequests } from "../modules/scheduling/application/appointment-request-queries";
+import { createUpsertHealthcareServiceFromHermes } from "../modules/scheduling/application/upsert-healthcare-service-from-hermes";
+import { createUpsertPractitionerFromHermes } from "../modules/scheduling/application/upsert-practitioner-from-hermes";
+import { createUpsertScheduleFromHermes } from "../modules/scheduling/application/upsert-schedule-from-hermes";
+import { createUpsertSlotFromHermes } from "../modules/scheduling/application/upsert-slot-from-hermes";
+import { createPrismaHermesMasterStore } from "../modules/scheduling/infrastructure/prisma-hermes-masters";
+import { createPrismaPreAgendaStore } from "../modules/scheduling/infrastructure/prisma-pre-agenda-store";
 import { createPrismaSchedulingDirectory } from "../modules/scheduling/infrastructure/prisma-scheduling-directory";
+import type { AuditLog } from "../modules/shared/domain/ports/audit-log";
+import type { Clock } from "../modules/shared/domain/ports/clock";
+import type { IdGenerator } from "../modules/shared/domain/ports/id-generator";
+import type { PrismaExecutor } from "../modules/shared/infrastructure/prisma-client";
 
 /**
  * Cumple los puertos de lectura de `fhir` con `scheduling` y `patients`, para que
@@ -61,8 +74,44 @@ export function fhirReads(prisma: PrismaClient, config: AppConfig, expire: Expir
       readResource: createReadResource(handlers),
       searchResources: createSearchResources(handlers, config.appTimezone),
       getCapabilityStatement: createGetCapabilityStatement(),
+      conditionalPut: createConditionalPut,
     },
   };
 }
 
 export type FhirReads = ReturnType<typeof fhirReads>;
+
+export function fhirWritePorts(
+  db: PrismaExecutor,
+  audit: AuditLog,
+  ids: IdGenerator,
+  clock: Clock,
+) {
+  const store = createPrismaHermesMasterStore(db);
+  const deps = { store, audit, ids, clock };
+  const upserts = {
+    upsertPatientFromHermes: createUpsertPatientFromHermes({
+      repo: createPrismaMedicalRecordRepository(db),
+      audit,
+      ids,
+      clock,
+    }),
+    upsertPractitionerFromHermes: createUpsertPractitionerFromHermes(deps),
+    upsertHealthcareServiceFromHermes: createUpsertHealthcareServiceFromHermes(deps),
+    upsertScheduleFromHermes: createUpsertScheduleFromHermes(deps),
+    upsertSlotFromHermes: createUpsertSlotFromHermes({
+      ...deps,
+      preAgenda: createPrismaPreAgendaStore(db),
+    }),
+  };
+  const fhirWriters: FhirWriters = {
+    Patient: upserts.upsertPatientFromHermes,
+    Practitioner: upserts.upsertPractitionerFromHermes,
+    HealthcareService: upserts.upsertHealthcareServiceFromHermes,
+    Schedule: upserts.upsertScheduleFromHermes,
+    Slot: upserts.upsertSlotFromHermes,
+  };
+  return { ...upserts, fhirWriters };
+}
+
+export type FhirWritePorts = ReturnType<typeof fhirWritePorts>;

@@ -127,10 +127,12 @@ export type CapabilityStatement = {
       readonly type: ResourceType;
       readonly interaction: readonly {
         readonly code: "read" | "search-type" | "update";
+        readonly documentation?: string;
       }[];
       readonly conditionalUpdate?: boolean;
       readonly updateCreate?: boolean;
       readonly searchParam: readonly { readonly name: string; readonly type: SearchParamType }[];
     }[];
+    readonly documentation?: string;
   }[];
 };

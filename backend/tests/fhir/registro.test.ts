@@ -15,7 +15,7 @@ import type {
   SlotQuery,
   SlotRecord,
 } from "@/modules/fhir/domain/ports/sources";
-import { RESOURCE_TYPES } from "@/modules/fhir/domain/profiles";
+import { CONDITIONAL_ONLY, RESOURCE_TYPES } from "@/modules/fhir/domain/profiles";
 import { DECLARED_RESOURCES } from "@/modules/fhir/domain/registry";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 
@@ -313,10 +313,26 @@ describe("fhir-conformance: CapabilityStatement", () => {
     const declared = statement.rest[0]?.resource ?? [];
     expect(declared.map((resource) => resource.type)).toEqual([...RESOURCE_TYPES]);
     for (const resource of declared) {
-      expect(resource.interaction).toEqual([{ code: "read" }, { code: "search-type" }]);
       const definition = DECLARED_RESOURCES.find((entry) => entry.type === resource.type);
       expect(resource.searchParam).toEqual(definition?.searchParams);
+      if (resource.type === "Appointment") {
+        expect(resource.interaction).toEqual([{ code: "read" }, { code: "search-type" }]);
+        expect(resource).not.toHaveProperty("conditionalUpdate");
+        expect(resource).not.toHaveProperty("updateCreate");
+      } else {
+        expect(resource.interaction).toEqual([
+          { code: "read" },
+          { code: "search-type" },
+          { code: "update", documentation: CONDITIONAL_ONLY },
+        ]);
+        expect(resource.conditionalUpdate).toBe(true);
+        expect(resource.updateCreate).toBe(false);
+      }
     }
+  });
+
+  it("documenta que Idempotency-Key es obligatoria", () => {
+    expect(statement.rest[0]?.documentation).toContain("Idempotency-Key");
   });
 
   it("los parametros por recurso son los de la spec", () => {

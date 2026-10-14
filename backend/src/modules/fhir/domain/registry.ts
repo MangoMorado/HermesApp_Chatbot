@@ -50,6 +50,7 @@ export type SearchContext = { readonly params: SearchParams; readonly timeZone: 
 
 export type ResourceDefinition<R, Q> = {
   readonly type: ResourceType;
+  readonly writable: boolean;
   readonly searchParams: readonly SearchParamDef[];
   buildQuery(context: SearchContext): Q;
   toResource(record: R): FhirResource;
@@ -91,6 +92,7 @@ function preRegisteredOf(params: SearchParams): boolean | null {
 
 const patient: ResourceDefinition<PatientRecord, PatientQuery> = {
   type: "Patient",
+  writable: true,
   searchParams: [IDENTIFIER, { name: "_tag", type: "token" }],
   buildQuery({ params }) {
     const token = identifierOf(params);
@@ -107,6 +109,7 @@ const patient: ResourceDefinition<PatientRecord, PatientQuery> = {
 
 const practitioner: ResourceDefinition<PractitionerRecord, MasterQuery> = {
   type: "Practitioner",
+  writable: true,
   searchParams: [IDENTIFIER, ACTIVE],
   buildQuery: masterQuery,
   toResource: toPractitioner,
@@ -114,6 +117,7 @@ const practitioner: ResourceDefinition<PractitionerRecord, MasterQuery> = {
 
 const healthcareService: ResourceDefinition<HealthcareServiceRecord, MasterQuery> = {
   type: "HealthcareService",
+  writable: true,
   searchParams: [IDENTIFIER, ACTIVE],
   buildQuery: masterQuery,
   toResource: toHealthcareService,
@@ -121,6 +125,7 @@ const healthcareService: ResourceDefinition<HealthcareServiceRecord, MasterQuery
 
 const schedule: ResourceDefinition<ScheduleRecord, ScheduleQuery> = {
   type: "Schedule",
+  writable: true,
   searchParams: [IDENTIFIER, { name: "actor", type: "reference" }, ACTIVE],
   buildQuery(context) {
     const raw = single(context.params, "actor");
@@ -137,6 +142,7 @@ const schedule: ResourceDefinition<ScheduleRecord, ScheduleQuery> = {
 
 const slot: ResourceDefinition<SlotRecord, SlotQuery> = {
   type: "Slot",
+  writable: true,
   searchParams: [
     IDENTIFIER,
     { name: "schedule", type: "reference" },
@@ -159,6 +165,7 @@ const slot: ResourceDefinition<SlotRecord, SlotQuery> = {
 
 const appointment: ResourceDefinition<AppointmentRecord, AppointmentQuery> = {
   type: "Appointment",
+  writable: false,
   searchParams: [
     IDENTIFIER,
     { name: "patient", type: "reference" },
@@ -191,6 +198,7 @@ export const DEFINITIONS = {
 
 export type DeclaredResource = {
   readonly type: ResourceType;
+  readonly writable: boolean;
   readonly searchParams: readonly SearchParamDef[];
 };
 
