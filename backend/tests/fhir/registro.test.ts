@@ -314,6 +314,8 @@ describe("fhir-conformance: CapabilityStatement", () => {
     expect(declared.map((resource) => resource.type)).toEqual([...RESOURCE_TYPES]);
     for (const resource of declared) {
       const definition = DECLARED_RESOURCES.find((entry) => entry.type === resource.type);
+      expect(resource.versioning).toBe("no-version");
+      expect(resource.readHistory).toBe(false);
       expect(resource.searchParam).toEqual(definition?.searchParams);
       if (resource.type === "Appointment") {
         expect(resource.interaction).toEqual([{ code: "read" }, { code: "search-type" }]);

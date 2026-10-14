@@ -263,6 +263,7 @@ describe("roles: /fhir", () => {
     const { response, body } = await fhirGet("Patient/mr-1");
 
     expect(response.status).toBe(401);
+    expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
     expect(response.headers.get("Content-Type")).toBe(FHIR_MIME);
     expect(body.issue[0]).toEqual({
       severity: "error",

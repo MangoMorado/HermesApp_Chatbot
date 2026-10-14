@@ -74,9 +74,12 @@ describe("fhir-conformance: Patient", () => {
   });
 
   it("un pre-registro lleva el tag pre-registered", () => {
-    expect(toPatient({ ...patient, status: "pre_registered" }).meta).toEqual({
+    const preRegistered = toPatient({ ...patient, status: "pre_registered" });
+    expect(preRegistered.meta).toEqual({
       tag: [{ system: "urn:ingenius:patient-tag", code: "pre-registered" }],
     });
+    expect(preRegistered).not.toHaveProperty("active");
+    expect(toPatient(patient).active).toBe(true);
     expect(toPatient(patient)).not.toHaveProperty("meta");
   });
 

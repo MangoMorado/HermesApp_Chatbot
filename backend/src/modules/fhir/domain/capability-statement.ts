@@ -26,6 +26,8 @@ export function capabilityStatement(resources: readonly DeclaredResource[]): Cap
         security: { description: "Token portador (JWT) con rol service. Sin SMART." },
         resource: resources.map((resource) => ({
           type: resource.type,
+          versioning: "no-version",
+          readHistory: false,
           interaction: [
             { code: "read" },
             { code: "search-type" },

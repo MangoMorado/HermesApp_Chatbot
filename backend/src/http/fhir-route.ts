@@ -35,6 +35,7 @@ export function fhirResponse(
     headers: {
       "Content-Type": FHIR_MIME,
       [REQUEST_ID_HEADER]: requestId,
+      ...(status === 401 ? { "WWW-Authenticate": "Bearer" } : {}),
       ...(extras.location ? { Location: extras.location } : {}),
       ...(extras.allow ? { Allow: extras.allow } : {}),
     },

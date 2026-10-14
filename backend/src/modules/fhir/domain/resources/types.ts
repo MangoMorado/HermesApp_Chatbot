@@ -11,7 +11,7 @@ export type FhirPatient = {
   readonly id: string;
   readonly meta?: { readonly tag: readonly FhirCoding[] };
   readonly identifier: readonly FhirIdentifier[];
-  readonly active: boolean;
+  readonly active?: boolean;
   readonly name: readonly { readonly family: string; readonly given?: readonly string[] }[];
   readonly birthDate: string;
   readonly telecom?: readonly { readonly system: "phone" | "email"; readonly value: string }[];
@@ -125,6 +125,8 @@ export type CapabilityStatement = {
     readonly security: { readonly description: string };
     readonly resource: readonly {
       readonly type: ResourceType;
+      readonly versioning: "no-version";
+      readonly readHistory: false;
       readonly interaction: readonly {
         readonly code: "read" | "search-type" | "update";
         readonly documentation?: string;
