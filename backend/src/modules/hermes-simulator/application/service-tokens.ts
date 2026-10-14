@@ -3,7 +3,7 @@ import type { ServiceTokenIssuer } from "../domain/ports/fhir-http";
 
 const QUARTER_HOUR_MS = 15 * 60_000;
 
-/** Token `service` de un tenant. La Fase 6 cambia el emisor, no esta funcion. */
+/** Token `service` de un tenant. La Fase 5 cambia el emisor, no esta funcion. */
 export function createServiceTokens(issuer: TokenIssuer): ServiceTokenIssuer {
   return {
     issue(tenantId) {

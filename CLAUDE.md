@@ -17,13 +17,13 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 - **3.3 motor conversacional — cerrada** y en `main` (PR #5). Spec en `docs/superpowers/specs/2026-10-02-fase-3-3-motor-conversacional-design.md`: conversaciones con historial redactado, verificación con banco de preguntas y par fijo, pre-registro, handoff-tickets (solo creación), CORS del widget y alta/baja de orígenes.
 - **3.4 frontend del chat — cerrada** y en `main` (PR #6). Spec en `docs/superpowers/specs/2026-10-13-fase-3-4-frontend-chat-design.md`: widget con un núcleo (`frontend/src/widget/`) y tres montajes (script `widget.js`, iframe `/widget`, consola `/chat`), páginas `/panel/conocimiento` y `/panel/bot`, y bandeja `/simulador/bandeja`. El widget habla directo al backend por CORS (`PUBLIC_BACKEND_URL`), no por el proxy.
 
-**Siguiente: Fase 4** (FHIR completo e integración Hermes). No hay nada de `/fhir` todavía y el SDD es obligatorio: empieza por la spec.
+**Fase 4 en curso.** Cuatro sub-proyectos de igual peso. La 4.1 (PR #9), la 4.2 (PR #10) y la 4.3 (PR #11) están en `main`: `/fhir` R4 con lectura y búsqueda, `PUT` condicional de maestros, `Appointment` `proposed` y `Task` de cancelación resueltos por `PUT` por id, y `GET /fhir/metadata` generado del registro. La 4.4 (simulador por FHIR) está en curso en la rama `fase-4-4-simulador-fhir`; spec en `docs/superpowers/specs/2026-10-14-fase-4-4-simulador-fhir-design.md`. El cliente con token `service` sustituye al gateway en proceso (`hermes:sync` y la bandeja). No está en `main`, así que el porcentaje del roadmap sigue en 75% del MVP. La Fase 5 (Keycloak) no está abierta. La Fase 6 es el endurecimiento y queda fuera del MVP.
 
 Fuera del plan de fases, `main` incluye el rediseño del panel operativo (tablero oscuro; sistema visual en `DESIGN.md`).
 
 Lo que aún no existe está descrito como destino, no como hecho. Verifica antes de asumir que un archivo o comando está.
 
-`ROADMAP.md` es la fuente del plan: cinco fases hasta el MVP (1→2→3→4→5) y, después, la Fase 6 (Fixes y nuevas features: Keycloak para administración, JWT y sesiones). No se abre una fase sin cerrar los criterios de aceptación de la anterior. Tanto `ROADMAP.md` como `GOBERNANZA.md` (Fase 1) viven en la raíz.
+`ROADMAP.md` es la fuente del plan: cinco fases hasta el MVP (1→2→3→4→5). La Fase 5 es Keycloak (JWT y sesiones) y el contrato (Postman, OpenAPI, Swagger). Después, la Fase 6 es el endurecimiento, los pipelines de CI, la cobertura al 100% y las oleadas de fixes de SonarQube. No se abre una fase sin cerrar los criterios de aceptación de la anterior. Tanto `ROADMAP.md` como `GOBERNANZA.md` (Fase 1) viven en la raíz.
 
 ## No negociables (aplican a todo cambio)
 
@@ -59,7 +59,7 @@ Nunca mezclar las envolturas. `GET /fhir/metadata` (CapabilityStatement) debe de
 
 **Cómo se escribe una ruta REST:** se envuelve con `publicRoute` o `privateRoute` de `backend/src/http/route.ts` (resuelven `X-Request-Id`, aplican el rol y normalizan errores), y se declara en `backend/src/http/openapi.ts` seguido de `npm --prefix backend run openapi:generate`. `openapi.json` es generado: editarlo a mano rompe la suite `contrato-api`, que también falla si hay una ruta sin declarar. Para comprobar propiedad de un recurso, `requireTenant` — falla como `not_found`, nunca `forbidden`.
 
-**Conceptos de dominio que atraviesan fases:** el apartado de cupo es atómico (`free` → `busy_tentative` en la misma transacción, dos solicitudes concurrentes nunca toman el mismo cupo); las solicitudes vencen y el vencimiento se evalúa **al leer** (también en lecturas FHIR de `Slot`, `Appointment` y `Task`), con barrido periódico adicional en Fase 5. Paginación REST por cursor (50 por defecto, 200 máximo); FHIR usa `_count`/`_offset`.
+**Conceptos de dominio que atraviesan fases:** el apartado de cupo es atómico (`free` → `busy_tentative` en la misma transacción, dos solicitudes concurrentes nunca toman el mismo cupo); las solicitudes vencen y el vencimiento se evalúa **al leer** (también en lecturas FHIR de `Slot`, `Appointment` y `Task`), con barrido periódico adicional en Fase 6. Paginación REST por cursor (50 por defecto, 200 máximo); FHIR usa `_count`/`_offset`.
 
 ## Comandos
 

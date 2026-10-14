@@ -1,6 +1,6 @@
 # Fase 4.3 — FHIR: pre-agenda (diseño)
 
-> Estado: **en implementación** en la rama `fase-4-3-pre-agenda-fhir`.
+> Estado: **cerrada en `main`** mediante la [PR #11](https://github.com/MangoMorado/HermesApp_Chatbot/pull/11).
 > Fuente del alcance: `ROADMAP.md` §Fase 4, entregables 3, 4 y 7, y el criterio 5. Corte de
 > sub-proyectos en la §1 de `2026-10-13-fase-4-1-fhir-base-lectura-design.md`. Los hallazgos
 > 15 a 17 de `docs/FHIR_R4_REVIEW.md` quedan cerrados aquí. Manda `GOBERNANZA.md` ante
@@ -17,8 +17,8 @@ confirmar citas: book y reschedule salen como `Appointment` `proposed`; cancel s
 | --- | --- | --- | --- |
 | 4.1 Base y lectura | Cerrada en `main` | 1, 9, 11, 5 (lectura), 7 (`Slot`) | 7 (parcial), 5 (parcial) |
 | 4.2 Escritura de maestros | Cerrada en `main` | 2, 5 (escritura), 6, 8 | 2, 3, 4, 6 |
-| **4.3 Pre-agenda por FHIR** (esta spec) | `Appointment` `proposed`, extensión `replaces`, `Task`, `PUT` por id, vencimiento al leer | 3, 4, 7 | 5 |
-| 4.4 Simulador por FHIR | Cliente FHIR con token `service` | 10 | 1, 7 (cierre) |
+| **4.3 Pre-agenda por FHIR** (esta spec) | Cerrada en `main` | 3, 4, 7 | 5 |
+| 4.4 Simulador por FHIR | En curso; aún no está en `main` | 10 | 1, 7 (cierre) |
 
 No hay migración. El id de la cita en firme de un book o un reschedule pasa a ser el id de la
 solicitud. `replaces` sale de `appointment_requests.appointment_id`.
@@ -125,5 +125,5 @@ marca como `writable`). `CLAUDE.md` y `ROADMAP.md` los edita quien cierra la fas
 ## 7. Fuera de alcance
 
 El cliente FHIR del simulador y la sincronización de maestros (4.4). `PUT` por id de
-maestros, `PATCH`, borrado, `If-Match` y versiones. Barrido periódico y Postman (Fase 5).
-Keycloak (Fase 6).
+maestros, `PATCH`, borrado, `If-Match` y versiones. Barrido periódico (Fase 6).
+Keycloak, Postman, OpenAPI y Swagger (Fase 5).

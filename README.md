@@ -6,9 +6,10 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fases 1, 2 y 3 cerradas. La Fase 4 (FHIR e integración con Hermes) va en cuatro
-> sub-proyectos: la 4.1, la 4.2 y la 4.3 están en el árbol. La 4.4 (simulador por FHIR)
-> está en curso.
+> Estado: Fases 1, 2 y 3 cerradas. La Fase 4 va en cuatro sub-proyectos: la 4.1 (PR #9),
+> la 4.2 (PR #10) y la 4.3 (PR #11) están en `main`. La 4.4 (simulador por FHIR) está en
+> curso en la rama `fase-4-4-simulador-fhir` y todavía no está en `main`. Sigue la Fase 5
+> (Keycloak). La Fase 6 es el endurecimiento y queda fuera del MVP.
 
 ## Requisitos
 
@@ -158,7 +159,7 @@ docker compose up --build
 
 Levanta Postgres (con healthcheck), el backend en `3001` y el frontend en `3000`. El
 frontend espera a que el backend esté sano. Las contraseñas en claro del compose son
-provisionales hasta la Fase 5, donde salen del YAML versionado.
+provisionales hasta la Fase 6, donde salen del YAML versionado.
 
 ## Variables
 
@@ -182,9 +183,11 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 ## FHIR
 
 `/fhir` es la superficie de Hermes: R4, solo JSON y solo rol `service`. Expone lectura y
-búsqueda de `Patient`, `Practitioner`, `HealthcareService`, `Schedule`, `Slot` y
-`Appointment`. Los cinco primeros admiten escritura mediante `PUT` condicional por
-`identifier`; `Idempotency-Key` es obligatoria en cada escritura.
+búsqueda de `Patient`, `Practitioner`, `HealthcareService`, `Schedule`, `Slot`,
+`Appointment` y `Task`. Los cinco maestros admiten `PUT` condicional por `identifier`.
+`Appointment` y `Task` se resuelven con `PUT` por id (pre-agenda: cita `proposed` o
+cancelación). `Idempotency-Key` es obligatoria en cada escritura. `GET /fhir/metadata`
+declara exactamente eso.
 
 ```bash
 curl http://localhost:3001/fhir/metadata                 # publico: que existe
@@ -267,7 +270,11 @@ con `-t "<nombre>"`.
 | `sesion-widget` | Clave pública, `Origin`, límite por IP, renovación e idempotencia sin JWT persistido |
 | `idempotencia` | Repetición sin efectos duplicados en todas las escrituras |
 | `sin-ia` | Ninguna dependencia ni import de IA o n8n |
-| `fhir-conformance` | Forma R4 de los recursos, búsqueda y paginación, `OperationOutcome`, `metadata` igual a lo implementado y vencimiento al leer en `Slot` |
+| `flujo` | Motor, pasos, recorrido del chat y conversación por HTTP |
+| `verificacion` | Banco de preguntas, par fijo, bloqueo y redacción |
+| `pre-agenda` | Apartado atómico, tope, vencimiento y bandeja |
+| `fhir-conformance` | Forma R4, búsqueda, `OperationOutcome`, `metadata` igual a lo implementado y vencimiento al leer |
+| `hermes-simulador` | El simulador cierra maestros, pre-agenda y pre-registro solo por `/fhir` |
+| `cors` | CORS del widget y alta / baja de orígenes |
 
-Las demás (`flujo`, `verificacion`…) llegan con sus fases; están
-listadas en `GOBERNANZA.md`.
+`carga-basica` llega con la Fase 6. El inventario completo está en `GOBERNANZA.md` §5.1.

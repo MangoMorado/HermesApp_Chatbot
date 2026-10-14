@@ -18,7 +18,7 @@ escritura.
 | --- | --- | --- | --- |
 | 4.1 Base y lectura | Cerrada en `main` | 1, 9, 11, 5 (lectura), 7 (`Slot`) | 7 (parcial), 5 (parcial) |
 | 4.2 Escritura de maestros | Cerrada en `main` | 2, 5 (escritura), 6, 8 | 2, 3, 4, 6 |
-| 4.3 Pre-agenda por FHIR | Cerrada en el árbol | 3, 4, 7 | 5 |
+| 4.3 Pre-agenda por FHIR | Cerrada en `main` (PR #11) | 3, 4, 7 | 5 |
 | **4.4 Simulador por FHIR** (esta spec) | Cliente FHIR, sincronización de maestros, suite `hermes-simulador` | 10 | 1, 7 (cierre) |
 
 ## 2. Decisiones tomadas
@@ -27,7 +27,7 @@ escritura.
 | --- | --- | --- |
 | Dos consumidores | La bandeja conserva su REST. El script `hermes:sync` recorre el ciclo solo. Los dos usan el mismo cliente | El puerto ya decía que el gateway en proceso lo reemplaza un cliente FHIR. El criterio 1 pide el ciclo sin pasos manuales |
 | Transporte | `fetch` contra `FHIR_BASE_URL` en el proceso que sirve y en el script. Las pruebas usan un transporte que invoca los handlers, sin abrir un puerto | El repo ya prueba `/fhir` llamando al handler. `FHIR_BASE_URL` es obligatoria cuando el simulador está encendido y el transporte es `fetch` |
-| Token | JWT `service` del emisor actual, uno por tenant, sujeto `hermes-{tenantId}`, 15 minutos. Keycloak queda en la Fase 6 | El núcleo no cambia de verificador |
+| Token | JWT `service` del emisor actual, uno por tenant, sujeto `hermes-{tenantId}`, 15 minutos. Keycloak queda en la Fase 5 | El núcleo no cambia de verificador |
 | Literales | El simulador copia en `fhir-contract.ts` los que tiene que enviar. No importa `fhir`. Un test de paridad los compara con `profiles.ts` | `fronteras` prohíbe que otro módulo importe `fhir`. Hermes no comparte el módulo del chatbot |
 | Referencias | El `PUT` de `Schedule` y `Slot` usa el `id` que devolvió el `PUT` anterior, no el id de `hermes_sim` | El id interno de `public` lo asigna el servidor |
 | Citas de `hermes_sim` | No se empujan como `Appointment`. La cita en firme nace al aprobar | El `PUT` condicional no existe para `Appointment` |
@@ -126,4 +126,4 @@ quien cierra la fase. Sin cambios de OpenAPI ni de frontend.
 ## 8. Fuera de alcance
 
 Interacciones nuevas en `/fhir`. Doble escritura en el CRUD del simulador. Empujar las citas
-de `hermes_sim`. Barrido periódico y Postman (Fase 5). Keycloak (Fase 6).
+de `hermes_sim`. Barrido periódico (Fase 6). Keycloak, Postman, OpenAPI y Swagger (Fase 5).

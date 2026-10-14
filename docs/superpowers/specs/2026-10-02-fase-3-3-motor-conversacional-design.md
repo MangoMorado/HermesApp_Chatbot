@@ -17,7 +17,7 @@ Incluye: motor y pasos del flujo, conversaciones con historial redactado, verifi
 banco de preguntas y bloqueo, pre-registro, creación de handoff-tickets, CORS para las rutas
 del widget y alta/baja individual de orígenes permitidos.
 
-No incluye: consola `/chat` ni páginas de panel (3.4), lectura y gestión de handoffs (Fase 5),
+No incluye: consola `/chat` ni páginas de panel (3.4), lectura y gestión de handoffs (Fase 6),
 confirmación del pre-registro por Hermes vía FHIR (Fase 4).
 
 ## 2. Decisiones tomadas
@@ -29,7 +29,7 @@ confirmación del pre-registro por Hermes vía FHIR (Fase 4).
 | Par fijo | El par se sortea la primera vez que se identifica un documento y se mantiene entre sesiones y tras el bloqueo; solo se re-sortea tras verificar con éxito | Re-sortear por sesión permitiría pescar el par más fácil |
 | Bloqueo | `verification_max_attempts` (3) fallos → `verification_lock_minutes` (30); salida por asesor | Resistencia a fuerza bruta sin dejar al paciente sin camino |
 | Pre-registro | Aviso de datos (Ley 1581) → nombres, apellidos, fecha de nacimiento, celular (obligatorio), correo (opcional) → confirmación | Con celular el banco tiene preguntas no derivadas de la fecha |
-| Conversación | Estado + historial con los mensajes sensibles del paciente redactados | El asesor (Fase 5) y la consola (3.4) necesitan contexto sin datos sensibles |
+| Conversación | Estado + historial con los mensajes sensibles del paciente redactados | El asesor (Fase 6) y la consola (3.4) necesitan contexto sin datos sensibles |
 | Motor | Pasos puros en `domain` que devuelven estado, mensajes y **efectos**; `application` carga hechos y ejecuta efectos | El flujo se prueba sin base de datos; respeta las fronteras hexagonales |
 | CORS | En el backend, solo rutas del widget, origen exacto validado contra `allowed_origins`, sin comodín | El widget vive en dominios de las clínicas; el proxy no sirve ahí |
 | Orígenes por API | `POST`/`DELETE /api/v1/bot-config/allowed-origins` (rol `admin`); `PATCH` sigue reemplazando la lista | Evita la carrera de leer-modificar-escribir la lista entera |
@@ -126,7 +126,7 @@ Un paso por archivo; cada `handle` ≤ 40 líneas y complejidad cognitiva ≤ 15
 | --- | --- |
 | `id`, `tenant_id`, `conversation_id` | |
 | `reason` | enum `requested` · `verification_locked` · `unverifiable` |
-| `status` | enum `open` (la Fase 5 añade los demás) |
+| `status` | enum `open` (la Fase 6 añade los demás) |
 | `medical_record_id` | Si ya se conoce |
 | `created_at` | |
 
@@ -292,10 +292,10 @@ clave.
 ## 8. Fuera de alcance
 
 - Consola `/chat`, bandeja, páginas de KB y config (3.4).
-- Lectura y gestión de handoff-tickets (Fase 5).
+- Lectura y gestión de handoff-tickets (Fase 6).
 - Confirmación del pre-registro por Hermes (Fase 4).
-- Barrido periódico de bloqueos y conversaciones vencidas (Fase 5); todo se evalúa al leer.
-- Store compartido para rate limits (Fase 5).
+- Barrido periódico de bloqueos y conversaciones vencidas (Fase 6); todo se evalúa al leer.
+- Store compartido para rate limits (Fase 6).
 
 ## 9. Refinamientos del plan
 

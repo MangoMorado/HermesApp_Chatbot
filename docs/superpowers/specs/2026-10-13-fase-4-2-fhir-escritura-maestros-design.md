@@ -1,6 +1,6 @@
 # Fase 4.2 — FHIR: escritura de maestros (diseño)
 
-> Estado: **implementada** en la rama `fase-4-2-fhir-escritura-maestros`.
+> Estado: **cerrada en `main`** mediante la [PR #10](https://github.com/MangoMorado/HermesApp_Chatbot/pull/10).
 > Fuente del alcance: `ROADMAP.md` §Fase 4, entregables 2, 5 (escritura), 6 y 8; corte de
 > sub-proyectos en la §1 de `2026-10-13-fase-4-1-fhir-base-lectura-design.md`. Manda
 > `GOBERNANZA.md` ante cualquier conflicto.
@@ -227,7 +227,7 @@ ya dicen que la escritura queda auditada como hecha por Hermes y que `/fhir` es 
 
 `Appointment` `proposed`, la extensión `replaces-appointment`, `Task` y el vencimiento al
 leer de ambos (4.3). El cliente FHIR del simulador y la sincronización automática de
-maestros (4.4). La colección Postman y el barrido periódico (Fase 5). Keycloak (Fase 6).
+maestros (4.4). El barrido periódico (Fase 6). Keycloak, Postman, OpenAPI y Swagger (Fase 5).
 Borrar recursos, `PATCH`, `PUT` por id y versiones (`If-Match`).
 
 ## 9. Refinamientos al planificar
