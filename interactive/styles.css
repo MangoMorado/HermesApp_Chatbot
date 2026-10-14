@@ -228,6 +228,19 @@ h2 {
   font-size: clamp(1.55rem, 3vw, 2rem);
 }
 
+.copy h3 {
+  margin: 2rem 0 0.75rem;
+  color: var(--ink);
+  font-size: 1.2rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.copy h3:first-of-type {
+  margin-top: 0.35rem;
+}
+
 .copy p {
   margin: 0 0 0.95rem;
   max-width: 38em;
@@ -291,6 +304,18 @@ pre code {
 .rows span:first-child {
   color: var(--ink);
   font-weight: 600;
+}
+
+.rows.types div {
+  grid-template-columns: 9.6rem 1fr;
+  align-items: baseline;
+}
+
+.rows.types span:first-child {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .phases,
@@ -399,6 +424,11 @@ pre code {
 
   .rows div {
     grid-template-columns: 5.5rem 1fr;
+  }
+
+  .rows.types div {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
   }
 }
 

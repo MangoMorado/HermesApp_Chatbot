@@ -32,6 +32,7 @@
         <a href="#construccion">Construcción</a>
         <a href="#arneses">Arneses</a>
         <a href="#puertas">Puertas</a>
+        <a href="#fhir">FHIR</a>
       </nav>
       <div class="progress" aria-hidden="true"><span id="progress"></span></div>
     </header>
@@ -410,6 +411,389 @@
               los logs no guardan respuestas de verificación ni datos clínicos. El simulador
               no viaja a producción.
             </p>
+          </div>
+        </section>
+
+        <section class="chapter" id="fhir" data-scene="fhir">
+          <p class="index" data-depth="0.55">09</p>
+          <div class="rule" data-depth="0.9"></div>
+          <div class="copy" data-depth="0.14">
+            <h2>FHIR es la puerta de Hermes</h2>
+            <h3>En fácil</h3>
+            <p>
+              FHIR R4 es el idioma en el que Hermes ya nombra pacientes, profesionales,
+              agendas y citas. Este servicio traduce sus tablas a ese idioma. Hermes lee y
+              escribe en <code>/fhir</code> sin conocer Postgres, el widget ni el motor de la
+              conversación.
+            </p>
+            <p>
+              El paciente habla con el chatbot. El chatbot aparta un cupo y deja una
+              solicitud. La cita en firme aparece cuando Hermes la escribe.
+            </p>
+            <p>
+              Los maestros son cinco recursos: paciente, profesional, servicio, agenda y
+              cupo. Hermes los busca por un identificador de negocio, un par
+              <code>system|value</code>. Si no hay coincidencia, se crea. Si hay una, se
+              actualiza y conserva el id interno. Si hay más de una, no se escribe.
+            </p>
+            <p>
+              La pre-agenda usa otros dos recursos. Pedir cita o reprogramar se lee como un
+              <code>Appointment</code> en estado <code>proposed</code>. Cancelar se lee como
+              un <code>Task</code> en estado <code>requested</code>. Hermes responde
+              escribiendo el estado final sobre el mismo id.
+              <code>booked</code> confirma la cita. <code>cancelled</code> rechaza el pedido
+              y libera el cupo. En una cancelación, <code>completed</code> anula la cita y
+              <code>rejected</code> la deja como estaba.
+            </p>
+            <p>
+              Si el chatbot tiene el cupo apartado, Hermes solo puede marcarlo ocupado o no
+              disponible. Esa escritura rechaza la solicitud en el mismo paso. Cambiar la
+              hora, la agenda o devolver el cupo a libre espera a que el apartado venza o se
+              resuelva.
+            </p>
+            <p>
+              Quien todavía no está en el padrón se lee como un <code>Patient</code> con la
+              etiqueta <code>pre-registered</code>. Hermes lo confirma escribiendo el
+              paciente real, sin esa etiqueta. El id interno sigue igual: la conversación y
+              las solicitudes apuntan a la misma persona.
+            </p>
+            <p>
+              A <code>/fhir</code> entra el rol <code>service</code>. El panel y el widget
+              siguen en <code>/api/v1</code>. Un id de otra clínica responde 404, igual que
+              un id que no existe. <code>GET /fhir/metadata</code> es público y lista
+              exactamente las operaciones que el servidor cumple.
+            </p>
+            <div class="rows">
+              <div>
+                <span>Versión</span>
+                <span>
+                  R4 <code>4.0.1</code>, solo JSON. El equipo de Hermes lo confirmó el 14 de
+                  octubre de 2026. Los perfiles viven en este repositorio:
+                  <code>metadata</code> es el contrato que se puede leer.
+                </span>
+              </div>
+              <div>
+                <span>Dos escrituras</span>
+                <span>
+                  Los maestros se crean o actualizan con un
+                  <code>PUT</code> que busca por identificador. La pre-agenda se resuelve
+                  con un <code>PUT</code> al id de la solicitud.
+                </span>
+              </div>
+              <div>
+                <span>Quién manda</span>
+                <span>
+                  Hermes confirma, reprograma y cancela. El chatbot origina la solicitud y
+                  el pre-registro. Ocupar un cupo apartado rechaza esa solicitud; no confirma
+                  una cita.
+                </span>
+              </div>
+              <div>
+                <span>Repetir</span>
+                <span>
+                  Toda escritura lleva <code>Idempotency-Key</code>. La misma petición
+                  devuelve el mismo resultado y no abre un segundo registro.
+                </span>
+              </div>
+            </div>
+
+            <h3>El contrato</h3>
+            <p>
+              El módulo <code>modules/fhir</code> tiene <code>domain</code> y
+              <code>application</code>. Declara puertos de lectura y de escritura.
+              <code>composition/fhir-wiring.ts</code> los cumple con
+              <code>scheduling</code> y <code>patients</code>. <code>fhir</code> no importa
+              esos módulos; la suite <code>fronteras</code> cierra el corte. La versión, el
+              MIME, los systems, los tags y los value sets están solo en
+              <code>profiles.ts</code>.
+            </p>
+            <p>
+              Hay una ruta, <code>app/fhir/[[...path]]</code>. El despacho consulta
+              <code>registry.ts</code>, y de ese mismo registro sale el
+              <code>CapabilityStatement</code>. Añadir un recurso o un parámetro de búsqueda
+              es declararlo ahí. <code>metadata</code> no se edita a mano.
+              <code>fhir-conformance</code> recorre lo declarado y exige un valor de muestra
+              por parámetro.
+            </p>
+            <p>
+              <code>fhir-route.ts</code> no importa <code>errors.ts</code>. Toda respuesta,
+              también el fallo, lleva <code>Content-Type: application/fhir+json</code> y
+              <code>X-Request-Id</code>. El cuerpo de error es un
+              <code>OperationOutcome</code>.
+            </p>
+            <p>
+              <strong>Lectura.</strong> <code>read</code> es
+              <code>GET /fhir/{Tipo}/{id}</code>. <code>search-type</code> es
+              <code>GET /fhir/{Tipo}</code>. Se leen los siete tipos. El id de la URL es el
+              id interno. El identificador de Hermes viaja en <code>identifier</code>.
+            </p>
+            <div class="rows types">
+              <div>
+                <span>Patient</span>
+                <span>
+                  Expediente. Dos <code>identifier</code>: el de negocio y el documento
+                  (<code>urn:ingenius:document:{CC|TI|CE|PA|RC}</code>). Si el estado es
+                  <code>pre_registered</code>, lleva
+                  <code>meta.tag</code>
+                  <code>urn:ingenius:patient-tag|pre-registered</code>. Búsqueda:
+                  <code>identifier</code>, <code>_tag</code>.
+                </span>
+              </div>
+              <div>
+                <span>Practitioner</span>
+                <span>
+                  Identificador, nombre, <code>active</code>. Búsqueda:
+                  <code>identifier</code>, <code>active</code>.
+                </span>
+              </div>
+              <div>
+                <span>HealthcareService</span>
+                <span>
+                  Identificador, nombre, <code>active</code>. Misma búsqueda que el
+                  profesional.
+                </span>
+              </div>
+              <div>
+                <span>Schedule</span>
+                <span>
+                  Identificador, <code>active</code> y <code>actor</code> al profesional y al
+                  servicio. Búsqueda: <code>identifier</code>, <code>actor</code>,
+                  <code>active</code>.
+                </span>
+              </div>
+              <div>
+                <span>Slot</span>
+                <span>
+                  Agenda, estado, inicio y fin.
+                  <code>busy_tentative</code> sale como <code>busy-tentative</code> y
+                  <code>busy_unavailable</code> como <code>busy-unavailable</code>.
+                  Búsqueda: <code>identifier</code>, <code>schedule</code>,
+                  <code>status</code>, <code>start</code>.
+                </span>
+              </div>
+              <div>
+                <span>Appointment</span>
+                <span>
+                  Cita en firme (<code>booked</code>, <code>cancelled</code>,
+                  <code>fulfilled</code>, <code>noshow</code>) o solicitud de alta o
+                  reprogramación. La pendiente es <code>proposed</code>, con identificador
+                  <code>urn:ingenius:appointment-request|{id}</code>. La rechazada o vencida
+                  se lee <code>cancelled</code>. Búsqueda: <code>identifier</code>,
+                  <code>patient</code>, <code>slot</code>, <code>status</code>,
+                  <code>date</code>.
+                </span>
+              </div>
+              <div>
+                <span>Task</span>
+                <span>
+                  Solo solicitudes de cancelación. <code>intent</code> fijo
+                  <code>proposal</code>. Viva <code>requested</code>, aprobada
+                  <code>completed</code>, rechazada <code>rejected</code>, vencida
+                  <code>cancelled</code>. <code>focus</code> es la cita que se cancela y
+                  <code>for</code> es el paciente. Búsqueda: <code>identifier</code>,
+                  <code>status</code>, <code>focus</code>, <code>patient</code>.
+                </span>
+              </div>
+            </div>
+            <p>
+              <code>identifier</code> exige <code>system|value</code>. El valor a solas
+              responde <code>400</code> <code>invalid</code>. Las referencias son relativas
+              (<code>Patient/{id}</code>, <code>Schedule/{id}</code>). <code>actor</code>
+              acepta profesional o servicio. <code>start</code> y <code>date</code> aceptan
+              <code>eq</code>, <code>ge</code>, <code>gt</code>, <code>le</code> y
+              <code>lt</code>, y se repiten para formar un rango. Con offset se usan tal
+              cual. Una fecha sin hora es el día completo en <code>APP_TIMEZONE</code>.
+            </p>
+            <p>
+              <code>_count</code> vale 50 si no viene; por encima de 200 se recorta a 200.
+              <code>_offset</code> parte de 0. Un valor mal formado responde
+              <code>400</code>. El <code>Bundle</code> es <code>searchset</code>, con
+              <code>total</code> y enlaces <code>self</code>, <code>next</code> y
+              <code>previous</code>. Cada entrada lleva <code>fullUrl</code> y
+              <code>search.mode = match</code>. Maestros y <code>Patient</code> se ordenan
+              por id. <code>Slot</code> y <code>Appointment</code> se ordenan por inicio y
+              luego por id. <code>Task</code> se ordena por el inicio de la cita que cancela.
+            </p>
+            <p>
+              Un parámetro que el registro no declara para ese tipo responde
+              <code>400</code> <code>not-supported</code>. Varios parámetros se combinan con
+              AND. El tenant de toda consulta es el claim del token. Filtrar por una
+              referencia de otro tenant devuelve un conjunto vacío. Antes de leer
+              <code>Slot</code>, <code>Appointment</code> o <code>Task</code> se vencen las
+              solicitudes vencidas de ese tenant: el cupo vuelve a <code>free</code> y la
+              solicitud deja de salir como <code>proposed</code> o <code>requested</code>.
+            </p>
+            <p>
+              <strong>Escritura de maestros.</strong> Solo
+              <code>PUT /fhir/{Tipo}?identifier=system|value</code>, con un segmento, para
+              los cinco tipos. <code>PUT /fhir/Patient/{id}</code> responde
+              <code>405</code>. En <code>metadata</code> esos cinco declaran
+              <code>update</code> con <code>conditionalUpdate: true</code> y
+              <code>updateCreate: false</code>, y un texto que limita el verbo al
+              condicional. El id lo asigna el servidor.
+            </p>
+            <p>
+              El orden es rol, ruta, tipo de contenido, clave y cuerpo. Se acepta
+              <code>application/fhir+json</code> y <code>application/json</code>. Otro tipo
+              responde <code>415</code> <code>not-supported</code>, sin leer el cuerpo. La
+              <code>Idempotency-Key</code> es obligatoria, de al menos un carácter, y
+              comparte el almacén de REST. El hash incluye método, ruta, query y cuerpo. La
+              misma clave con el mismo hash repite el <code>201</code> o el
+              <code>200</code> guardados. La misma clave con otro cuerpo o con otra query
+              responde <code>409</code>. Un rechazo revierte la transacción y no guarda la
+              clave.
+            </p>
+            <p>
+              Cero coincidencias crea (<code>201</code>). Una actualiza y conserva el id
+              (<code>200</code>). Más de una responde <code>412</code>
+              <code>multiple-matches</code> y no escribe. El <code>id</code> del cuerpo puede
+              faltar. Si viene y no es el del recurso encontrado, o si no hay coincidencia y
+              el cuerpo trae <code>id</code>, la respuesta es <code>400</code>
+              <code>invalid</code>. El identificador de la query tiene que estar en el
+              cuerpo, y <code>resourceType</code> tiene que coincidir con la ruta.
+              <code>Location</code> apunta a <code>/{Tipo}/{id}</code>.
+            </p>
+            <p>
+              Se ignoran <code>meta</code>, <code>text</code>, <code>use</code> y
+              <code>extension</code>. Un elemento con significado que no se persiste, o un
+              <code>modifierExtension</code>, responde <code>422</code>
+              <code>structure</code>. Un campo obligatorio ausente, un value set inválido o
+              un <code>start</code> que no es anterior a <code>end</code> responde
+              <code>422</code> <code>processing</code>. R4 separa el JSON que no se puede
+              leer (<code>400</code>) del recurso que se leyó y el servidor rechaza
+              (<code>422</code>).
+            </p>
+            <p>
+              En <code>Patient</code>, el system de negocio lo elige Hermes: no es un system
+              de documento ni <code>urn:ingenius:pre-registration</code>. Si ese documento
+              pertenece a un expediente <code>pre_registered</code> del tenant, el
+              <code>PUT</code> confirma ese expediente: mismo id, identificador del cuerpo,
+              estado <code>active</code>, y el tag deja de salir. Si el documento ya es de un
+              paciente activo, <code>409</code>. Mandar el tag
+              <code>pre-registered</code> en el cuerpo responde <code>422</code>
+              <code>business-rule</code>.
+            </p>
+            <p>
+              <code>Schedule.actor</code> y <code>Slot.schedule</code> usan el id interno. Si
+              el profesional, el servicio o la agenda no existen en el tenant, responde
+              <code>422</code> <code>processing</code> y no crea la fila. En un
+              <code>Slot</code> apartado por una solicitud pendiente, el único estado
+              aceptado es <code>busy</code> o <code>busy-unavailable</code>. El cupo queda
+              así y la solicitud pasa a <code>rejected</code> con motivo
+              <code>slot_unavailable</code>, en la misma transacción. Otro cambio responde
+              <code>409</code> y deja el apartado intacto. Un cupo sin solicitud pendiente
+              acepta el estado del cuerpo. Los índices únicos de identificador y de
+              documento cierran la carrera: una violación sale como <code>409</code>, no como
+              <code>500</code>.
+            </p>
+            <p>
+              Cada escritura aplicada deja auditoría con actor <code>service</code>, acción
+              <code>patient.written_by_hermes</code> (y el equivalente de profesional,
+              servicio, agenda y cupo) y el id del recurso. El cuerpo no se guarda. El
+              rechazo del apartado añade <code>appointment_request.rejected</code>.
+            </p>
+            <p>
+              <strong>Pre-agenda.</strong>
+              <code>PUT /fhir/Appointment/{id}</code> y
+              <code>PUT /fhir/Task/{id}</code>. El <code>PUT</code> condicional de estos dos
+              tipos responde <code>405</code>. En <code>metadata</code> declaran
+              <code>update</code> con <code>conditionalUpdate: false</code> y
+              <code>updateCreate: false</code>. El id del recurso es el id de la solicitud.
+              Al aprobar un alta o una reprogramación, la cita en firme se inserta con ese
+              mismo id. El cuerpo <code>booked</code> trae el identificador de negocio de la
+              cita, distinto de <code>urn:ingenius:appointment-request</code>.
+            </p>
+            <p>
+              <code>Appointment.replaces</code> no existe en R4. La reprogramación lleva la
+              extensión
+              <code>http://hl7.org/fhir/5.0/StructureDefinition/extension-Appointment.replaces</code>
+              con <code>valueReference</code> a la cita que sustituye. Solo sale en
+              reschedule, y el literal vive en <code>profiles.ts</code>. En
+              <code>proposed</code>, el paciente va <code>accepted</code> y el profesional y
+              el servicio van <code>needs-action</code>. En la cita en firme, los tres van
+              <code>accepted</code>. El motivo de resolución va en
+              <code>statusReason</code>, system
+              <code>urn:ingenius:resolution-reason</code>: <code>slot_unavailable</code> si
+              el cuerpo trae ese código; si no, <code>declined</code>.
+            </p>
+            <ol class="phases">
+              <li>
+                <span>1</span>
+                <div>
+                  <strong>Appointment booked.</strong> Aprueba un alta o una reprogramación
+                  viva. Responde <code>200</code> con la cita <code>booked</code> y el
+                  identificador del cuerpo.
+                </div>
+              </li>
+              <li>
+                <span>2</span>
+                <div>
+                  <strong>Appointment cancelled.</strong> Rechaza esa solicitud y libera el
+                  cupo. Responde <code>200</code> con la cita <code>cancelled</code>.
+                </div>
+              </li>
+              <li>
+                <span>3</span>
+                <div>
+                  <strong>Task completed.</strong> Aprueba la cancelación: la cita pasa a
+                  <code>cancelled</code> y su cupo a <code>free</code>.
+                </div>
+              </li>
+              <li>
+                <span>4</span>
+                <div>
+                  <strong>Task rejected.</strong> Rechaza la cancelación. La cita en firme no
+                  cambia.
+                </div>
+              </li>
+            </ol>
+            <p>
+              Otro <code>status</code> responde <code>422</code> <code>processing</code>. El
+              <code>id</code> del cuerpo puede faltar; si viene y no es el de la URL,
+              <code>400</code>. Una query en el <code>PUT</code> por id responde
+              <code>400</code> <code>not-supported</code>. <code>intent</code> puede faltar;
+              si viene y no es <code>proposal</code>, <code>422</code>. Una solicitud que ya
+              no está pendiente, o una cita en firme, responde <code>409</code>
+              <code>conflict</code>. Un id desconocido o de otro tenant responde
+              <code>404</code>. La aprobada no se duplica en la lectura: la representa la
+              cita en firme. Cada <code>PUT</code> aplicado suma
+              <code>appointment.written_by_hermes</code> o
+              <code>task.written_by_hermes</code>, además del evento de la resolución.
+            </p>
+            <p>El fallo, en los dos verbos, sigue esta tabla.</p>
+            <ul class="board">
+              <li><code>401</code> <code>login</code> sin token, o token inválido</li>
+              <li><code>403</code> <code>forbidden</code> rol distinto de service</li>
+              <li><code>404</code> <code>not-found</code> tipo o id desconocido, u otro tenant</li>
+              <li><code>405</code> <code>not-supported</code> verbo o forma de PUT que el tipo no declara</li>
+              <li><code>415</code> <code>not-supported</code> Content-Type distinto de fhir+json o json</li>
+              <li><code>400</code> <code>invalid</code> JSON, query, resourceType o id del cuerpo</li>
+              <li><code>422</code> <code>structure</code> elemento no persistido o modifierExtension</li>
+              <li><code>422</code> <code>processing</code> campo, value set, referencia o estado no resoluble</li>
+              <li><code>422</code> <code>business-rule</code> tag pre-registered en el cuerpo</li>
+              <li><code>409</code> <code>conflict</code> clave reutilizada, documento ajeno, cupo apartado, ya resuelto</li>
+              <li><code>412</code> <code>multiple-matches</code> más de un recurso con ese identifier</li>
+              <li><code>500</code> <code>exception</code> fallo no previsto</li>
+            </ul>
+            <p>
+              <code>metadata</code> declara <code>read</code> y <code>search-type</code> en
+              los siete tipos, <code>update</code> condicional en los cinco maestros y
+              <code>update</code> por id en <code>Appointment</code> y <code>Task</code>.
+              También documenta que las escrituras exigen <code>Idempotency-Key</code>, una
+              cabecera de este servidor. Quedan fuera del registro
+              <code>vread</code>, <code>history</code>, <code>_include</code>,
+              <code>_revinclude</code>, <code>_sort</code>, <code>_summary</code>,
+              <code>POST _search</code>, <code>PATCH</code>, el borrado, <code>If-Match</code>
+              y las versiones. La fecha del contrato, <code>CAPABILITY_DATE</code>, cambia
+              cuando cambia lo declarado.
+            </p>
+            <pre><code>PUT /fhir/Patient?identifier=urn:example:mrn|88421
+Idempotency-Key: 7c2e9a
+Content-Type: application/fhir+json
+
+PUT /fhir/Appointment/{id-de-la-solicitud}
+{ "resourceType": "Appointment", "status": "booked",
+  "identifier": [{ "system": "urn:example:appointment", "value": "A-19" }] }</code></pre>
           </div>
         </section>
 

@@ -53,5 +53,6 @@ export function createResourceHandlers(sources: FhirSources): ResourceHandlers {
     Schedule: bind(DEFINITIONS.Schedule, sources.Schedule),
     Slot: bind(DEFINITIONS.Slot, sources.Slot),
     Appointment: bind(DEFINITIONS.Appointment, sources.Appointment),
+    Task: bind(DEFINITIONS.Task, sources.Task),
   };
 }

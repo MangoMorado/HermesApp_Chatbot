@@ -12,6 +12,9 @@ export const CAPABILITY_DATE = "2026-10-14";
 export const CONDITIONAL_ONLY =
   "Solo actualización condicional (PUT [type]?identifier=system|value). El PUT por id responde 405.";
 
+export const UPDATE_BY_ID =
+  "Solo PUT [type]/{id} para resolver una pre-agenda. El PUT condicional responde 405.";
+
 export const IDEMPOTENCY_DOCUMENTATION =
   "Las escrituras requieren la cabecera Idempotency-Key con un valor no vacío.";
 
@@ -22,6 +25,7 @@ export const RESOURCE_TYPES = [
   "Schedule",
   "Slot",
   "Appointment",
+  "Task",
 ] as const;
 
 export type ResourceType = (typeof RESOURCE_TYPES)[number];
@@ -55,6 +59,24 @@ export function documentCodeOf(system: string): DocumentCode | null {
 
 export const PRE_REGISTRATION_SYSTEM = "urn:ingenius:pre-registration";
 
+/** Identificador de una solicitud mientras Hermes no le ha puesto el suyo. */
+export const APPOINTMENT_REQUEST_SYSTEM = "urn:ingenius:appointment-request";
+
+/** Extensión cruzada de R5: `Appointment.replaces` no existe en R4. */
+export const REPLACES_APPOINTMENT =
+  "http://hl7.org/fhir/5.0/StructureDefinition/extension-Appointment.replaces";
+
+export const RESOLUTION_REASON_SYSTEM = "urn:ingenius:resolution-reason";
+
+/** Identificador de negocio que Hermes elige. No es documento, pre-registro ni solicitud. */
+export function isHermesBusinessSystem(system: string): boolean {
+  return (
+    documentCodeOf(system) === null &&
+    system !== PRE_REGISTRATION_SYSTEM &&
+    system !== APPOINTMENT_REQUEST_SYSTEM
+  );
+}
+
 export const PRE_REGISTERED_TAG = {
   system: "urn:ingenius:patient-tag",
   code: "pre-registered",
@@ -76,7 +98,21 @@ export function slotStatusKeyOf(code: string): SlotStatusKey | null {
   return keys.find((key) => SLOT_STATUS[key] === code) ?? null;
 }
 
-/** Citas en firme: los codigos internos ya son los de `appointmentstatus` de R4. */
-export const APPOINTMENT_STATUSES = ["booked", "cancelled", "fulfilled", "noshow"] as const;
+/** `proposed` es solo la pre-agenda. Los otros cuatro ya son los de la cita en firme. */
+export const APPOINTMENT_STATUSES = [
+  "proposed",
+  "booked",
+  "cancelled",
+  "fulfilled",
+  "noshow",
+] as const;
 
 export type AppointmentStatusCode = (typeof APPOINTMENT_STATUSES)[number];
+
+export const TASK_STATUSES = ["requested", "completed", "rejected", "cancelled"] as const;
+
+export type TaskStatusCode = (typeof TASK_STATUSES)[number];
+
+export const RESOLUTION_REASONS = ["slot_unavailable", "declined"] as const;
+
+export type ResolutionReasonCode = (typeof RESOLUTION_REASONS)[number];

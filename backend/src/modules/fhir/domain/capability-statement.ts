@@ -4,6 +4,7 @@ import {
   FHIR_VERSION,
   IDEMPOTENCY_DOCUMENTATION,
   SOFTWARE_NAME,
+  UPDATE_BY_ID,
 } from "./profiles";
 import type { DeclaredResource } from "./registry";
 import type { CapabilityStatement } from "./resources/types";
@@ -34,8 +35,13 @@ export function capabilityStatement(resources: readonly DeclaredResource[]): Cap
             ...(resource.writable
               ? [{ code: "update" as const, documentation: CONDITIONAL_ONLY }]
               : []),
+            ...(resource.updateById
+              ? [{ code: "update" as const, documentation: UPDATE_BY_ID }]
+              : []),
           ],
-          ...(resource.writable ? { conditionalUpdate: true, updateCreate: false } : {}),
+          ...(resource.writable || resource.updateById
+            ? { conditionalUpdate: resource.writable, updateCreate: false as const }
+            : {}),
           searchParam: resource.searchParams.map((param) => ({
             name: param.name,
             type: param.type,
