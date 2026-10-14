@@ -6,6 +6,7 @@ import type { TenantId } from "@/modules/shared/domain/tenant-id";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 import type { Schedule } from "../domain/entities";
 import type { HermesMasterStore } from "../domain/ports/hermes-masters";
+import { upsertMasterFromHermes } from "./upsert-master-from-hermes";
 
 export type UpsertScheduleFromHermes = (input: {
   readonly tenantId: TenantId;
@@ -38,24 +39,21 @@ export function createUpsertScheduleFromHermes(deps: Dependencies): UpsertSchedu
   return async (input) => {
     await validateActors(deps, input);
     const existing = await deps.store.findScheduleByIdentifier(input.tenantId, input.identifier);
-    const record: Schedule = {
-      id: existing?.id ?? deps.ids.next(),
+    return upsertMasterFromHermes({
+      deps,
       tenantId: input.tenantId,
-      identifier: input.identifier,
-      practitionerId: input.practitionerId,
-      healthcareServiceId: input.healthcareServiceId,
-      active: input.active,
-    };
-    const outcome = existing ? "updated" : "created";
-    await deps.store.saveSchedule(record, existing ? "update" : "insert");
-    await deps.audit.record({
-      tenantId: input.tenantId,
-      ...input.actor,
-      action: "schedule.written_by_hermes",
-      resourceType: "schedule",
-      resourceId: record.id,
-      occurredAt: deps.clock.now(),
+      actor: input.actor,
+      existing,
+      buildRecord: (id) => ({
+        id,
+        tenantId: input.tenantId,
+        identifier: input.identifier,
+        practitionerId: input.practitionerId,
+        healthcareServiceId: input.healthcareServiceId,
+        active: input.active,
+      }),
+      save: (record, mode) => deps.store.saveSchedule(record, mode),
+      audit: { action: "schedule.written_by_hermes", resourceType: "schedule" },
     });
-    return { outcome, record };
   };
 }

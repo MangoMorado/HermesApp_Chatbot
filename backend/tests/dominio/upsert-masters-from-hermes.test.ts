@@ -7,6 +7,7 @@ import type {
   Practitioner,
   Schedule,
 } from "@/modules/scheduling/domain/entities";
+import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 
 function dependencies() {
@@ -82,6 +83,22 @@ describe("dominio: upsert de maestros desde Hermes", () => {
     expect(result.outcome).toBe("updated");
     expect(result.record.id).toBe("practitioner-1");
     expect(deps.store.savePractitioner).toHaveBeenCalledWith(result.record, "update");
+  });
+
+  it("propaga ConflictError cuando savePractitioner falla por identificador duplicado", async () => {
+    const deps = dependencies();
+    deps.store.savePractitioner.mockRejectedValue(new ConflictError("El identificador ya existe"));
+
+    await expect(
+      createUpsertPractitionerFromHermes(deps)({
+        tenantId: "t1" as never,
+        actor,
+        identifier: { system: "urn:hermes:practitioner", value: "P-1" },
+        name: "Dra. Ana Perez",
+        active: true,
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(deps.audit.record).not.toHaveBeenCalled();
   });
 
   it("crea y audita un HealthcareService", async () => {

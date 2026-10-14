@@ -5,6 +5,7 @@ import type { IdGenerator } from "@/modules/shared/domain/ports/id-generator";
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
 import type { HealthcareService } from "../domain/entities";
 import type { HermesMasterStore } from "../domain/ports/hermes-masters";
+import { upsertMasterFromHermes } from "./upsert-master-from-hermes";
 
 export type UpsertHealthcareServiceFromHermes = (input: {
   readonly tenantId: TenantId;
@@ -29,23 +30,23 @@ export function createUpsertHealthcareServiceFromHermes(
       input.tenantId,
       input.identifier,
     );
-    const record: HealthcareService = {
-      id: existing?.id ?? deps.ids.next(),
+    return upsertMasterFromHermes({
+      deps,
       tenantId: input.tenantId,
-      identifier: input.identifier,
-      name: input.name,
-      active: input.active,
-    };
-    const outcome = existing ? "updated" : "created";
-    await deps.store.saveHealthcareService(record, existing ? "update" : "insert");
-    await deps.audit.record({
-      tenantId: input.tenantId,
-      ...input.actor,
-      action: "healthcare_service.written_by_hermes",
-      resourceType: "healthcare_service",
-      resourceId: record.id,
-      occurredAt: deps.clock.now(),
+      actor: input.actor,
+      existing,
+      buildRecord: (id) => ({
+        id,
+        tenantId: input.tenantId,
+        identifier: input.identifier,
+        name: input.name,
+        active: input.active,
+      }),
+      save: (record, mode) => deps.store.saveHealthcareService(record, mode),
+      audit: {
+        action: "healthcare_service.written_by_hermes",
+        resourceType: "healthcare_service",
+      },
     });
-    return { outcome, record };
   };
 }
