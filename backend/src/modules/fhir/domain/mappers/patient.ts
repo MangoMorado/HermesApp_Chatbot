@@ -21,7 +21,7 @@ export function toPatient(record: PatientRecord): FhirPatient {
       { system: record.identifier.system, value: record.identifier.value },
       { system: documentSystem(record.documentType), value: record.documentNumber },
     ],
-    active: true,
+    ...(record.status === "active" ? { active: true } : {}),
     name: [{ family: record.familyNames, ...(given.length > 0 ? { given } : {}) }],
     birthDate: record.birthDate,
     ...(telecom ? { telecom } : {}),

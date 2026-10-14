@@ -5,14 +5,16 @@ import type { Actor } from "@/modules/auth/domain/actor";
 import { AuthError } from "@/modules/auth/domain/auth-error";
 import {
   FhirError,
+  fhirConflict,
   fhirException,
   fhirForbidden,
-  fhirInvalid,
   fhirLogin,
   fhirNotFound,
+  fhirUnprocessable,
 } from "@/modules/fhir/domain/fhir-error";
 import { operationOutcome } from "@/modules/fhir/domain/operation-outcome";
 import { FHIR_MIME } from "@/modules/fhir/domain/profiles";
+import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 import { REQUEST_ID_HEADER, resolveRequestId } from "./request-id";
@@ -22,13 +24,20 @@ import { REQUEST_ID_HEADER, resolveRequestId } from "./request-id";
  * error es un `OperationOutcome` con `application/fhir+json`, nunca la envoltura REST.
  */
 
-export function fhirResponse(body: unknown, status: number, requestId: string): NextResponse {
+export function fhirResponse(
+  body: unknown,
+  status: number,
+  requestId: string,
+  extras: { readonly location?: string; readonly allow?: string } = {},
+): NextResponse {
   return new NextResponse(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": FHIR_MIME,
       [REQUEST_ID_HEADER]: requestId,
-      ...(status === 405 ? { Allow: "GET" } : {}),
+      ...(status === 401 ? { "WWW-Authenticate": "Bearer" } : {}),
+      ...(extras.location ? { Location: extras.location } : {}),
+      ...(extras.allow ? { Allow: extras.allow } : {}),
     },
   });
 }
@@ -48,11 +57,14 @@ export function toFhirError(error: unknown): FhirError {
   if (error instanceof AuthError) {
     return fromAuthError(error);
   }
+  if (error instanceof ConflictError) {
+    return fhirConflict(error.message);
+  }
   if (error instanceof NotFoundError) {
     return fhirNotFound();
   }
   if (error instanceof ValidationError) {
-    return fhirInvalid(error.message);
+    return fhirUnprocessable("processing", error.message);
   }
   return fhirException();
 }
@@ -63,7 +75,14 @@ async function respond(request: Request, run: () => Promise<unknown>): Promise<N
     return fhirResponse(await run(), 200, requestId);
   } catch (error) {
     const failure = toFhirError(error);
-    return fhirResponse(operationOutcome(failure.code, failure.message), failure.status, requestId);
+    return fhirResponse(
+      operationOutcome(failure.code, failure.message),
+      failure.status,
+      requestId,
+      {
+        ...(failure.status === 405 ? { allow: failure.allow } : {}),
+      },
+    );
   }
 }
 

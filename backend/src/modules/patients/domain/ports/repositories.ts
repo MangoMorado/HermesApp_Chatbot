@@ -8,9 +8,15 @@ export type MedicalRecordRepository = {
     documentType: DocumentType,
     documentNumber: string,
   ): Promise<MedicalRecord | null>;
+  findByIdentifier(
+    tenantId: TenantId,
+    identifier: { readonly system: string; readonly value: string },
+  ): Promise<MedicalRecord | null>;
   get(tenantId: TenantId, id: string): Promise<MedicalRecord | null>;
   /** Inserta un expediente `pre_registered`. Documento ya existente: ConflictError document_taken. */
   insertPreRegistered(record: MedicalRecord): Promise<void>;
+  insertActive(record: MedicalRecord): Promise<void>;
+  updateFromHermes(record: MedicalRecord): Promise<MedicalRecord>;
 };
 
 export type AppointmentHistoryFilter = {

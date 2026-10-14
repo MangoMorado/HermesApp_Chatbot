@@ -44,6 +44,19 @@ export function createPrismaMedicalRecordRepository(db: PrismaExecutor): Medical
       return row ? mapRecord(row) : null;
     },
 
+    async findByIdentifier(tenantId, identifier) {
+      const row = await db.medicalRecord.findUnique({
+        where: {
+          tenantId_identifierSystem_identifierValue: {
+            tenantId,
+            identifierSystem: identifier.system,
+            identifierValue: identifier.value,
+          },
+        },
+      });
+      return row ? mapRecord(row) : null;
+    },
+
     async get(tenantId, id) {
       const row = await db.medicalRecord.findFirst({ where: { tenantId, id } });
       return row ? mapRecord(row) : null;
@@ -70,6 +83,58 @@ export function createPrismaMedicalRecordRepository(db: PrismaExecutor): Medical
       } catch (error) {
         if (isUniqueViolation(error)) {
           throw new ConflictError("El documento ya esta registrado", { reason: "document_taken" });
+        }
+        throw error;
+      }
+    },
+
+    async insertActive(record) {
+      try {
+        await db.medicalRecord.create({
+          data: {
+            id: record.id,
+            tenantId: record.tenantId,
+            identifierSystem: record.identifier.system,
+            identifierValue: record.identifier.value,
+            documentType: record.documentType,
+            documentNumber: record.documentNumber,
+            givenNames: record.givenNames,
+            familyNames: record.familyNames,
+            birthDate: new Date(`${record.birthDate}T00:00:00.000Z`),
+            phone: record.phone,
+            email: record.email,
+            status: "active",
+          },
+        });
+      } catch (error) {
+        if (isUniqueViolation(error)) {
+          throw new ConflictError("El identificador o documento ya esta registrado");
+        }
+        throw error;
+      }
+    },
+
+    async updateFromHermes(record) {
+      try {
+        const row = await db.medicalRecord.update({
+          where: { tenantId_id: { tenantId: record.tenantId, id: record.id } },
+          data: {
+            identifierSystem: record.identifier.system,
+            identifierValue: record.identifier.value,
+            documentType: record.documentType,
+            documentNumber: record.documentNumber,
+            givenNames: record.givenNames,
+            familyNames: record.familyNames,
+            birthDate: new Date(`${record.birthDate}T00:00:00.000Z`),
+            phone: record.phone,
+            email: record.email,
+            status: "active",
+          },
+        });
+        return mapRecord(row);
+      } catch (error) {
+        if (isUniqueViolation(error)) {
+          throw new ConflictError("El identificador o documento ya esta registrado");
         }
         throw error;
       }

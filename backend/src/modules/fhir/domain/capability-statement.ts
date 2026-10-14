@@ -1,4 +1,10 @@
-import { CAPABILITY_DATE, FHIR_VERSION, SOFTWARE_NAME } from "./profiles";
+import {
+  CAPABILITY_DATE,
+  CONDITIONAL_ONLY,
+  FHIR_VERSION,
+  IDEMPOTENCY_DOCUMENTATION,
+  SOFTWARE_NAME,
+} from "./profiles";
 import type { DeclaredResource } from "./registry";
 import type { CapabilityStatement } from "./resources/types";
 
@@ -16,10 +22,20 @@ export function capabilityStatement(resources: readonly DeclaredResource[]): Cap
     rest: [
       {
         mode: "server",
+        documentation: IDEMPOTENCY_DOCUMENTATION,
         security: { description: "Token portador (JWT) con rol service. Sin SMART." },
         resource: resources.map((resource) => ({
           type: resource.type,
-          interaction: [{ code: "read" }, { code: "search-type" }],
+          versioning: "no-version",
+          readHistory: false,
+          interaction: [
+            { code: "read" },
+            { code: "search-type" },
+            ...(resource.writable
+              ? [{ code: "update" as const, documentation: CONDITIONAL_ONLY }]
+              : []),
+          ],
+          ...(resource.writable ? { conditionalUpdate: true, updateCreate: false } : {}),
           searchParam: resource.searchParams.map((param) => ({
             name: param.name,
             type: param.type,

@@ -33,6 +33,15 @@ function fakeRecords(rows: MedicalRecord[]): MedicalRecordRepository {
     async insertPreRegistered() {
       throw new Error("no usado en estas pruebas");
     },
+    async insertActive() {
+      throw new Error("no usado en estas pruebas");
+    },
+    async updateFromHermes() {
+      throw new Error("no usado en estas pruebas");
+    },
+    async findByIdentifier() {
+      throw new Error("no usado en estas pruebas");
+    },
     async findByDocument(tenantId, documentType, documentNumber) {
       return (
         rows.find(

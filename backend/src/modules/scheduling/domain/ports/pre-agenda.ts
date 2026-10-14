@@ -64,6 +64,12 @@ export type PreAgendaStore = RequestExpirer & {
   getAppointment(tenantId: TenantId, id: string): Promise<Appointment | null>;
   /** Solicitudes `book`/`reschedule` vivas del paciente. */
   countLiveHolds(tenantId: TenantId, medicalRecordId: string, now: Date): Promise<number>;
+  /** Bloquea y devuelve la solicitud pendiente viva que aparta el cupo. */
+  findLiveHoldBySlot(
+    tenantId: TenantId,
+    slotId: string,
+    now: Date,
+  ): Promise<AppointmentRequest | null>;
   /** `free` -> `busy_tentative` solo si sigue libre. `false` si otro lo tomo antes. */
   holdSlot(tenantId: TenantId, slotId: string): Promise<boolean>;
   /** Traduce los indices unicos parciales a `appointment_change_pending` / `slot_unavailable`. */

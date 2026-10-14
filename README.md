@@ -7,10 +7,8 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
 > Estado: Fases 1, 2 y 3 cerradas. La Fase 4 (FHIR e integración con Hermes) va en cuatro
-> sub-proyectos: la 4.1 deja `/fhir` en solo lectura (`read` y `search` de `Patient`,
-> `Practitioner`, `HealthcareService`, `Schedule`, `Slot` y `Appointment`, más
-> `GET /fhir/metadata`). Siguen la 4.2 (escritura de maestros), la 4.3 (pre-agenda por FHIR) y
-> la 4.4 (simulador por FHIR).
+> sub-proyectos: la 4.1 de lectura está cerrada y la 4.2 de escritura de maestros está
+> implementada en su rama. Siguen la 4.3 (pre-agenda por FHIR) y la 4.4 (simulador por FHIR).
 
 ## Requisitos
 
@@ -182,19 +180,28 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 
 ## FHIR
 
-`/fhir` es la superficie de Hermes: R4, solo JSON y solo rol `service`. En la 4.1 es de
-lectura.
+`/fhir` es la superficie de Hermes: R4, solo JSON y solo rol `service`. Expone lectura y
+búsqueda de `Patient`, `Practitioner`, `HealthcareService`, `Schedule`, `Slot` y
+`Appointment`. Los cinco primeros admiten escritura mediante `PUT` condicional por
+`identifier`; `Idempotency-Key` es obligatoria en cada escritura.
 
 ```bash
 curl http://localhost:3001/fhir/metadata                 # publico: que existe
 curl -H "Authorization: Bearer $TOKEN" \
   "http://localhost:3001/fhir/Slot?status=free&start=ge2026-06-15&_count=20"
 curl -H "Authorization: Bearer $TOKEN" http://localhost:3001/fhir/Patient/<id>
+
+curl -X PUT "http://localhost:3001/fhir/Practitioner?identifier=urn:hermes:practitioner%7CP-1" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/fhir+json" \
+  -H "Idempotency-Key: <uuid>" \
+  -d '{"resourceType":"Practitioner","identifier":[{"system":"urn:hermes:practitioner","value":"P-1"}],"active":true,"name":[{"text":"Dra. Ana Perez"}]}'
 ```
 
 El token `service` se emite por `/api/platform/v1/tokens` (o `npm --prefix backend run token:dev`
-en local). Los errores son `OperationOutcome` con `application/fhir+json`; un parámetro de
-búsqueda no declarado en `metadata` responde `400`.
+en local). El `PUT` crea con `201` o actualiza con `200`; repetir la misma clave y petición
+devuelve la respuesta persistida. Los errores son `OperationOutcome` con
+`application/fhir+json`; un parámetro de búsqueda no declarado en `metadata` responde `400`.
 
 ## Mapa del código
 

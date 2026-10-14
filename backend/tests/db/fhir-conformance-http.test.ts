@@ -1,8 +1,14 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetContainer } from "@/composition-root";
-import { fhirGet, serviceToken } from "../helpers/fhir";
-import { seedTenantDomain, type TenantDomainSeed, testPrisma, truncateAll } from "./support";
+import { fhirGet, fhirPut, serviceToken } from "../helpers/fhir";
+import {
+  HERMES_SYSTEM,
+  seedTenantDomain,
+  type TenantDomainSeed,
+  testPrisma,
+  truncateAll,
+} from "./support";
 
 const prisma: PrismaClient = testPrisma();
 const FHIR_MIME = "application/fhir+json";
@@ -69,6 +75,79 @@ describe("fhir-conformance: lectura por HTTP", () => {
       Schedule: seed.scheduleId,
       Slot: seed.freeSlotId,
       Appointment: seed.appointmentId,
+    };
+  }
+
+  function writeSample(type: string): { path: string; body: Record<string, unknown> } {
+    const samples: Record<
+      string,
+      { system: string; value: string; body: Record<string, unknown> }
+    > = {
+      Patient: {
+        system: HERMES_SYSTEM.patient,
+        value: "MR-a",
+        body: {
+          resourceType: "Patient",
+          identifier: [
+            { system: HERMES_SYSTEM.patient, value: "MR-a" },
+            { system: "urn:ingenius:document:CC", value: seed.documentNumber },
+          ],
+          active: true,
+          name: [{ given: ["Nombre", "a"], family: "Apellido a" }],
+          birthDate: "1990-01-15",
+        },
+      },
+      Practitioner: {
+        system: HERMES_SYSTEM.practitioner,
+        value: "P-a",
+        body: {
+          resourceType: "Practitioner",
+          identifier: [{ system: HERMES_SYSTEM.practitioner, value: "P-a" }],
+          active: true,
+          name: [{ text: "Prof a" }],
+        },
+      },
+      HealthcareService: {
+        system: HERMES_SYSTEM.service,
+        value: "S-a",
+        body: {
+          resourceType: "HealthcareService",
+          identifier: [{ system: HERMES_SYSTEM.service, value: "S-a" }],
+          active: true,
+          name: "Serv a",
+        },
+      },
+      Schedule: {
+        system: HERMES_SYSTEM.schedule,
+        value: "SCH-a",
+        body: {
+          resourceType: "Schedule",
+          identifier: [{ system: HERMES_SYSTEM.schedule, value: "SCH-a" }],
+          active: true,
+          actor: [
+            { reference: `Practitioner/${seed.practitionerId}` },
+            { reference: `HealthcareService/${seed.serviceId}` },
+          ],
+        },
+      },
+      Slot: {
+        system: HERMES_SYSTEM.slot,
+        value: "SL-FREE-a",
+        body: {
+          resourceType: "Slot",
+          identifier: [{ system: HERMES_SYSTEM.slot, value: "SL-FREE-a" }],
+          schedule: { reference: `Schedule/${seed.scheduleId}` },
+          status: "free",
+          start: "2026-06-15T14:00:00.000Z",
+          end: "2026-06-15T14:30:00.000Z",
+        },
+      },
+    };
+    const sample = samples[type];
+    if (!sample) throw new Error(`Sin muestra de escritura para ${type}`);
+    return {
+      path: `${type}?identifier=${encodeURIComponent(`${sample.system}|${sample.value}`)}`,
+      body: sample.body,
     };
   }
 
@@ -237,21 +316,42 @@ describe("fhir-conformance: lectura por HTTP", () => {
     }
   });
 
-  it("metadata coincide con lo que existe", async () => {
+  it("10. metadata declara cinco updates ejecutables y excluye Appointment", async () => {
     const { body: metadata } = await fhirGet("metadata");
     const declared: Array<{
       type: string;
-      interaction: Array<{ code: string }>;
+      interaction: Array<{ code: string; documentation?: string }>;
       searchParam: Array<{ name: string }>;
+      conditionalUpdate?: boolean;
+      updateCreate?: boolean;
     }> = metadata.rest[0].resource;
 
     expect(declared.map((resource) => resource.type).sort()).toEqual(Object.keys(seedIds()).sort());
 
     for (const resource of declared) {
-      expect(resource.interaction.map((interaction) => interaction.code)).toEqual([
-        "read",
-        "search-type",
-      ]);
+      const interactions = resource.interaction.map((interaction) => interaction.code);
+      if (resource.type === "Appointment") {
+        expect(interactions).toEqual(["read", "search-type"]);
+        expect(resource).not.toHaveProperty("conditionalUpdate");
+        expect(resource).not.toHaveProperty("updateCreate");
+      } else {
+        expect(interactions).toEqual(["read", "search-type", "update"]);
+        expect(resource.interaction[2]?.documentation).toEqual(expect.any(String));
+        expect(resource.conditionalUpdate).toBe(true);
+        expect(resource.updateCreate).toBe(false);
+
+        const sample = writeSample(resource.type);
+        const conditional = await fhirPut(sample.path, token, sample.body);
+        expect([resource.type, conditional.response.status]).toEqual([resource.type, 200]);
+        const byId = await fhirPut(
+          `${resource.type}/${seedIds()[resource.type]}`,
+          token,
+          sample.body,
+          { "Idempotency-Key": "" },
+        );
+        expect(byId.response.status).toBe(405);
+        expect(byId.response.headers.get("Allow")).toBe("GET");
+      }
       const read = await fhirGet(`${resource.type}/${seedIds()[resource.type]}`, token);
       expect([resource.type, "read", read.response.status]).toEqual([resource.type, "read", 200]);
 

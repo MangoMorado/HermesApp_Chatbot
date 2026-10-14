@@ -7,7 +7,13 @@ export const FHIR_VERSION = "4.0.1";
 export const FHIR_MIME = "application/fhir+json";
 export const SOFTWARE_NAME = "Chatbot Ingenius 360";
 /** Fecha del contrato; se cambia cuando cambia lo que declara `metadata`. */
-export const CAPABILITY_DATE = "2026-10-13";
+export const CAPABILITY_DATE = "2026-10-14";
+
+export const CONDITIONAL_ONLY =
+  "Solo actualización condicional (PUT [type]?identifier=system|value). El PUT por id responde 405.";
+
+export const IDEMPOTENCY_DOCUMENTATION =
+  "Las escrituras requieren la cabecera Idempotency-Key con un valor no vacío.";
 
 export const RESOURCE_TYPES = [
   "Patient",
@@ -46,6 +52,8 @@ export function documentCodeOf(system: string): DocumentCode | null {
   const code = system.slice(DOCUMENT_SYSTEM_PREFIX.length);
   return (DOCUMENT_CODES as readonly string[]).includes(code) ? (code as DocumentCode) : null;
 }
+
+export const PRE_REGISTRATION_SYSTEM = "urn:ingenius:pre-registration";
 
 export const PRE_REGISTERED_TAG = {
   system: "urn:ingenius:patient-tag",

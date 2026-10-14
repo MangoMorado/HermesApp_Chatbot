@@ -1,6 +1,11 @@
 import type { PrismaClient } from "@prisma/client";
 import { conversationWritePorts } from "./composition/conversation-wiring";
-import { type FhirReads, fhirReads } from "./composition/fhir-wiring";
+import {
+  type FhirReads,
+  type FhirWritePorts,
+  fhirReads,
+  fhirWritePorts,
+} from "./composition/fhir-wiring";
 import {
   type PreAgendaReads,
   preAgendaReads,
@@ -129,7 +134,8 @@ export type WritePorts = BaseWritePorts &
   PlatformWritePorts &
   WidgetWritePorts &
   PreAgendaWritePorts &
-  ConversationWritePorts;
+  ConversationWritePorts &
+  FhirWritePorts;
 
 export type Container = {
   readonly config: AppConfig;
@@ -339,6 +345,7 @@ function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
     ...widgetWritePorts(db),
     ...preAgenda,
     ...conversationWritePorts(db, config, auditLog, preAgenda.createAppointmentRequest),
+    ...fhirWritePorts(db, auditLog, uuidV7Generator, systemClock),
   };
 }
 
