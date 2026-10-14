@@ -89,6 +89,25 @@ function preAgendaReads(db: PrismaExecutor) {
         },
       });
     },
+    async findLiveHoldBySlot(tenantId: TenantId, slotId: string, now: Date) {
+      const locked = await db.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "public"."appointment_requests"
+        WHERE "tenant_id" = ${tenantId} AND "slot_id" = ${slotId}
+          AND "status" = 'pending' AND "expires_at" > ${now}
+        FOR UPDATE`;
+      if (locked.length === 0) {
+        return null;
+      }
+      const requestId = locked[0]?.id;
+      if (!requestId) {
+        return null;
+      }
+      return mapRequest(
+        await db.appointmentRequest.findFirstOrThrow({
+          where: { tenantId, id: requestId },
+        }),
+      );
+    },
     async getRequestForUpdate(tenantId: TenantId, id: string) {
       const locked = await db.$queryRaw<{ id: string }[]>`
         SELECT "id" FROM "public"."appointment_requests"

@@ -6,6 +6,7 @@ import type {
   HealthcareService,
   Practitioner,
   Schedule,
+  Slot,
 } from "@/modules/scheduling/domain/entities";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
@@ -19,7 +20,10 @@ function dependencies() {
     findScheduleByIdentifier: vi.fn(async () => null as Schedule | null),
     getPractitioner: vi.fn(async () => null as Practitioner | null),
     getHealthcareService: vi.fn(async () => null as HealthcareService | null),
+    getSchedule: vi.fn(async () => null as Schedule | null),
     saveSchedule: vi.fn(async () => {}),
+    findSlotByIdentifier: vi.fn(async () => null as Slot | null),
+    saveSlot: vi.fn(async () => {}),
   };
   return {
     store,

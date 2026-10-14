@@ -1,11 +1,12 @@
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
 import { isUniqueViolation } from "@/modules/shared/infrastructure/prisma-errors";
-import type { HealthcareService, Practitioner, Schedule } from "../domain/entities";
+import type { HealthcareService, Practitioner, Schedule, Slot } from "../domain/entities";
 import type { HermesMasterStore } from "../domain/ports/hermes-masters";
 import { mapService } from "./prisma-healthcare-service-repository";
 import { mapPractitioner } from "./prisma-practitioner-repository";
 import { mapSchedule } from "./prisma-schedule-repository";
+import { mapSlot } from "./prisma-slot-repository";
 
 async function translateUniqueViolation(operation: () => Promise<unknown>): Promise<void> {
   try {
@@ -43,6 +44,17 @@ function scheduleData(row: Schedule) {
     practitionerId: row.practitionerId,
     healthcareServiceId: row.healthcareServiceId,
     active: row.active,
+  };
+}
+
+function slotData(row: Slot) {
+  return {
+    identifierSystem: row.identifier.system,
+    identifierValue: row.identifier.value,
+    scheduleId: row.scheduleId,
+    startAt: row.startAt,
+    endAt: row.endAt,
+    status: row.status,
   };
 }
 
@@ -123,6 +135,11 @@ export function createPrismaHermesMasterStore(db: PrismaExecutor): HermesMasterS
       return row ? mapService(row) : null;
     },
 
+    async getSchedule(tenantId, id) {
+      const row = await db.schedule.findFirst({ where: { tenantId, id } });
+      return row ? mapSchedule(row) : null;
+    },
+
     async saveSchedule(row, mode) {
       await translateUniqueViolation(() =>
         mode === "insert"
@@ -132,6 +149,32 @@ export function createPrismaHermesMasterStore(db: PrismaExecutor): HermesMasterS
           : db.schedule.update({
               where: { tenantId_id: { tenantId: row.tenantId, id: row.id } },
               data: scheduleData(row),
+            }),
+      );
+    },
+
+    async findSlotByIdentifier(tenantId, identifier) {
+      const row = await db.slot.findUnique({
+        where: {
+          tenantId_identifierSystem_identifierValue: {
+            tenantId,
+            identifierSystem: identifier.system,
+            identifierValue: identifier.value,
+          },
+        },
+      });
+      return row ? mapSlot(row) : null;
+    },
+
+    async saveSlot(row, mode) {
+      await translateUniqueViolation(() =>
+        mode === "insert"
+          ? db.slot.create({
+              data: { id: row.id, tenantId: row.tenantId, ...slotData(row) },
+            })
+          : db.slot.update({
+              where: { tenantId_id: { tenantId: row.tenantId, id: row.id } },
+              data: slotData(row),
             }),
       );
     },
