@@ -1,6 +1,6 @@
 import { fhirInvalid } from "../fhir-error";
 import type { PatientWriteCommand } from "../ports/writers";
-import { documentCodeOf } from "../profiles";
+import { documentCodeOf, PRE_REGISTRATION_SYSTEM } from "../profiles";
 import type { FhirIdentifier } from "../resources/types";
 import {
   assertNoExtraKeys,
@@ -60,7 +60,7 @@ function readPatientIdentifiers(identifiers: readonly FhirIdentifier[]): {
   const document = documents[0] as FhirIdentifier;
   const business = businesses[0] as FhirIdentifier;
   const documentType = documentCodeOf(document.system);
-  if (documentType === null || business.system.endsWith(":pre-registration")) {
+  if (documentType === null || business.system === PRE_REGISTRATION_SYSTEM) {
     throw fhirInvalid("Identifier de negocio invalido");
   }
   return {

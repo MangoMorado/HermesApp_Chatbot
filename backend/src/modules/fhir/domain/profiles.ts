@@ -47,6 +47,8 @@ export function documentCodeOf(system: string): DocumentCode | null {
   return (DOCUMENT_CODES as readonly string[]).includes(code) ? (code as DocumentCode) : null;
 }
 
+export const PRE_REGISTRATION_SYSTEM = "urn:ingenius:pre-registration";
+
 export const PRE_REGISTERED_TAG = {
   system: "urn:ingenius:patient-tag",
   code: "pre-registered",

@@ -92,6 +92,22 @@ describe("fhir-conformance: parsers de escritura", () => {
     ).toThrow(FhirError);
   });
 
+  it("acepta identifier de negocio con sufijo pre-registration distinto al de pre-registro", () => {
+    const hermesBusiness = { system: "urn:other:pre-registration", value: "MR-HERMES" };
+    const parsed = parsePatientBody(
+      {
+        resourceType: "Patient",
+        identifier: [hermesBusiness, { system: "urn:ingenius:document:CC", value: "123" }],
+        name: [{ family: "Perez", given: ["Ana"] }],
+        birthDate: "1990-01-02",
+      },
+      hermesBusiness,
+    );
+
+    expect(parsed.businessIdentifier).toEqual(hermesBusiness);
+    expect(parsed.documentType).toBe("CC");
+  });
+
   it("exige identifier de la query en el cuerpo", () => {
     expect(() =>
       parsePatientBody(
