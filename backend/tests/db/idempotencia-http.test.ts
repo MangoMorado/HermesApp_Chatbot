@@ -6,6 +6,7 @@ import { GET as listSimInbox } from "@/app/api/sim/v1/inbox/route";
 import { POST as postSimPractitioner } from "@/app/api/sim/v1/practitioners/route";
 import { PATCH as patchTenantSettings } from "@/app/api/v1/tenant-settings/route";
 import { resetContainer } from "@/composition-root";
+import { fhirPut } from "../helpers/fhir";
 import { authedRequest, signToken } from "../helpers/token";
 import {
   ACTOR,
@@ -150,6 +151,54 @@ describe("idempotencia: escrituras HTTP", () => {
     expect(conflict.status).toBe(409);
     expect(body.error.code).toBe("conflict");
     expect(await prisma.simPractitioner.count()).toBe(1);
+  });
+
+  it("12. PUT FHIR exige clave, repite 201 y detecta cambios de cuerpo o query", async () => {
+    const service = await signToken({
+      role: "service",
+      tenantId,
+      subject: `hermes-${tenantId}`,
+    });
+    const key = "idem-fhir-practitioner";
+    const system = "urn:hermes:practitioner";
+    const path = `Practitioner?identifier=${encodeURIComponent(`${system}|P-IDEM`)}`;
+    const payload = {
+      resourceType: "Practitioner",
+      identifier: [{ system, value: "P-IDEM" }],
+      active: true,
+      name: [{ text: "Dra. Idempotente" }],
+    };
+
+    const missing = await fhirPut(path, service, payload, { "Idempotency-Key": "" });
+    expect(missing.response.status).toBe(400);
+    expect(missing.body.issue[0].diagnostics).toContain("Idempotency-Key");
+
+    const first = await fhirPut(path, service, payload, { "Idempotency-Key": key });
+    const repeated = await fhirPut(path, service, payload, { "Idempotency-Key": key });
+    expect(first.response.status).toBe(201);
+    expect(repeated.response.status).toBe(201);
+    expect(repeated.body).toEqual(first.body);
+    expect(repeated.response.headers.get("Location")).toBe(first.response.headers.get("Location"));
+
+    const otherBody = await fhirPut(
+      path,
+      service,
+      { ...payload, name: [{ text: "Otro nombre" }] },
+      { "Idempotency-Key": key },
+    );
+    expect(otherBody.response.status).toBe(409);
+    expect(otherBody.body.issue[0].code).toBe("conflict");
+
+    const otherQuery = await fhirPut(
+      `Practitioner?identifier=${encodeURIComponent(`${system}|P-OTRO`)}`,
+      service,
+      { ...payload, identifier: [{ system, value: "P-OTRO" }] },
+      { "Idempotency-Key": key },
+    );
+    expect(otherQuery.response.status).toBe(409);
+    expect(otherQuery.body.issue[0].code).toBe("conflict");
+    expect(await prisma.practitioner.count()).toBe(1);
+    expect(await prisma.auditEvent.count()).toBe(1);
   });
 });
 

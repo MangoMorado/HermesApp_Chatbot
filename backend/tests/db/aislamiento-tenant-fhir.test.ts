@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetContainer } from "@/composition-root";
-import { fhirGet, serviceToken } from "../helpers/fhir";
+import { fhirGet, fhirPut, serviceToken } from "../helpers/fhir";
 import {
   HERMES_SYSTEM,
   seedTenantDomain,
@@ -125,5 +125,35 @@ describe("aislamiento-tenant: /fhir no filtra datos ajenos", () => {
     expect(
       (body.entry ?? []).map((entry: { resource: { id: string } }) => entry.resource.id),
     ).toEqual([a.practitionerId]);
+  });
+
+  it("11. tenant B no modifica el identifier de A y crea su propio recurso", async () => {
+    const tokenB = await serviceToken(b.tenantId);
+    const value = "P-a";
+    const { response, body } = await fhirPut(
+      `Practitioner?identifier=${encodeURIComponent(`${HERMES_SYSTEM.practitioner}|${value}`)}`,
+      tokenB,
+      {
+        resourceType: "Practitioner",
+        identifier: [{ system: HERMES_SYSTEM.practitioner, value }],
+        active: true,
+        name: [{ text: "Profesional de B" }],
+      },
+    );
+
+    expect(response.status).toBe(201);
+    expect(body.id).not.toBe(a.practitionerId);
+    expect(
+      await prisma.practitioner.findUniqueOrThrow({ where: { id: a.practitionerId } }),
+    ).toMatchObject({ tenantId: a.tenantId, name: "Prof a" });
+    expect(
+      await prisma.practitioner.findFirstOrThrow({
+        where: {
+          tenantId: b.tenantId,
+          identifierSystem: HERMES_SYSTEM.practitioner,
+          identifierValue: value,
+        },
+      }),
+    ).toMatchObject({ id: body.id, name: "Profesional de B" });
   });
 });
