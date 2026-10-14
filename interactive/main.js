@@ -23,6 +23,7 @@
     build: sceneBuild,
     harness: sceneHarness,
     gates: sceneGates,
+    fhir: sceneFhir,
   };
 
   function reduced() {
@@ -630,5 +631,52 @@
       box.p,
       () => "#4ade9a",
     );
+  }
+
+  function sceneFhir(box) {
+    caption("fhir r4");
+    if (box.h < 300) {
+      columnFlaps(box, ["Maestros", "proposed", "Task", "booked"], box.p, (index) =>
+        index === 0 ? "#c8b0fb" : "#4ade9a",
+      );
+      return;
+    }
+    const steps = [
+      ["Maestros", "PUT ?identifier="],
+      ["Pre-agenda", "proposed · requested"],
+      ["Resolución", "PUT /{id}"],
+    ];
+    const gap = 14;
+    const width = Math.min(300, box.w - 48);
+    const height = Math.min(86, (box.h - 96 - gap * 2) / 3);
+    const x = (box.w - width) / 2;
+    const block = steps.length * height + (steps.length - 1) * gap;
+    const y0 = Math.max(46, (box.h - block) / 2);
+    const active = Math.min(steps.length - 1, Math.floor(clamp(box.p, 0, 0.999) * steps.length));
+    for (let i = 0; i < steps.length; i++) {
+      const y = y0 + i * (height + gap);
+      const on = i <= active;
+      panel(x, y, width, height);
+      ctx.globalAlpha = on ? 1 : 0.45;
+      ink(steps[i][0], x + width / 2, y + height * 0.38, {
+        size: 15,
+        weight: 650,
+        color: "#f4f1ff",
+      });
+      ink(steps[i][1], x + width / 2, y + height * 0.68, {
+        size: 12,
+        mono: true,
+        color: on ? "#4ade9a" : "#9d94c9",
+      });
+      ctx.globalAlpha = 1;
+    }
+    const labelY = y0 + block + 22;
+    if (labelY < box.h - 8) {
+      ink("4.0.1 · rol service", box.cx, labelY, {
+        size: 12,
+        mono: true,
+        color: "#9d94c9",
+      });
+    }
   }
 })();

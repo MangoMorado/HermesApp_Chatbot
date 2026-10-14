@@ -5,6 +5,7 @@ import { toPatient } from "./mappers/patient";
 import { toPractitioner } from "./mappers/practitioner";
 import { toSchedule } from "./mappers/schedule";
 import { toSlot } from "./mappers/slot";
+import { toTask } from "./mappers/task";
 import type {
   AppointmentQuery,
   AppointmentRecord,
@@ -17,6 +18,8 @@ import type {
   ScheduleRecord,
   SlotQuery,
   SlotRecord,
+  TaskQuery,
+  TaskRecord,
 } from "./ports/sources";
 import {
   APPOINTMENT_STATUSES,
@@ -25,6 +28,7 @@ import {
   type ResourceType,
   SLOT_STATUS,
   slotStatusKeyOf,
+  TASK_STATUSES,
 } from "./profiles";
 import type { FhirIdentifier, FhirResource, SearchParamType } from "./resources/types";
 import {
@@ -50,7 +54,10 @@ export type SearchContext = { readonly params: SearchParams; readonly timeZone: 
 
 export type ResourceDefinition<R, Q> = {
   readonly type: ResourceType;
+  /** `PUT` condicional por `identifier`. */
   readonly writable: boolean;
+  /** `PUT` por id, para resolver una pre-agenda. */
+  readonly updateById: boolean;
   readonly searchParams: readonly SearchParamDef[];
   buildQuery(context: SearchContext): Q;
   toResource(record: R): FhirResource;
@@ -93,6 +100,7 @@ function preRegisteredOf(params: SearchParams): boolean | null {
 const patient: ResourceDefinition<PatientRecord, PatientQuery> = {
   type: "Patient",
   writable: true,
+  updateById: false,
   searchParams: [IDENTIFIER, { name: "_tag", type: "token" }],
   buildQuery({ params }) {
     const token = identifierOf(params);
@@ -110,6 +118,7 @@ const patient: ResourceDefinition<PatientRecord, PatientQuery> = {
 const practitioner: ResourceDefinition<PractitionerRecord, MasterQuery> = {
   type: "Practitioner",
   writable: true,
+  updateById: false,
   searchParams: [IDENTIFIER, ACTIVE],
   buildQuery: masterQuery,
   toResource: toPractitioner,
@@ -118,6 +127,7 @@ const practitioner: ResourceDefinition<PractitionerRecord, MasterQuery> = {
 const healthcareService: ResourceDefinition<HealthcareServiceRecord, MasterQuery> = {
   type: "HealthcareService",
   writable: true,
+  updateById: false,
   searchParams: [IDENTIFIER, ACTIVE],
   buildQuery: masterQuery,
   toResource: toHealthcareService,
@@ -126,6 +136,7 @@ const healthcareService: ResourceDefinition<HealthcareServiceRecord, MasterQuery
 const schedule: ResourceDefinition<ScheduleRecord, ScheduleQuery> = {
   type: "Schedule",
   writable: true,
+  updateById: false,
   searchParams: [IDENTIFIER, { name: "actor", type: "reference" }, ACTIVE],
   buildQuery(context) {
     const raw = single(context.params, "actor");
@@ -143,6 +154,7 @@ const schedule: ResourceDefinition<ScheduleRecord, ScheduleQuery> = {
 const slot: ResourceDefinition<SlotRecord, SlotQuery> = {
   type: "Slot",
   writable: true,
+  updateById: false,
   searchParams: [
     IDENTIFIER,
     { name: "schedule", type: "reference" },
@@ -166,6 +178,7 @@ const slot: ResourceDefinition<SlotRecord, SlotQuery> = {
 const appointment: ResourceDefinition<AppointmentRecord, AppointmentQuery> = {
   type: "Appointment",
   writable: false,
+  updateById: true,
   searchParams: [
     IDENTIFIER,
     { name: "patient", type: "reference" },
@@ -187,6 +200,29 @@ const appointment: ResourceDefinition<AppointmentRecord, AppointmentQuery> = {
   toResource: toAppointment,
 };
 
+const task: ResourceDefinition<TaskRecord, TaskQuery> = {
+  type: "Task",
+  writable: false,
+  updateById: true,
+  searchParams: [
+    IDENTIFIER,
+    { name: "status", type: "token" },
+    { name: "focus", type: "reference" },
+    { name: "patient", type: "reference" },
+  ],
+  buildQuery({ params }) {
+    const raw = single(params, "status");
+    return {
+      identifier: identifierOf(params),
+      status: raw === null ? null : parseCode("status", raw, TASK_STATUSES),
+      focusAppointmentId: referenceIdOf(params, "focus", "Appointment"),
+      medicalRecordId: referenceIdOf(params, "patient", "Patient"),
+      ...parseWindow(params),
+    };
+  },
+  toResource: toTask,
+};
+
 export const DEFINITIONS = {
   Patient: patient,
   Practitioner: practitioner,
@@ -194,11 +230,13 @@ export const DEFINITIONS = {
   Schedule: schedule,
   Slot: slot,
   Appointment: appointment,
+  Task: task,
 } as const;
 
 export type DeclaredResource = {
   readonly type: ResourceType;
   readonly writable: boolean;
+  readonly updateById: boolean;
   readonly searchParams: readonly SearchParamDef[];
 };
 

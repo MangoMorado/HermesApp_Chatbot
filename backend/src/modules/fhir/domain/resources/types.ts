@@ -1,4 +1,10 @@
-import type { AppointmentStatusCode, FhirSlotStatus, ResourceType } from "../profiles";
+import type {
+  AppointmentStatusCode,
+  FhirSlotStatus,
+  ResolutionReasonCode,
+  ResourceType,
+  TaskStatusCode,
+} from "../profiles";
 
 /** Subconjunto de R4 que este servicio expone. Solo los campos que se emiten. */
 
@@ -51,6 +57,8 @@ export type FhirSlot = {
   readonly end: string;
 };
 
+export type ParticipantStatus = "accepted" | "needs-action";
+
 export type FhirAppointment = {
   readonly resourceType: "Appointment";
   readonly id: string;
@@ -59,7 +67,27 @@ export type FhirAppointment = {
   readonly start: string;
   readonly end: string;
   readonly slot: readonly FhirReference[];
-  readonly participant: readonly { readonly actor: FhirReference; readonly status: "accepted" }[];
+  readonly participant: readonly {
+    readonly actor: FhirReference;
+    readonly status: ParticipantStatus;
+  }[];
+  readonly extension?: readonly {
+    readonly url: string;
+    readonly valueReference: FhirReference;
+  }[];
+};
+
+export type FhirTask = {
+  readonly resourceType: "Task";
+  readonly id: string;
+  readonly identifier: readonly FhirIdentifier[];
+  readonly status: TaskStatusCode;
+  readonly intent: "proposal";
+  readonly focus: FhirReference;
+  readonly for: FhirReference;
+  readonly statusReason?: {
+    readonly coding: readonly { readonly system: string; readonly code: ResolutionReasonCode }[];
+  };
 };
 
 export type FhirResource =
@@ -68,7 +96,8 @@ export type FhirResource =
   | FhirHealthcareService
   | FhirSchedule
   | FhirSlot
-  | FhirAppointment;
+  | FhirAppointment
+  | FhirTask;
 
 export type IssueCode =
   | "login"

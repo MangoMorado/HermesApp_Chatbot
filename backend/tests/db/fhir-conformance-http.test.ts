@@ -60,6 +60,17 @@ describe("fhir-conformance: lectura por HTTP", () => {
         status: "pre_registered",
       },
     });
+    await prisma.appointmentRequest.create({
+      data: {
+        id: `${seed.tenantId}-cancel`,
+        tenantId: seed.tenantId,
+        kind: "cancel",
+        medicalRecordId: seed.medicalRecordId,
+        appointmentId: seed.appointmentId,
+        expiresAt: new Date("2026-12-01T00:00:00.000Z"),
+        createdAt: new Date("2026-10-01T00:00:00.000Z"),
+      },
+    });
   });
 
   afterAll(async () => {
@@ -75,6 +86,7 @@ describe("fhir-conformance: lectura por HTTP", () => {
       Schedule: seed.scheduleId,
       Slot: seed.freeSlotId,
       Appointment: seed.appointmentId,
+      Task: `${seed.tenantId}-cancel`,
     };
   }
 
@@ -157,7 +169,8 @@ describe("fhir-conformance: lectura por HTTP", () => {
       identifier: "urn:hermes:x|no-existe",
       _tag: "urn:ingenius:patient-tag|pre-registered",
       active: "true",
-      status: type === "Slot" ? "free" : "booked",
+      status: type === "Slot" ? "free" : type === "Task" ? "requested" : "booked",
+      focus: `Appointment/${seed.appointmentId}`,
       start: "ge2026-06-15",
       date: "ge2026-06-15",
       schedule: `Schedule/${seed.scheduleId}`,
@@ -295,7 +308,7 @@ describe("fhir-conformance: lectura por HTTP", () => {
   it("los errores son OperationOutcome con application/fhir+json", async () => {
     const cases: Array<[string, number, string]> = [
       ["Patient/no-existe", 404, "not-found"],
-      ["Task", 404, "not-found"],
+      ["Encounter", 404, "not-found"],
       ["Slot?name=x", 400, "not-supported"],
       ["Slot?tenant_id=tenant-b", 400, "not-supported"],
       ["Patient?identifier=MR-a", 400, "invalid"],
@@ -316,7 +329,7 @@ describe("fhir-conformance: lectura por HTTP", () => {
     }
   });
 
-  it("10. metadata declara cinco updates ejecutables y excluye Appointment", async () => {
+  it("10. metadata declara el update condicional y el PUT por id de la pre-agenda", async () => {
     const { body: metadata } = await fhirGet("metadata");
     const declared: Array<{
       type: string;
@@ -330,10 +343,28 @@ describe("fhir-conformance: lectura por HTTP", () => {
 
     for (const resource of declared) {
       const interactions = resource.interaction.map((interaction) => interaction.code);
-      if (resource.type === "Appointment") {
-        expect(interactions).toEqual(["read", "search-type"]);
-        expect(resource).not.toHaveProperty("conditionalUpdate");
-        expect(resource).not.toHaveProperty("updateCreate");
+      if (resource.type === "Appointment" || resource.type === "Task") {
+        expect(interactions).toEqual(["read", "search-type", "update"]);
+        expect(resource.interaction[2]?.documentation).toEqual(expect.any(String));
+        expect(resource.conditionalUpdate).toBe(false);
+        expect(resource.updateCreate).toBe(false);
+        const byId = await fhirPut(
+          `${resource.type}/${seedIds()[resource.type]}`,
+          token,
+          {},
+          {
+            "Idempotency-Key": "",
+          },
+        );
+        expect(byId.response.status).toBe(400);
+        const conditional = await fhirPut(
+          `${resource.type}?identifier=${encodeURIComponent("urn:test|x")}`,
+          token,
+          {},
+          { "Idempotency-Key": "" },
+        );
+        expect(conditional.response.status).toBe(405);
+        expect(conditional.response.headers.get("Allow")).toBe("GET");
       } else {
         expect(interactions).toEqual(["read", "search-type", "update"]);
         expect(resource.interaction[2]?.documentation).toEqual(expect.any(String));

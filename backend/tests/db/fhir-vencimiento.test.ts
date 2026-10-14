@@ -82,8 +82,15 @@ describe("fhir-conformance: vencimiento al leer en Slot", () => {
     ).toContain(expiredSlotId);
   });
 
-  it("no hay ningun Appointment propuesto para la solicitud vencida", async () => {
-    const { body } = await fhirGet(`Appointment?slot=Slot/${expiredSlotId}`, token);
-    expect(body.total).toBe(0);
+  it("la solicitud vencida no se lee como Appointment proposed y el cupo queda free", async () => {
+    const proposed = await fhirGet(`Appointment?status=proposed&slot=Slot/${expiredSlotId}`, token);
+    expect(proposed.body.total).toBe(0);
+    const slot = await fhirGet(`Slot/${expiredSlotId}`, token);
+    expect(slot.body.status).toBe("free");
+    const request = await prisma.appointmentRequest.findFirstOrThrow({
+      where: { slotId: expiredSlotId },
+    });
+    const cancelled = await fhirGet(`Appointment/${request.id}`, token);
+    expect(cancelled.body.status).toBe("cancelled");
   });
 });

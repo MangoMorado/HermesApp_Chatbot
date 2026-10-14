@@ -156,4 +156,30 @@ describe("aislamiento-tenant: /fhir no filtra datos ajenos", () => {
       }),
     ).toMatchObject({ id: body.id, name: "Profesional de B" });
   });
+
+  it("una pre-agenda de otro tenant no se lee ni se resuelve", async () => {
+    const id = `${b.tenantId}-book`;
+    await prisma.appointmentRequest.create({
+      data: {
+        id,
+        tenantId: b.tenantId,
+        kind: "book",
+        medicalRecordId: b.medicalRecordId,
+        slotId: b.freeSlotId,
+        expiresAt: new Date("2026-12-01T00:00:00.000Z"),
+        createdAt: new Date("2026-10-01T00:00:00.000Z"),
+      },
+    });
+    const read = await fhirGet(`Appointment/${id}`, tokenA);
+    expect(read.response.status).toBe(404);
+    const write = await fhirPut(`Appointment/${id}`, tokenA, {
+      resourceType: "Appointment",
+      status: "booked",
+      identifier: [{ system: HERMES_SYSTEM.appointment, value: "AP-ajena" }],
+    });
+    expect(write.response.status).toBe(404);
+    expect((await prisma.appointmentRequest.findUniqueOrThrow({ where: { id } })).status).toBe(
+      "pending",
+    );
+  });
 });

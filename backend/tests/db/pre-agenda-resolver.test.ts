@@ -85,6 +85,7 @@ describe("pre-agenda: resolucion y vencimiento", () => {
     const request = await book(slotAt(world, 0));
     const resolved = await resolve(request.id, APPROVE);
     expect(resolved.status).toBe("approved");
+    expect(resolved.resultingAppointmentId).toBe(request.id);
     expect(await status(slotAt(world, 0))).toBe("busy");
     const created = await prisma.appointment.findUniqueOrThrow({
       where: { id: resolved.resultingAppointmentId ?? "" },
@@ -110,6 +111,7 @@ describe("pre-agenda: resolucion y vencimiento", () => {
   it("reschedule aprobado: cita vieja cancelada y cita nueva en el cupo nuevo", async () => {
     const request = await reschedule(slotAt(world, 1));
     const resolved = await resolve(request.id, APPROVE);
+    expect(resolved.resultingAppointmentId).toBe(request.id);
     expect(await appt(world.appointmentId)).toBe("cancelled");
     expect(await status(world.bookedSlotId)).toBe("free");
     expect(await status(slotAt(world, 1))).toBe("busy");

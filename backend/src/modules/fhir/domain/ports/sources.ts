@@ -1,6 +1,12 @@
 import type { OffsetPage, OffsetWindow } from "@/modules/shared/domain/pagination";
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
-import type { AppointmentStatusCode, DocumentCode, SlotStatusKey } from "../profiles";
+import type {
+  AppointmentStatusCode,
+  DocumentCode,
+  ResolutionReasonCode,
+  SlotStatusKey,
+  TaskStatusCode,
+} from "../profiles";
 import type { FhirIdentifier } from "../resources/types";
 
 /**
@@ -62,6 +68,17 @@ export type AppointmentRecord = {
   readonly startAt: Date;
   readonly endAt: Date;
   readonly status: AppointmentStatusCode;
+  /** Cita que esta sustituye. Solo en un reschedule. */
+  readonly replacesAppointmentId: string | null;
+};
+
+export type TaskRecord = {
+  readonly id: string;
+  readonly identifier: FhirIdentifier;
+  readonly status: TaskStatusCode;
+  readonly medicalRecordId: string;
+  readonly focusAppointmentId: string;
+  readonly statusReason: ResolutionReasonCode | null;
 };
 
 /** Cota sobre el inicio de un cupo o cita. Varias cotas se combinan con AND. */
@@ -92,6 +109,13 @@ export type AppointmentQuery = OffsetWindow & {
   readonly start: readonly DateBound[];
 };
 
+export type TaskQuery = OffsetWindow & {
+  readonly identifier: FhirIdentifier | null;
+  readonly status: TaskStatusCode | null;
+  readonly focusAppointmentId: string | null;
+  readonly medicalRecordId: string | null;
+};
+
 export type PatientQuery = OffsetWindow & {
   /** Identificador Hermes. Excluyente con `document`. */
   readonly identifier: FhirIdentifier | null;
@@ -112,4 +136,5 @@ export type FhirSources = {
   readonly Schedule: FhirSource<ScheduleRecord, ScheduleQuery>;
   readonly Slot: FhirSource<SlotRecord, SlotQuery>;
   readonly Appointment: FhirSource<AppointmentRecord, AppointmentQuery>;
+  readonly Task: FhirSource<TaskRecord, TaskQuery>;
 };

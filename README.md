@@ -7,8 +7,8 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
 > Estado: Fases 1, 2 y 3 cerradas. La Fase 4 (FHIR e integración con Hermes) va en cuatro
-> sub-proyectos: la 4.1 de lectura está cerrada y la 4.2 de escritura de maestros está
-> implementada en su rama. Siguen la 4.3 (pre-agenda por FHIR) y la 4.4 (simulador por FHIR).
+> sub-proyectos: la 4.1 y la 4.2 están en `main`. La 4.3 (pre-agenda por FHIR) está en
+> curso. Sigue la 4.4 (simulador por FHIR).
 
 ## Requisitos
 

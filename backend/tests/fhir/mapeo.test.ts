@@ -5,6 +5,7 @@ import { toPatient } from "@/modules/fhir/domain/mappers/patient";
 import { toPractitioner } from "@/modules/fhir/domain/mappers/practitioner";
 import { toSchedule } from "@/modules/fhir/domain/mappers/schedule";
 import { toSlot } from "@/modules/fhir/domain/mappers/slot";
+import { toTask } from "@/modules/fhir/domain/mappers/task";
 import type { PatientRecord } from "@/modules/fhir/domain/ports/sources";
 import {
   documentCodeOf,
@@ -35,10 +36,10 @@ describe("fhir-conformance: perfiles", () => {
     expect(documentCodeOf("urn:ingenius:document:XX")).toBeNull();
   });
 
-  it("reconoce solo los seis tipos de recurso", () => {
+  it("reconoce solo los tipos de recurso declarados", () => {
     expect(isResourceType("Slot")).toBe(true);
-    expect(isResourceType("Task")).toBe(false);
-    expect(isResourceType("slot")).toBe(false);
+    expect(isResourceType("Task")).toBe(true);
+    expect(isResourceType("Encounter")).toBe(false);
   });
 
   it("traduce el estado FHIR de un cupo a su clave interna", () => {
@@ -175,6 +176,7 @@ describe("fhir-conformance: Slot y Appointment", () => {
         startAt,
         endAt,
         status: "booked",
+        replacesAppointmentId: null,
       }),
     ).toEqual({
       resourceType: "Appointment",
@@ -189,6 +191,55 @@ describe("fhir-conformance: Slot y Appointment", () => {
         { actor: { reference: "Practitioner/p-1" }, status: "accepted" },
         { actor: { reference: "HealthcareService/s-1" }, status: "accepted" },
       ],
+    });
+  });
+
+  it("un Appointment proposed deja al profesional y al servicio en needs-action", () => {
+    const resource = toAppointment({
+      id: "req-1",
+      identifier: { system: "urn:ingenius:appointment-request", value: "req-1" },
+      medicalRecordId: "mr-1",
+      slotId: "sl-1",
+      practitionerId: "p-1",
+      healthcareServiceId: "s-1",
+      startAt,
+      endAt,
+      status: "proposed",
+      replacesAppointmentId: "ap-old",
+    });
+    expect(resource.participant.map((participant) => participant.status)).toEqual([
+      "accepted",
+      "needs-action",
+      "needs-action",
+    ]);
+    expect(resource.extension).toEqual([
+      {
+        url: "http://hl7.org/fhir/5.0/StructureDefinition/extension-Appointment.replaces",
+        valueReference: { reference: "Appointment/ap-old" },
+      },
+    ]);
+  });
+});
+
+describe("fhir-conformance: Task", () => {
+  it("una cancelacion viva es proposal y requested", () => {
+    expect(
+      toTask({
+        id: "req-2",
+        identifier: { system: "urn:ingenius:appointment-request", value: "req-2" },
+        status: "requested",
+        medicalRecordId: "mr-1",
+        focusAppointmentId: "ap-1",
+        statusReason: null,
+      }),
+    ).toEqual({
+      resourceType: "Task",
+      id: "req-2",
+      identifier: [{ system: "urn:ingenius:appointment-request", value: "req-2" }],
+      status: "requested",
+      intent: "proposal",
+      focus: { reference: "Appointment/ap-1" },
+      for: { reference: "Patient/mr-1" },
     });
   });
 });

@@ -53,7 +53,7 @@ async function bookAppointment(
   if (!slot) {
     throw new NotFoundError();
   }
-  const id = deps.ids.next();
+  const id = request.id;
   await deps.store.insertAppointment({
     id,
     tenantId,

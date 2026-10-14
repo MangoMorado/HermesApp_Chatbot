@@ -14,8 +14,9 @@ import type {
   ScheduleQuery,
   SlotQuery,
   SlotRecord,
+  TaskQuery,
 } from "@/modules/fhir/domain/ports/sources";
-import { CONDITIONAL_ONLY, RESOURCE_TYPES } from "@/modules/fhir/domain/profiles";
+import { CONDITIONAL_ONLY, RESOURCE_TYPES, UPDATE_BY_ID } from "@/modules/fhir/domain/profiles";
 import { DECLARED_RESOURCES } from "@/modules/fhir/domain/registry";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 
@@ -37,6 +38,7 @@ type Seen = {
   schedule: ScheduleQuery[];
   slot: SlotQuery[];
   appointment: AppointmentQuery[];
+  task: TaskQuery[];
 };
 
 function source<R extends { id: string }, Q>(
@@ -54,7 +56,7 @@ function source<R extends { id: string }, Q>(
 }
 
 function world(slotTotal = 1) {
-  const seen: Seen = { patient: [], master: [], schedule: [], slot: [], appointment: [] };
+  const seen: Seen = { patient: [], master: [], schedule: [], slot: [], appointment: [], task: [] };
   const sources: FhirSources = {
     Patient: source([], seen.patient),
     Practitioner: source([], seen.master),
@@ -62,6 +64,7 @@ function world(slotTotal = 1) {
     Schedule: source([], seen.schedule),
     Slot: source([slot], seen.slot, slotTotal),
     Appointment: source([], seen.appointment),
+    Task: source([], seen.task),
   };
   const handlers = createResourceHandlers(sources);
   return {
@@ -99,7 +102,7 @@ describe("fhir-conformance: read", () => {
       status: 404,
       code: "not-found",
     });
-    expect(await failure(() => read(TENANT, "Task", "sl-1"))).toEqual({
+    expect(await failure(() => read(TENANT, "Encounter", "sl-1"))).toEqual({
       status: 404,
       code: "not-found",
     });
@@ -214,7 +217,7 @@ describe("fhir-conformance: search arma la consulta del puerto", () => {
       code: "invalid",
     });
     expect(await failure(run("Slot", "status=ocupado"))).toEqual({ status: 400, code: "invalid" });
-    expect(await failure(run("Task", ""))).toEqual({ status: 404, code: "not-found" });
+    expect(await failure(run("Encounter", ""))).toEqual({ status: 404, code: "not-found" });
   });
 });
 
@@ -317,10 +320,14 @@ describe("fhir-conformance: CapabilityStatement", () => {
       expect(resource.versioning).toBe("no-version");
       expect(resource.readHistory).toBe(false);
       expect(resource.searchParam).toEqual(definition?.searchParams);
-      if (resource.type === "Appointment") {
-        expect(resource.interaction).toEqual([{ code: "read" }, { code: "search-type" }]);
-        expect(resource).not.toHaveProperty("conditionalUpdate");
-        expect(resource).not.toHaveProperty("updateCreate");
+      if (resource.type === "Appointment" || resource.type === "Task") {
+        expect(resource.interaction).toEqual([
+          { code: "read" },
+          { code: "search-type" },
+          { code: "update", documentation: UPDATE_BY_ID },
+        ]);
+        expect(resource.conditionalUpdate).toBe(false);
+        expect(resource.updateCreate).toBe(false);
       } else {
         expect(resource.interaction).toEqual([
           { code: "read" },
@@ -351,6 +358,7 @@ describe("fhir-conformance: CapabilityStatement", () => {
       Schedule: ["identifier", "actor", "active"],
       Slot: ["identifier", "schedule", "status", "start"],
       Appointment: ["identifier", "patient", "slot", "status", "date"],
+      Task: ["identifier", "status", "focus", "patient"],
     });
   });
 });
