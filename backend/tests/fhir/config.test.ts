@@ -50,4 +50,25 @@ describe("fhir-conformance: FHIR_BASE_URL", () => {
       expect(() => withFhirBaseUrl(value, () => loadConfig()), value).toThrow(/FHIR_BASE_URL/);
     }
   });
+
+  it("con el simulador en fetch, FHIR_BASE_URL es obligatoria", () => {
+    const saved = {
+      enabled: process.env.HERMES_SIMULATOR_ENABLED,
+      gateway: process.env.FHIR_GATEWAY,
+    };
+    try {
+      process.env.HERMES_SIMULATOR_ENABLED = "true";
+      process.env.FHIR_GATEWAY = "fetch";
+      expect(() => withFhirBaseUrl(undefined, () => loadConfig())).toThrow(/FHIR_BASE_URL/);
+      process.env.FHIR_GATEWAY = "handlers";
+      expect(withFhirBaseUrl(undefined, () => loadConfig()).fhirGateway).toBe("handlers");
+    } finally {
+      process.env.HERMES_SIMULATOR_ENABLED = saved.enabled;
+      if (saved.gateway === undefined) {
+        delete process.env.FHIR_GATEWAY;
+      } else {
+        process.env.FHIR_GATEWAY = saved.gateway;
+      }
+    }
+  });
 });

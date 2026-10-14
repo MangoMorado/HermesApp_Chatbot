@@ -45,6 +45,12 @@ export function createPrismaSimInboxStore(db: PrismaExecutor): SimInboxStore {
         data: { status: "cancelled" },
       });
     },
+    async setAppointmentStatus(tenantId, id, status) {
+      await db.simAppointment.updateMany({ where: { tenantId, id }, data: { status } });
+    },
+    async deleteAppointment(tenantId, id) {
+      await db.simAppointment.deleteMany({ where: { tenantId, id } });
+    },
     async createAppointment(row) {
       await db.simAppointment.create({
         data: {

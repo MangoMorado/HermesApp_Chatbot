@@ -9,4 +9,5 @@ const testDatabaseUrl =
 Object.assign(process.env, {
   DATABASE_URL: testDatabaseUrl,
   HERMES_SIMULATOR_ENABLED: "true",
+  FHIR_GATEWAY: "handlers",
 });

@@ -3,6 +3,7 @@ import { createApproveInboxRequest } from "@/modules/hermes-simulator/applicatio
 import type { InboxRequest } from "@/modules/hermes-simulator/domain/inbox";
 import type {
   ChatbotRequestsGateway,
+  HermesSession,
   SimInboxStore,
 } from "@/modules/hermes-simulator/domain/ports/inbox";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
@@ -50,13 +51,22 @@ function fakes(pending: InboxRequest, slotStatus: "free" | "busy" = "free") {
       status: slotStatus,
       ...WHEN,
     })),
-    findAppointment: vi.fn(async () => ({ id: "sim-appt", slotId: "sim-old" })),
+    findAppointment: vi.fn(async (_tenant: string, identifier: { value: string }) =>
+      identifier.value === "AP" ? { id: "sim-appt", slotId: "sim-old" } : null,
+    ),
     setSlotStatus: vi.fn(async () => {}),
     cancelAppointment: vi.fn(async () => {}),
+    setAppointmentStatus: vi.fn(async () => {}),
+    deleteAppointment: vi.fn(async () => {}),
     createAppointment: vi.fn(async () => {}),
   };
+  const session: HermesSession = { run: (fn) => fn(store) };
   let n = 0;
-  const approve = createApproveInboxRequest({ gateway, store, ids: { next: () => `id-${n++}` } });
+  const approve = createApproveInboxRequest({
+    gateway,
+    session,
+    ids: { next: () => `id-${n++}` },
+  });
   return { gateway, store, approve };
 }
 
@@ -72,7 +82,7 @@ describe("hermes-simulador: decision de la bandeja", () => {
       expect.objectContaining({
         resolution: {
           outcome: "approved",
-          appointmentIdentifier: { system: "urn:hermes:appointment", value: "AP-id-0" },
+          appointmentIdentifier: { system: "urn:hermes:appointment", value: "AP-req-1" },
         },
       }),
     );
@@ -122,13 +132,30 @@ describe("hermes-simulador: decision de la bandeja", () => {
     await expect(approve(command)).rejects.toBeInstanceOf(ConflictError);
   });
 
-  it("si el chatbot rechaza la resolucion, el error se propaga (la transaccion revierte)", async () => {
-    const { gateway, approve } = fakes(request());
+  it("si el PUT falla, deshace la reserva que Hermes ya confirmo", async () => {
+    const { gateway, store, approve } = fakes(request());
     vi.mocked(gateway.resolve).mockRejectedValue(
       new ConflictError("vencida", { reason: "request_not_pending" }),
     );
     await expect(approve(command)).rejects.toMatchObject({
       details: { reason: "request_not_pending" },
     });
+    expect(store.deleteAppointment).toHaveBeenCalledWith("t", "id-0");
+    expect(store.setSlotStatus).toHaveBeenCalledWith("t", "sim-slot", "free");
+  });
+
+  it("si Hermes ya reservo esa solicitud, reenvia el PUT sin volver a ocupar el cupo", async () => {
+    const { gateway, store, approve } = fakes(request());
+    vi.mocked(store.findAppointment).mockResolvedValue({ id: "ya", slotId: "sim-slot" });
+    await approve(command);
+    expect(store.createAppointment).not.toHaveBeenCalled();
+    expect(gateway.resolve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resolution: {
+          outcome: "approved",
+          appointmentIdentifier: { system: "urn:hermes:appointment", value: "AP-req-1" },
+        },
+      }),
+    );
   });
 });

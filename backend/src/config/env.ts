@@ -19,6 +19,8 @@ export type AppConfig = {
   readonly trustProxy: boolean;
   /** Base publica de `/fhir` para los enlaces del Bundle. `null`: el origen de la peticion. */
   readonly fhirBaseUrl: string | null;
+  /** `handlers` solo lo usan las pruebas, que invocan `/fhir` sin abrir un puerto. */
+  readonly fhirGateway: "fetch" | "handlers";
 };
 
 function required(name: string): string {
@@ -65,6 +67,14 @@ function fhirBaseUrl(): string | null {
   return value.replace(/\/+$/, "");
 }
 
+function fhirGateway(): AppConfig["fhirGateway"] {
+  const value = optional("FHIR_GATEWAY", "fetch");
+  if (value === "fetch" || value === "handlers") {
+    return value;
+  }
+  throw new Error("FHIR_GATEWAY debe ser fetch o handlers");
+}
+
 function isAbsoluteHttpUrl(value: string): boolean {
   try {
     const { protocol } = new URL(value);
@@ -75,7 +85,7 @@ function isAbsoluteHttpUrl(value: string): boolean {
 }
 
 export function loadConfig(): AppConfig {
-  return {
+  const config: AppConfig = {
     nodeEnv: parseEnvironment(optional("NODE_ENV", "development")),
     databaseUrl: required("DATABASE_URL"),
     appTimezone: optional("APP_TIMEZONE", "America/Bogota"),
@@ -88,5 +98,14 @@ export function loadConfig(): AppConfig {
     platformSecret: platformSecret(),
     trustProxy: optional("TRUST_PROXY", "false") === "true",
     fhirBaseUrl: fhirBaseUrl(),
+    fhirGateway: fhirGateway(),
   };
+  if (
+    config.hermesSimulatorEnabled &&
+    config.fhirGateway === "fetch" &&
+    config.fhirBaseUrl === null
+  ) {
+    throw new Error("FHIR_BASE_URL es obligatoria cuando el simulador habla por HTTP");
+  }
+  return config;
 }

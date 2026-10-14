@@ -36,6 +36,11 @@ cabecera `X-Request-Id`. `/fhir` responde `OperationOutcome` con `application/fh
 5. La suite `fhir-conformance` recorre `metadata` y exige un valor de muestra por parámetro
    (`tests/db/fhir-conformance-http.test.ts`, función `sampleValue`).
 
+El simulador no importa `fhir`. Copia los literales que envía en
+`src/modules/hermes-simulator/domain/fhir-contract.ts`; `tests/hermes/contrato-fhir.test.ts`
+los compara con `profiles.ts`. La bandeja resuelve por ese cliente. `npm run hermes:sync`
+sincroniza maestros y cierra el ciclo por HTTP contra `FHIR_BASE_URL`.
+
 ## Al añadir escritura FHIR
 
 1. Añade el parser del cuerpo en `src/modules/fhir/domain/parsers/` y conserva el mapper de
