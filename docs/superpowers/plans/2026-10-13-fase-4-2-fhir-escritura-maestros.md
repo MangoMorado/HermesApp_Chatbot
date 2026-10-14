@@ -70,8 +70,29 @@ La Tarea 1 los deja escritos en la spec (§9). Salen de leer el código al plani
 - **Rechazo del apartado:** tras `PUT` con `busy`, el cupo queda `busy` (no `free`) y la solicitud `rejected` / `slot_unavailable`.
 - **Pre-registro:** mismo `id` interno; desaparece el tag; identificador de negocio del cuerpo.
 - **Idempotencia:** misma clave + misma query + mismo cuerpo → misma respuesta; otra query → `409`.
-- **Campo de más / tag en el cuerpo → `400` `not-supported`.**
-- **`metadata`:** solo los cinco tienen `update` + `conditionalUpdate` + `updateCreate`; la prueba HTTP ejecuta el `PUT`.
+- **Cuerpo (spec §10.2):** `meta`, `text`, `extension` y `use` se ignoran; elemento con significado no guardado → `422` `structure`; tag `pre-registered` → `422` `business-rule`.
+- **Orden (spec §10.5):** `405`/`404`/`415` antes de exigir `Idempotency-Key`.
+- **`metadata`:** solo los cinco tienen `update` (con `documentation`) + `conditionalUpdate: true` + `updateCreate: false`; la prueba HTTP ejecuta el `PUT` condicional y comprueba el `405` del `PUT` por id.
+
+## Alineación R4 (revisión del 2026-10-14)
+
+La spec ganó la §10 a partir de `docs/FHIR_R4_REVIEW.md`. Cuando se revisó, las Tareas 1 a 3 ya estaban hechas y la 4 en curso. Por eso:
+
+- **Tareas 1 a 3:** no se rehacen. Lo que cambia de la Tarea 1 (parsers y errores) lo corrige la **Tarea 4b**.
+- **Tarea 4:** se mantiene tal cual. La spec §10.7 confirma la opción A (`409` ante cualquier cambio que no sea `busy` o `busy-unavailable` sobre un cupo apartado).
+- **Tareas 5 a 8:** ya reflejan la §10. Donde este plan y la spec §10 digan cosas distintas, manda la spec.
+
+Cambios de contrato, en breve:
+
+| Tema | Antes | Ahora |
+| --- | --- | --- |
+| `metadata` | `update`, `conditionalUpdate: true`, `updateCreate: true` | `update` con `documentation` (solo condicional), `conditionalUpdate: true`, `updateCreate: false` |
+| Cuerpo | Cualquier campo de más → `400` `not-supported` | Se ignoran `meta` (salvo tag), `text`, `extension`, `use` y afines; elemento con significado no guardado o `modifierExtension` → `422` `structure` |
+| `id` del cuerpo | Se ignora | Debe faltar o coincidir; si no, `400` |
+| Reglas del servidor | `400` | `422` (`processing` o `business-rule`) |
+| `412` | `conflict` | `multiple-matches` |
+| `Content-Type` | Solo `application/fhir+json`; si no, `400` | También `application/json`; si no, `415` |
+| Orden | Clave antes de enrutar | Enrutado (`405`/`404`) y `415` antes de la clave y el cuerpo |
 
 ---
 
@@ -647,6 +668,117 @@ git commit -m "feat(scheduling): upsert de Slot con rechazo de apartado por Herm
 
 ---
 
+### Task 4b: Alineación R4 de parsers y errores
+
+Corrige lo commiteado en la Tarea 1 según la spec §10.2, §10.4 y §10.6. No toca `patients` ni `scheduling`.
+
+**Files:**
+- Modify: `backend/src/modules/fhir/domain/resources/types.ts`
+- Modify: `backend/src/modules/fhir/domain/fhir-error.ts`
+- Modify: `backend/src/http/fhir-route.ts`
+- Modify: `backend/src/modules/fhir/domain/parsers/body.ts`
+- Modify: `backend/src/modules/fhir/domain/parsers/{patient,practitioner,healthcare-service,schedule,slot}.ts`
+- Modify: `backend/src/modules/fhir/domain/ports/writers.ts`
+- Modify: `backend/tests/fhir/parsers.test.ts`
+
+**Interfaces:**
+- Produces:
+  - `IssueCode` gana `"multiple-matches" | "processing" | "business-rule" | "structure"`.
+  - `fhirMultipleMatches(message)` → `412` `multiple-matches` (antes `conflict`).
+  - `fhirUnprocessable(code: "processing" | "business-rule" | "structure", message)` → `422`.
+  - `fhirUnsupportedMediaType()` → `415` `not-supported`.
+  - Los payloads de los parsers ganan `readonly bodyId: string | null` (el `id` lógico del cuerpo, sin descartar). Los comandos de `ports/writers.ts` **no** lo llevan: lo consume `conditional-put` (Tarea 5).
+  - `parsers/body.ts` gana `pickKnown(row, known, ignored)`: devuelve el objeto sin las claves ignoradas y lanza `422` `structure` ante cualquier clave desconocida o `modifierExtension`. Sustituye a `assertNoExtraKeys` en los parsers de escritura.
+
+- [ ] **Step 1: Tests que fallan**
+
+En `backend/tests/fhir/parsers.test.ts`:
+
+```ts
+it("ignora meta, text, extension y use", () => {
+  const parsed = parsePatientBody(
+    {
+      resourceType: "Patient",
+      meta: { versionId: "3", lastUpdated: "2026-06-15T12:00:00Z" },
+      text: { status: "generated", div: "<div xmlns=\"http://www.w3.org/1999/xhtml\">Ana</div>" },
+      extension: [{ url: "urn:x", valueString: "y" }],
+      identifier: [
+        { use: "official", ...query },
+        { system: "urn:ingenius:document:CC", value: "123", type: { text: "CC" } },
+      ],
+      name: [{ use: "official", family: "Perez", given: ["Ana"] }],
+      telecom: [{ system: "phone", value: "300", use: "mobile", rank: 1 }],
+      birthDate: "1990-01-02",
+    },
+    query,
+  );
+  expect(parsed.phone).toBe("300");
+  expect(parsed.bodyId).toBeNull();
+});
+
+it("rechaza con 422 un elemento no guardado y modifierExtension", () => {
+  const base = {
+    resourceType: "Practitioner",
+    identifier: [{ system: "urn:hermes:practitioner", value: "P-1" }],
+    active: true,
+    name: [{ text: "Dr" }],
+  };
+  const q = { system: "urn:hermes:practitioner", value: "P-1" };
+  expect(() => parsePractitionerBody({ ...base, gender: "male" }, q)).toThrow(
+    expect.objectContaining({ status: 422, code: "structure" }),
+  );
+  expect(() =>
+    parsePractitionerBody({ ...base, modifierExtension: [{ url: "urn:x" }] }, q),
+  ).toThrow(expect.objectContaining({ status: 422 }));
+});
+
+it("tag pre-registered es 422 business-rule; otro tag se ignora", () => {
+  /* meta.tag con PRE_REGISTERED_TAG → 422 business-rule; meta.tag con otro system → acepta */
+});
+
+it("start >= end, referencia mal formada y value set invalido son 422 processing", () => {
+  /* parseSlotBody con start >= end → 422 processing */
+});
+
+it("entrega el id del cuerpo como bodyId", () => {
+  /* parsePractitionerBody({ ...base, id: "abc" }, q).bodyId === "abc" */
+});
+```
+
+Ajustar los tests existentes que esperaban `400` `not-supported` por campo de más o por tag.
+
+- [ ] **Step 2: Correr y ver FAIL**
+
+Run: `npm --prefix backend exec vitest run tests/fhir/parsers.test.ts`
+
+- [ ] **Step 3: Implementar**
+
+Qué devuelve cada código, según la spec §5:
+
+| Error en el cuerpo | Status | Código |
+| --- | --- | --- |
+| No es un objeto JSON, `resourceType` distinto, identificador de la query ausente | 400 | `invalid` |
+| Clave desconocida (no conocida ni ignorada), `modifierExtension` | 422 | `structure` |
+| Campo obligatorio ausente o con valor inválido (fechas, offset, `start ≥ end`, value set, forma de referencia, identificador de negocio) | 422 | `processing` |
+| Tag `pre-registered` | 422 | `business-rule` |
+
+Claves ignoradas (spec §10.2): en la raíz `meta` (tras revisar `meta.tag`), `text` y `extension`; en `identifier`: `use`, `type`, `period`, `extension`; en `name`: `use`, `prefix`, `suffix`, `period`, `extension` (y `text` en `Patient`); en `telecom`: `use`, `rank`, `period`, `extension`; en referencias: `display`, `type`, `extension`.
+
+`readIdentifierArray`, `readReference` y los lectores de `name`/`telecom` usan `pickKnown` en vez de `assertNoExtraKeys`. `Schedule.actor` también.
+
+En `fhir-route.ts`, `toFhirError` traduce `ValidationError` → `fhirUnprocessable("processing", message)`. Antes de cambiarlo, comprobar con `rg "ValidationError" backend/src/modules/{scheduling,patients}` que ninguna lectura de `/fhir` lo lanza. Si alguna lo lanza, limitar la traducción a la escritura.
+
+- [ ] **Step 4: PASS, lint y commit**
+
+```bash
+npm --prefix backend exec vitest run tests/fhir/parsers.test.ts
+npm --prefix backend exec -- biome check --write src/modules/fhir src/http/fhir-route.ts tests/fhir/parsers.test.ts
+git add backend/src/modules/fhir backend/src/http/fhir-route.ts backend/tests/fhir/parsers.test.ts
+git commit -m "fix(fhir): parsers tolerantes y errores 422/412 segun R4"
+```
+
+---
+
 ### Task 5: Registro, capability, caso de uso `conditional-put` y wiring
 
 **Files:**
@@ -675,9 +807,12 @@ export type ConditionalPut = (input: {
 Flujo:
 1. Si tipo no es resource type → el dispatch ya filtró; aquí si no es writable → no se llama.
 2. Query: solo `identifier` (un valor `system|value`); otros params → `not-supported`/`invalid`.
-3. `parse*Body` según tipo.
-4. Llamar writer; si `ambiguous` → `fhirMultipleMatches`; si created → 201; updated → 200.
-5. Mapear record con `DEFINITIONS[type].toResource`.
+3. `parse*Body` según tipo; separa `bodyId` del resto del payload.
+4. Llamar writer; si `ambiguous` → `fhirMultipleMatches` (`412` `multiple-matches`); si created → 201; updated → 200.
+5. Comprobar `bodyId` (spec §10.3): si es `created` y `bodyId !== null`, o si es `updated` y `bodyId !== null && bodyId !== record.id` → `fhirInvalid`. Como corre dentro de la transacción de idempotencia, el error revierte la escritura y su auditoría. Así no hay que cambiar los casos de uso de las Tareas 2 a 4.
+6. Mapear record con `DEFINITIONS[type].toResource`.
+
+Tests de `conditional-put.test.ts`: además de created/updated/ambiguous, `bodyId` igual → 200; `bodyId` distinto → 400; `bodyId` en un alta → 400.
 
 Registro: cada definition gana `readonly writable: boolean` (`Appointment: false`, resto de maestros escribibles: true). `DECLARED_RESOURCES` incluye `writable`.
 
@@ -685,10 +820,12 @@ Capability:
 
 ```ts
 interaction: writable
-  ? [{ code: "read" }, { code: "search-type" }, { code: "update" }]
+  ? [{ code: "read" }, { code: "search-type" }, { code: "update", documentation: CONDITIONAL_ONLY }]
   : [{ code: "read" }, { code: "search-type" }],
-...(writable ? { conditionalUpdate: true, updateCreate: true } : {}),
+...(writable ? { conditionalUpdate: true, updateCreate: false } : {}),
 ```
+
+`CONDITIONAL_ONLY` vive en `profiles.ts`: «Solo actualización condicional (PUT [type]?identifier=system|value). El PUT por id responde 405.» (spec §10.1). `rest[0].documentation` anuncia la `Idempotency-Key` obligatoria (spec §10.8). En `types.ts`, `interaction` gana `documentation?: string` y `rest` gana `documentation?: string`.
 
 Wiring: construir writers con los casos de uso de patients/scheduling + `expire` en Slot antes del upsert (el caso de uso Slot ya expira; el wiring no duplica).
 
@@ -702,7 +839,7 @@ readonly upsertPractitionerFromHermes: ...;
 
 o un solo `fhirWriters` construido dentro de la transacción. Preferible funciones en `WritePorts` para reutilizar audit/ids/clock de la tx.
 
-- [ ] **Step 1: Actualizar test de capability** en `registro.test.ts` para esperar `update` en cinco recursos y no en `Appointment`.
+- [ ] **Step 1: Actualizar test de capability** en `registro.test.ts` para esperar `update` (con `documentation`), `conditionalUpdate: true` y `updateCreate: false` en cinco recursos y nada de eso en `Appointment`.
 - [ ] **Step 2: Test de `conditional-put`** con writers falsos (created/updated/ambiguous).
 - [ ] **Step 3: Implementar**
 - [ ] **Step 4: PASS + commit**
@@ -724,25 +861,29 @@ git commit -m "feat(fhir): conditional-put y metadata con update"
 - Test unitario opcional del dispatch si hace falta
 
 **Interfaces:**
-- Produces: `serviceFhirIdempotentRoute(request, execute)` donde `execute` recibe `{ actor, body, ports, requestId }` y devuelve `{ status, body, location? }`.
+- Produces: `serviceFhirIdempotentRoute(request, precheck, execute)`. `precheck` corre tras autenticar y exigir `service`, y **antes** de leer la clave y el cuerpo (spec §10.5); lo que devuelve llega a `execute` como `target`. `execute` recibe `{ actor, body, ports, requestId, target }` y devuelve `{ status, body }`.
 
 Implementación clave:
 
 ```ts
-export async function serviceFhirIdempotentRoute(
+export async function serviceFhirIdempotentRoute<T>(
   request: Request,
+  precheck: () => T,
   execute: (ctx: {
     actor: Actor;
     body: unknown;
     ports: WritePorts;
     requestId: string;
-  }) => Promise<{ status: number; body: unknown; location?: string }>,
+    target: T;
+  }) => Promise<{ status: number; body: unknown }>,
 ): Promise<NextResponse> {
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
   try {
     const container = getContainer();
     const actor = await container.authenticate(request.headers.get("Authorization"));
     requireRole(actor, ["service"]);
+    // Enrutado (405/404) y media type (415) antes de exigir clave o leer el cuerpo.
+    const target = precheck();
     const url = new URL(request.url);
     // Ampliar readIdempotentRequest con pathMode: "pathname+search" (Tarea 6).
     // Eso incluye la query en `path` y en el hash; no se recalcula a mano.
@@ -763,6 +904,7 @@ export async function serviceFhirIdempotentRoute(
           body: idempotent.body,
           ports,
           requestId,
+          target,
         });
         return { status: outcome.status, body: outcome.body, stored: outcome.body };
       },
@@ -801,52 +943,59 @@ export async function readIdempotentRequest(
 
 REST sigue con default `pathname`. FHIR pasa `"pathname+search"`.
 
-`handleFhirWrite`:
+`handleFhirWrite` (spec §10.5): el enrutado y el `Content-Type` van en el `precheck`, así se resuelven después de autenticar y antes de que el envoltorio lea la clave y el cuerpo. `Location` lo calcula **solo** el envoltorio, a partir del cuerpo guardado, para que también salga en la repetición idempotente (hallazgo 10):
 
 ```ts
+/** Enrutado y media type: sin leer clave ni cuerpo. Devuelve el tipo escribible. */
+function resolveWriteTarget(request: Request, path: readonly string[]): ResourceType {
+  const [type, id, ...rest] = path;
+  if (type === undefined || !isResourceType(type)) {
+    throw fhirNotFound();
+  }
+  const writable = DEFINITIONS[type].writable;
+  if (request.method !== "PUT") {
+    throw fhirMethodNotAllowed(writable && id === undefined ? "GET, PUT" : "GET");
+  }
+  if (id !== undefined || rest.length > 0 || !writable) {
+    throw fhirMethodNotAllowed("GET");
+  }
+  if (!isFhirJson(request.headers.get("content-type"))) {
+    throw fhirUnsupportedMediaType();
+  }
+  return type;
+}
+
+/** `application/fhir+json` o `application/json`, con o sin parametros. */
+function isFhirJson(header: string | null): boolean {
+  const mime = (header ?? "").split(";")[0]?.trim().toLowerCase();
+  return mime === FHIR_MIME || mime === "application/json";
+}
+
 export function handleFhirWrite(request: Request, path: readonly string[]): Promise<NextResponse> {
-  return serviceFhirIdempotentRoute(request, async ({ actor, body, ports, requestId }) => {
-    if (request.method !== "PUT") {
-      throw fhirMethodNotAllowed(allowFor(path));
-    }
-    const [type, id, ...rest] = path;
-    if (type === undefined || rest.length > 0) {
-      throw type !== undefined && isResourceType(type) ? fhirMethodNotAllowed("GET") : fhirNotFound();
-    }
-    if (id !== undefined) {
-      throw fhirMethodNotAllowed("GET");
-    }
-    if (!isResourceType(type)) {
-      throw fhirNotFound();
-    }
-    if (type === "Appointment" || !DEFINITIONS[type].writable) {
-      throw fhirMethodNotAllowed("GET");
-    }
-    const contentType = request.headers.get("content-type") ?? "";
-    if (!contentType.includes("application/fhir+json")) {
-      throw fhirInvalid("Content-Type debe ser application/fhir+json");
-    }
-    const url = new URL(request.url);
-    const result = await ports.fhirConditionalPut({
-      tenantId: actor.tenantId,
-      actor: {
-        actorSubject: actor.subject,
-        actorRole: actor.role,
-        requestId,
-      },
-      type,
-      entries: [...url.searchParams.entries()],
-      body,
-    });
-    const base = getContainer().config.fhirBaseUrl ?? `${url.origin}/fhir`;
-    return {
-      status: result.status,
-      body: result.resource,
-      location: `${base}/${result.resource.resourceType}/${result.resource.id}`,
-    };
-  });
+  return serviceFhirIdempotentRoute(
+    request,
+    () => resolveWriteTarget(request, path),
+    async ({ actor, body, ports, requestId, target }) => {
+      const url = new URL(request.url);
+      const result = await ports.fhirConditionalPut({
+        tenantId: actor.tenantId,
+        actor: { actorSubject: actor.subject, actorRole: actor.role, requestId },
+        type: target,
+        entries: [...url.searchParams.entries()],
+        body,
+      });
+      return { status: result.status, body: result.resource };
+    },
+  );
 }
 ```
+
+El `400` por falta de `Idempotency-Key` lleva un `diagnostics` que la nombra: «Falta la cabecera Idempotency-Key, obligatoria en toda escritura» (spec §10.8).
+
+Roles y orden, casos que añade esta tarea en `roles.test.ts`:
+
+- `PUT /fhir/Patient?identifier=…` con token `operator` → `403`, también sin clave.
+- Sin token → `401`, también sin clave.
 
 Nota: `fhirConditionalPut` debe estar en `WritePorts` porque corre dentro de la tx de idempotencia.
 
@@ -903,13 +1052,15 @@ git commit -m "feat(fhir): PUT condicional idempotente en /fhir"
 3. Patient confirma pre-registro → mismo id, sin tag, status active.
 4. Patient documento de active ajeno → 409 conflict.
 5. Slot hold: crear request pending vía API/store de prueba; PUT busy → slot busy, request rejected/slot_unavailable; audit de ambos; PUT free → 409 y hold intacto.
-6. Schedule con Practitioner inexistente → 400.
-7. Appointment PUT condicional → 405 Allow GET.
-8. PUT Patient/{id} → 405 Allow GET.
-9. Campo de más → 400 not-supported.
-10. metadata: cinco con update/conditionalUpdate/updateCreate; Appointment sin update; por cada update declarado, un PUT de muestra → 200/201.
+6. Schedule con Practitioner inexistente → 422 processing.
+7. Appointment PUT condicional → 405 Allow GET, también sin `Idempotency-Key`.
+8. PUT Patient/{id} → 405 Allow GET, también sin `Idempotency-Key`. Tipo desconocido sin clave → 404.
+9. Elemento con significado no guardado (p. ej. `gender`) → 422 structure; cuerpo con `meta`, `text`, `extension` y `use` → 201/200.
+10. metadata: cinco con `update` (con `documentation`), `conditionalUpdate: true` y `updateCreate: false`; Appointment sin update; por cada update declarado, un PUT condicional de muestra → 200/201 y un PUT por id → 405.
 11. Aislamiento: token tenant B no modifica identifier de A; mismo identifier en B crea recurso B.
-12. Idempotencia: sin clave → 400; misma clave repite 201; misma clave otro body → 409; misma clave otra query → 409.
+12. Idempotencia: sin clave → 400 (con `diagnostics` que la nombra); misma clave repite 201 con `Location`; misma clave otro body → 409; misma clave otra query → 409.
+13. `id` del cuerpo: igual al encontrado → 200; distinto → 400 sin escribir ni auditar; `id` en un alta → 400.
+14. `Content-Type: application/json` → aceptado; `text/plain` → 415.
 
 Datos: reutilizar `seedTenantDomain` + inserts de pre-registro/hold como en suites existentes de pre-agenda.
 
@@ -935,9 +1086,16 @@ git commit -m "test(fhir): escritura condicional, aislamiento e idempotencia"
 - Modify: `README.md` (estado: 4.2 en curso o cerrada según el momento del PR; documentar `PUT` + `Idempotency-Key`)
 - Modify: `backend/AGENTS.md` (cómo añadir escritura: parser + writable en registro + writer en wiring)
 - Modify: spec estado → implementada en rama (opcional)
+- Modify: `docs/superpowers/specs/2026-10-13-fase-4-1-fhir-base-lectura-design.md` (cabecera: cerrada en `main`, PR #9; hallazgo 14)
 - No tocar `CLAUDE.md` / `ROADMAP.md`
 
-- [ ] **Step 1: Actualizar docs**
+**Menores de la revisión R4 (hallazgos 11 a 13)**, con su test en `fhir-conformance`:
+
+- `401` de `/fhir` con `WWW-Authenticate: Bearer`, sin revelar la causa (RFC 6750).
+- `CapabilityStatement`: cada recurso declara `versioning: "no-version"` y `readHistory: false`.
+- `toPatient`: un expediente `pre_registered` no emite `active: true` (omitir `active`); la lectura de un paciente confirmado sigue con `active: true`.
+
+- [ ] **Step 1: Actualizar docs y aplicar los menores**
 - [ ] **Step 2: Puertas**
 
 ```bash
@@ -974,6 +1132,12 @@ git commit -m "docs: guia de escritura FHIR de maestros (Fase 4.2)"
 | OperationOutcome / conflict code | 1, 6 |
 | Fronteras fhir ↛ patients/scheduling | 5 + suite fronteras |
 | Sin OpenAPI / sin frontend | Global |
+| Alineación R4: parsers tolerantes, `422`, `multiple-matches`, `415` (spec §10.2, §10.4, §10.6) | 4b, 6, 7 |
+| `id` del cuerpo (spec §10.3) | 4b, 5, 7 |
+| `metadata` con `updateCreate: false` y `documentation` (spec §10.1, §10.8) | 5, 7 |
+| Orden enrutado → `415` → clave (spec §10.5) | 6, 7 |
+| Menores R4: `WWW-Authenticate`, `no-version`, `Patient.active` | 8 |
+| Cupo apartado frente a Hermes (spec §10.7, opción A) | 4 |
 
 ## Autorevisión del plan
 

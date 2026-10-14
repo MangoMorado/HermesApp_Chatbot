@@ -36,6 +36,17 @@ cabecera `X-Request-Id`. `/fhir` responde `OperationOutcome` con `application/fh
 5. La suite `fhir-conformance` recorre `metadata` y exige un valor de muestra por parámetro
    (`tests/db/fhir-conformance-http.test.ts`, función `sampleValue`).
 
+## Al añadir escritura FHIR
+
+1. Añade el parser del cuerpo en `src/modules/fhir/domain/parsers/` y conserva el mapper de
+   lectura como única salida del recurso.
+2. Marca el recurso como `writable` en `src/modules/fhir/domain/registry.ts`; de ahí salen el
+   enrutado condicional y las declaraciones de `GET /fhir/metadata`.
+3. Declara el writer en `src/modules/fhir/domain/ports/writers.ts` y conéctalo con el caso de
+   uso del módulo dueño en `src/composition/fhir-wiring.ts`. `fhir` no importa ese módulo.
+4. Toda escritura usa `Idempotency-Key` y responde con recurso FHIR u `OperationOutcome`;
+   nunca con la envoltura REST.
+
 ## Al escribir una ruta nueva de /api/v1
 
 1. Envuélvela con `publicRoute` o `privateRoute` de `src/http/route.ts`. Eso resuelve el
