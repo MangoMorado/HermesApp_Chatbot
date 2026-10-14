@@ -10,7 +10,7 @@ import { AuthError } from "@/modules/auth/domain/auth-error";
 import { createJoseTokenIssuer } from "@/modules/auth/infrastructure/jose-token-issuer";
 import { createJoseTokenVerifier } from "@/modules/auth/infrastructure/jose-token-verifier";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
-import { fhirGet, fhirSend, serviceToken } from "./helpers/fhir";
+import { fhirGet, fhirPut, fhirSend, serviceToken } from "./helpers/fhir";
 import { authorized, signToken, TEST_JWT } from "./helpers/token";
 
 const operator: Actor = {
@@ -288,9 +288,14 @@ describe("roles: /fhir", () => {
     expect((await fhirGet("Inventado/x", operator)).response.status).toBe(403);
   });
 
-  it("una escritura sin rol service responde 403, no 405", async () => {
+  it("una escritura condicional sin rol service responde 403, no valida la clave", async () => {
     const operator = await signToken({ role: "operator", tenantId: "tenant-a" });
-    const { response, body } = await fhirSend("PUT", "Patient/mr-1", operator);
+    const { response, body } = await fhirPut(
+      "Patient?identifier=urn:test|patient-1",
+      operator,
+      { resourceType: "Patient" },
+      { "Idempotency-Key": "" },
+    );
 
     expect(response.status).toBe(403);
     expect(body.issue[0].code).toBe("forbidden");
@@ -319,5 +324,44 @@ describe("roles: /fhir", () => {
     expect(write.response.headers.get("Allow")).toBe("GET");
     expect(write.body.issue[0].code).toBe("not-supported");
     expect((await fhirSend("DELETE", "Inventado/x", token)).response.status).toBe(404);
+  });
+
+  it("valida ruta y media type antes de exigir Idempotency-Key", async () => {
+    const token = await serviceToken("tenant-a");
+    const byId = await fhirPut("Patient/mr-1", token, {}, { "Idempotency-Key": "" });
+    expect(byId.response.status).toBe(405);
+    expect(byId.response.headers.get("Allow")).toBe("GET");
+
+    const appointment = await fhirPut(
+      "Appointment?identifier=urn:test|appointment-1",
+      token,
+      {},
+      { "Idempotency-Key": "" },
+    );
+    expect(appointment.response.status).toBe(405);
+    expect(appointment.response.headers.get("Allow")).toBe("GET");
+
+    const mediaType = await fhirPut(
+      "Patient?identifier=urn:test|patient-1",
+      token,
+      {},
+      { "Content-Type": "text/plain", "Idempotency-Key": "" },
+    );
+    expect(mediaType.response.status).toBe(415);
+    expect(mediaType.body.issue[0].code).toBe("not-supported");
+  });
+
+  it("exige Idempotency-Key despues de validar el destino escribible", async () => {
+    const token = await serviceToken("tenant-a");
+    const { response, body } = await fhirPut(
+      "Patient?identifier=urn:test|patient-1",
+      token,
+      {},
+      { "Idempotency-Key": "" },
+    );
+
+    expect(response.status).toBe(400);
+    expect(body.issue[0].code).toBe("invalid");
+    expect(body.issue[0].diagnostics).toContain("Idempotency-Key");
   });
 });

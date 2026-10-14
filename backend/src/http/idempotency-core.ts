@@ -114,10 +114,13 @@ export async function readIdempotentRequest(
   actorSubject: string,
   minKeyLength = 1,
   hashKey?: string,
+  pathMode: "pathname" | "pathname+search" = "pathname",
 ): Promise<IdempotentRequest> {
   const key = request.headers.get(IDEMPOTENCY_HEADER)?.trim() ?? "";
   if (key === "") {
-    throw new ValidationError("Idempotency-Key es obligatoria", { field: IDEMPOTENCY_HEADER });
+    throw new ValidationError("Falta la cabecera Idempotency-Key, obligatoria en toda escritura", {
+      field: IDEMPOTENCY_HEADER,
+    });
   }
   if (key.length < minKeyLength) {
     throw new ValidationError(`Idempotency-Key debe tener al menos ${minKeyLength} caracteres`, {
@@ -126,7 +129,8 @@ export async function readIdempotentRequest(
     });
   }
   const bodyText = await request.text();
-  const path = new URL(request.url).pathname;
+  const url = new URL(request.url);
+  const path = pathMode === "pathname+search" ? `${url.pathname}${url.search}` : url.pathname;
   return {
     key,
     hash: requestHash(request.method, path, bodyText, hashKey),

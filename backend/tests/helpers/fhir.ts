@@ -32,6 +32,28 @@ export async function fhirSend(method: keyof typeof WRITERS, path: string, token
   return { response, body: await response.json() };
 }
 
+export async function fhirPut(
+  pathAndQuery: string,
+  token: string,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
+  const url = new URL(`http://localhost/fhir/${pathAndQuery}`);
+  const response = await PUT(
+    authedRequest(url.toString(), token, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/fhir+json",
+        "Idempotency-Key": headers["Idempotency-Key"] ?? crypto.randomUUID(),
+        ...headers,
+      },
+      body: JSON.stringify(body),
+    }),
+    { params: Promise.resolve({ path: segmentsOf(url) }) },
+  );
+  return { response, body: await response.json() };
+}
+
 export function serviceToken(tenantId: string): Promise<string> {
   return signToken({ role: "service", tenantId, subject: `hermes-${tenantId}` });
 }
