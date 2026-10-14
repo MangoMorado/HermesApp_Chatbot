@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#140c33">
+<title>Anatomía del chatbot · Ingenius 360</title>
+<meta name="description" content="El chatbot de agenda clínica explicado como una máquina 3D: la solicitud, la verificación, el puente FHIR y Hermes, que es quien confirma.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..700&amp;family=Martian+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+.iso{
+  --anatomy-page:#0b0b0b;--anatomy-card:#131313;--anatomy-text:#a3a3a3;--anatomy-strong:#e6e6e6;--anatomy-muted:#6e6e6e;
+  --anatomy-paper:#131313;--anatomy-face:#1b1b1b;--anatomy-top:#1c1c1c;
+  --anatomy-shade-0:#0f0f0f;--anatomy-shade-1:#121212;--anatomy-shade-2:#151515;--anatomy-shade-3:#181818;
+  --anatomy-lit-top:#262626;--anatomy-lit-shade:#1d1d1d;
+  --anatomy-hi:#d4d4d4;--anatomy-mid:#6a6a6a;--anatomy-lo:#3e3e3e;--anatomy-faint:#2a2a2a;--anatomy-lit:#ffffff;
+  --anatomy-halo:#050505;--anatomy-halo-opacity:.9;--anatomy-dot:#e6e6e6;
+  --anatomy-red:#ff6b6b;--anatomy-green:#6be0a0;--anatomy-blue:#6b9bff;
+  --anatomy-weight:.6px;--anatomy-ease:cubic-bezier(.32,.72,0,1);
+  --anatomy-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff0a,inset 0 0 0 1px #ffffff06,0 0 0 1px #00000026,0 1px 1px -.5px #00000014,0 3px 3px -1.5px #00000014,0 6px 6px -3px #00000014,0 12px 12px -6px #00000014;
+}
+.iso[data-theme="light"]{
+  --anatomy-page:#f2f2ef;--anatomy-card:#fbfbfa;--anatomy-text:#57575a;--anatomy-strong:#18181a;--anatomy-muted:#8c8c90;
+  --anatomy-paper:#fbfbfa;--anatomy-face:#ffffff;--anatomy-top:#ffffff;
+  --anatomy-shade-0:#dcdcd9;--anatomy-shade-1:#e5e5e2;--anatomy-shade-2:#ededea;--anatomy-shade-3:#f4f4f1;
+  --anatomy-lit-top:#ffffff;--anatomy-lit-shade:#eeeeeb;
+  --anatomy-hi:#26262a;--anatomy-mid:#8a8a8f;--anatomy-lo:#b4b4b8;--anatomy-faint:#d4d4d6;--anatomy-lit:#000000;
+  --anatomy-halo:#8a8a80;--anatomy-halo-opacity:.32;--anatomy-dot:#3a3a3e;
+  --anatomy-red:#e5484d;--anatomy-green:#30a46c;--anatomy-blue:#3e63dd;
+  --anatomy-lift:inset 0 1px 0 0 #ffffff,0 0 0 1px #0000000f,0 1px 1px -.5px #0000000a,0 3px 3px -1.5px #0000000a,0 6px 6px -3px #0000000a,0 12px 12px -6px #0000000a;
+}
+.iso-svg{display:block;width:100%;height:auto;overflow:visible}
+.iso-svg path,.iso-svg circle{vector-effect:non-scaling-stroke}
+.iso-fill{fill:var(--anatomy-paper);stroke:none}
+.iso-solid[data-lit]>.iso-fill{fill:var(--anatomy-face)}
+.iso-shade,.iso-top{stroke:none}
+.iso-shade[data-shade="0"]{fill:var(--anatomy-shade-0)}
+.iso-shade[data-shade="1"]{fill:var(--anatomy-shade-1)}
+.iso-shade[data-shade="2"]{fill:var(--anatomy-shade-2)}
+.iso-shade[data-shade="3"]{fill:var(--anatomy-shade-3)}
+.iso-top{fill:var(--anatomy-top)}
+.iso-solid[data-lit]>.iso-top{fill:var(--anatomy-lit-top)}
+.iso-solid[data-lit]>.iso-shade{fill:var(--anatomy-lit-shade)}
+.iso-solid[data-seamless]>.iso-shade,.iso-solid[data-seamless]>.iso-top{stroke-width:.4;stroke-linejoin:round}
+.iso-solid[data-seamless]>.iso-shade[data-shade="0"]{stroke:var(--anatomy-shade-0)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="1"]{stroke:var(--anatomy-shade-1)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="2"]{stroke:var(--anatomy-shade-2)}
+.iso-solid[data-seamless]>.iso-shade[data-shade="3"]{stroke:var(--anatomy-shade-3)}
+.iso-solid[data-seamless]>.iso-top{stroke:var(--anatomy-top)}
+.iso-solid[data-seamless][data-lit]>.iso-top{stroke:var(--anatomy-lit-top)}
+.iso-solid[data-seamless][data-lit]>.iso-shade{stroke:var(--anatomy-lit-shade)}
+.iso-solid[data-lit]>.iso-edge{stroke:var(--anatomy-lit)}
+.iso-halo{fill:var(--anatomy-halo);stroke:none;filter:blur(9px);opacity:var(--anatomy-halo-opacity);transform:translateY(3px)}
+.iso-line{fill:none;stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight);stroke-linecap:round;stroke-linejoin:round}
+.iso-line[data-tone="hi"]{stroke:var(--anatomy-hi)}
+.iso-line[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.iso-line[data-tone="lo"]{stroke:var(--anatomy-lo)}
+.iso-line[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.iso-line[data-tone="lit"]{stroke:var(--anatomy-lit)}
+.iso-line[data-tone="red"]{stroke:var(--anatomy-red)}
+.iso-line[data-tone="green"]{stroke:var(--anatomy-green)}
+.iso-line[data-tone="blue"]{stroke:var(--anatomy-blue)}
+.iso-line[data-dotted]{stroke-dasharray:.01 3.5;stroke-width:1}
+.iso-line[data-dashed]{stroke-dasharray:3 3}
+.iso-line[data-flow]{stroke-dasharray:2 6}
+.iso-wire-end{fill:var(--anatomy-paper);stroke:var(--anatomy-lo);stroke-width:var(--anatomy-weight)}
+.iso-wire[data-tone="hi"] .iso-wire-end{stroke:var(--anatomy-hi)}
+.iso-wire[data-tone="mid"] .iso-wire-end{stroke:var(--anatomy-mid)}
+.iso-wire[data-tone="faint"] .iso-wire-end{stroke:var(--anatomy-faint)}
+.iso-wire[data-tone="lit"] .iso-wire-end{stroke:var(--anatomy-lit)}
+.iso-dots circle{fill:var(--anatomy-dot);stroke:none;opacity:.32}
+.iso-dots[data-tone="hi"] circle{opacity:.85}
+.iso-dots[data-tone="mid"] circle{opacity:.45}
+.iso-dots[data-tone="lo"] circle{opacity:.22}
+.iso-dots[data-tone="faint"] circle{opacity:.12}
+.iso-face-text{fill:var(--anatomy-mid);font-family:var(--anatomy-mono);letter-spacing:.04em}
+.iso-face-text[data-tone="hi"]{fill:var(--anatomy-hi)}
+.iso-face-text[data-tone="lo"]{fill:var(--anatomy-lo)}
+.iso-face-text[data-tone="faint"]{fill:var(--anatomy-faint)}
+.tb-body{fill:var(--anatomy-shade-2);stroke:none}
+.tb-shine{fill:var(--anatomy-top);stroke:none}
+.tb-shade{fill:var(--anatomy-shade-0);stroke:none}
+.tb-ring{fill:none;stroke:var(--anatomy-lo);stroke-width:.45;stroke-linecap:butt;stroke-linejoin:round}
+.tb-ring[data-tone="mid"]{stroke:var(--anatomy-mid)}
+.tb-ring[data-tone="faint"]{stroke:var(--anatomy-faint)}
+.tb-ring[data-tone="hi"]{stroke:var(--anatomy-hi)}
+@keyframes iso-flow{to{stroke-dashoffset:-32}}
+@keyframes iso-pulse{0%,100%{opacity:.18}12%{opacity:1}40%{opacity:.18}}
+.iso-line[data-flow]{animation:iso-flow 1600ms linear infinite}
+.iso-dots circle[data-pulse]{animation:iso-pulse 1600ms steps(1,end) infinite;animation-delay:var(--pulse-at,0ms)}
+.iso-figure{margin:32px 0 36px}
+.iso-plate{position:relative;padding:52px 24px;border-radius:0;background:var(--anatomy-card);box-shadow:0 0 0 1px var(--anatomy-mid);--anatomy-paper:var(--anatomy-card)}
+.iso-plate-corners{position:absolute;inset:18px 20px;pointer-events:none}
+.iso-plate-corner{position:absolute;color:var(--anatomy-muted);font-family:var(--anatomy-mono);font-size:10.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+.iso-plate-corner[data-corner="fig"]{top:0;left:0;color:var(--anatomy-text)}
+.iso-plate-corner[data-corner="title"]{top:0;right:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="hint"]{bottom:0;left:0;text-transform:uppercase;letter-spacing:.1em}
+.iso-plate-corner[data-corner="readout"]{right:0;bottom:0;color:var(--anatomy-text);font-variant-numeric:tabular-nums}
+.iso-plate .iso-svg{margin:0 auto}
+.iso-legend{display:grid;gap:8px;margin-top:12px;color:var(--anatomy-muted);font-size:13px;line-height:1.55}
+.iso-keys{display:flex;flex-wrap:wrap;gap:6px 18px}
+.iso-key{display:inline-flex;align-items:center;gap:7px}
+.iso-swatch{width:16px;height:10px;flex:none;overflow:visible}
+.iso-swatch path{fill:none;stroke:var(--anatomy-hi);stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.iso-swatch[data-mark="raised"] path,.iso-swatch[data-mark="flat"] path{stroke:var(--anatomy-mid)}
+.iso-swatch[data-mark="lit"] path{stroke:var(--anatomy-lit)}
+.iso-swatch[data-mark="dim"] path{stroke:var(--anatomy-lo)}
+.iso-swatch[data-mark="dotted"] path{stroke-dasharray:.01 3;stroke-width:1.4}
+.iso-swatch[data-mark="dashed"] path{stroke-dasharray:3 2.5}
+.iso-swatch[data-mark="red"] path{stroke:var(--anatomy-red)}
+.iso-swatch[data-mark="green"] path{stroke:var(--anatomy-green)}
+.iso-swatch[data-mark="blue"] path{stroke:var(--anatomy-blue)}
+.iso-swatch-crease{stroke:var(--anatomy-lo)!important}
+@media (max-width:560px){.iso-plate{padding:48px 12px 70px}.iso-plate-corner[data-corner="hint"]{bottom:18px}}
+@media (prefers-reduced-motion:reduce){.iso-line[data-flow],.iso-dots circle[data-pulse]{animation:none}}
+
+
+/* Página «Anatomía del chatbot». La tarjeta del kit (.iso-plate) conserva sus tokens --anatomy-*;
+   aquí solo viven los de la página (--anatomia-*), tomados de la marca de styles.css. */
+
+:root,
+.iso {
+  --anatomia-bg: #140c33;
+  --anatomia-surface: #1e1450;
+  --anatomia-raised: #271a63;
+  --anatomia-rule: #3a2c86;
+  --anatomia-ink: #f4f1ff;
+  --anatomia-ink-2: #b9b0e0;
+  --anatomia-ink-3: #9d94c9;
+  --anatomia-accent: #8851fa;
+  --anatomia-accent-ink: #c8b0fb;
+  --anatomia-focus: #c8b0fb;
+  --anatomia-ok: #4ade9a;
+  --anatomia-bar: #1e1450;
+  --anatomia-bar-rule: #3a2c86;
+  --anatomia-bar-ink: #b9b0e0;
+  --anatomia-sans: "Figtree", system-ui, sans-serif;
+  --anatomia-mono: "Martian Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --anatomia-bg: #f4f1ff;
+  --anatomia-surface: #ffffff;
+  --anatomia-raised: #ebe5ff;
+  --anatomia-rule: #d6cdf6;
+  --anatomia-ink: #140c33;
+  --anatomia-ink-2: #3d3470;
+  --anatomia-ink-3: #5e5590;
+  --anatomia-accent: #6a35e0;
+  --anatomia-accent-ink: #5a28cc;
+  --anatomia-focus: #6a35e0;
+  --anatomia-ok: #1c7a4c;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body.an-page {
+  margin: 0;
+  background: var(--anatomia-bg);
+  color: var(--anatomia-ink);
+  font-family: var(--anatomia-sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--anatomia-accent);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--anatomia-focus);
+  outline-offset: 3px;
+}
+
+.an-stage:focus-visible {
+  outline-offset: 6px;
+  border-radius: 2px;
+}
+
+a {
+  color: var(--anatomia-accent-ink);
+  text-underline-offset: 3px;
+}
+
+.an-skip {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--anatomia-accent);
+  color: #fff;
+  text-decoration: none;
+}
+
+.an-skip:focus {
+  top: 8px;
+}
+
+/* Barra superior: siempre oscura, porque el logotipo es claro. */
+.an-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--anatomia-bar);
+  border-bottom: 1px solid var(--anatomia-bar-rule);
+}
+
+.an-brand {
+  display: flex;
+  flex: none;
+}
+
+.an-brand img {
+  display: block;
+  height: 28px;
+  width: auto;
+}
+
+.an-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.an-nav a,
+.an-theme {
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--anatomia-bar-ink);
+  font: 550 0.8125rem / 1 var(--anatomia-sans);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.an-theme {
+  box-shadow: inset 0 0 0 1px var(--anatomia-bar-rule);
+}
+
+.an-nav a:hover,
+.an-theme:hover {
+  background: #271a63;
+  color: #f4f1ff;
+}
+
+.an-bar :focus-visible {
+  outline-color: #c8b0fb;
+}
+
+/* Columna de lectura. */
+.an-main,
+.an-foot {
+  width: min(760px, 100% - 32px);
+  margin: 0 auto;
+}
+
+.an-main {
+  padding: 56px 0 24px;
+}
+
+.an-intro {
+  max-width: 38em;
+}
+
+.an-eyebrow {
+  margin: 0 0 14px;
+  color: var(--anatomia-accent-ink);
+  font: 500 0.75rem / 1 var(--anatomia-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.an-page h1,
+.an-page h2,
+.an-page h3 {
+  margin: 0 0 0.75rem;
+  color: var(--anatomia-ink);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.an-page h1 {
+  font-size: clamp(2rem, 5vw, 2.7rem);
+}
+
+.an-page h2 {
+  font-size: clamp(1.4rem, 3vw, 1.75rem);
+}
+
+.an-page h3 {
+  font-size: 1.2rem;
+}
+
+.an-lead,
+.an-page p {
+  color: var(--anatomia-ink-2);
+  text-wrap: pretty;
+}
+
+.an-lead {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+/* Tarjeta del kit: solo se ajusta el margen y la nota provisional. */
+.an-page .iso-figure {
+  margin: 40px 0 8px;
+}
+
+.an-page .iso-legend {
+  color: var(--anatomia-ink-3);
+}
+
+.an-stage {
+  position: relative;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.an-pending {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  margin: 0;
+  transform: translateX(-50%);
+  color: var(--anatomy-muted);
+  font: 10.5px / 1 var(--anatomy-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Pasos. */
+.an-walk,
+.an-block {
+  margin-top: 56px;
+}
+
+.an-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.an-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  border: 1px solid var(--anatomia-rule);
+  border-radius: 8px;
+  background: var(--anatomia-surface);
+  color: var(--anatomia-ink-2);
+  font: 600 0.9375rem / 1.25 var(--anatomia-sans);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.an-step:hover {
+  border-color: var(--anatomia-accent);
+  color: var(--anatomia-ink);
+}
+
+.an-step[aria-pressed="true"] {
+  border-color: var(--anatomia-accent);
+  background: var(--anatomia-raised);
+  color: var(--anatomia-ink);
+  box-shadow: inset 0 -2px 0 var(--anatomia-accent);
+}
+
+.an-step-n {
+  color: var(--anatomia-ink-3);
+  font: 500 0.75rem / 1 var(--anatomia-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.an-step[aria-pressed="true"] .an-step-n {
+  color: var(--anatomia-accent-ink);
+}
+
+.an-step-panel {
+  min-height: 9.5rem;
+  padding: 20px;
+  border-left: 2px solid var(--anatomia-accent);
+  background: var(--anatomia-surface);
+  border-radius: 0 8px 8px 0;
+}
+
+.an-step-panel p {
+  margin: 0;
+  max-width: 38em;
+}
+
+/* Piezas. */
+.an-defs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--anatomia-rule);
+  border-radius: 8px;
+  background: var(--anatomia-rule);
+  overflow: hidden;
+}
+
+.an-defs div {
+  padding: 16px;
+  background: var(--anatomia-surface);
+}
+
+.an-defs dt {
+  margin-bottom: 4px;
+  color: var(--anatomia-ink);
+  font-weight: 650;
+}
+
+.an-defs dd {
+  margin: 0;
+  color: var(--anatomia-ink-2);
+  font-size: 0.975rem;
+}
+
+/* Lo que nunca hace. */
+.an-never {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.an-never li {
+  position: relative;
+  padding-left: 28px;
+  color: var(--anatomia-ink-2);
+}
+
+.an-never li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 14px;
+  height: 2px;
+  background: var(--anatomia-accent);
+}
+
+.an-never strong {
+  color: var(--anatomia-ink);
+  font-weight: 650;
+}
+
+/* Cómo va. */
+.an-phases {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--anatomia-rule);
+}
+
+.an-phases li {
+  display: grid;
+  grid-template-columns: 6.5rem 10rem minmax(0, 1fr);
+  gap: 4px 16px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--anatomia-rule);
+  color: var(--anatomia-ink-2);
+}
+
+.an-phases strong {
+  color: var(--anatomia-ink);
+  font-weight: 650;
+}
+
+.an-phase-state {
+  color: var(--anatomia-ok);
+  font: 500 0.75rem / 1.4 var(--anatomia-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.an-phases li[data-state="siguiente"] .an-phase-state {
+  color: var(--anatomia-accent-ink);
+}
+
+/* Pie. */
+.an-foot {
+  margin-top: 56px;
+  padding: 24px 0 64px;
+  border-top: 1px solid var(--anatomia-rule);
+}
+
+.an-foot p {
+  margin: 0;
+  max-width: 38em;
+  color: var(--anatomia-ink-3);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+  .an-main {
+    padding-top: 36px;
+  }
+
+  .an-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .an-step {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .an-defs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .an-phases li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .an-page .iso-figure {
+    margin-top: 28px;
+  }
+}
+
+@media (max-width: 420px) {
+  .an-nav a {
+    padding-inline: 6px;
+  }
+
+  .an-brand img {
+    height: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .an-step {
+    transition: none;
+  }
+}
+</style>
+</head>
+<body class="iso an-page" data-theme="dark">
+<a class="an-skip" href="#contenido">Saltar al contenido</a>
+<header class="an-bar">
+<a class="an-brand" href="index.html"><img src="logotipo-claro.png" alt="Ingenius 360" width="115" height="28"></a>
+<nav class="an-nav" aria-label="Navegación">
+<a href="index.html">Ver el relato técnico</a>
+<button type="button" class="an-theme" data-theme-toggle aria-label="Cambiar entre tema claro y oscuro">Tema</button>
+</nav>
+</header>
+<main id="contenido" class="an-main">
+<section class="an-intro">
+<p class="an-eyebrow">Ingenius 360 · anatomía</p>
+<h1>El proyecto, en una máquina</h1>
+<p class="an-lead">Un chatbot que ayuda a pedir citas médicas, contado como una máquina de verdad. Cada pieza es una parte del sistema. Gira la mesa, recorre los cinco pasos y mira cómo viaja una solicitud desde el chat hasta Hermes.</p>
+</section>
+<figure class="iso-figure"><div class="iso-plate"><div class="iso-plate-corners" aria-hidden="true"><span class="iso-plate-corner" data-corner="fig">Fig 1</span><span class="iso-plate-corner" data-corner="title">Anatomía del chatbot</span><span class="iso-plate-corner" data-corner="hint">Arrastra para girar · ← → pasos</span><span class="iso-plate-corner" data-corner="readout" data-readout>paso 1/5 · menú</span></div><div class="iso-stage an-stage" tabindex="0" role="slider" aria-label="Máquina del chatbot sobre una mesa giratoria: arrastra para girarla, flechas izquierda y derecha para cambiar de paso" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0" aria-valuetext="paso 1 de 5: Menú"><svg xmlns="http://www.w3.org/2000/svg" class="iso-svg" viewBox="0 0 640 460" role="img" aria-label="Mesa giratoria con la base del chatbot y la base de Hermes; la figura 3D completa está pendiente."><path class="iso-halo" d="M149.4 239.2L150 233.4L151.3 227.7L153.4 222.1L156.1 216.5L159.6 211L163.8 205.7L168.6 200.5L174.1 195.5L180.2 190.7L186.9 186.1L194.2 181.7L202 177.6L210.3 173.8L219.1 170.2L228.3 167L237.9 164L247.9 161.4L258.1 159.2L268.7 157.3L279.4 155.7L290.4 154.5L301.4 153.7L312.6 153.3L323.7 153.2L334.9 153.5L346 154.2L356.9 155.3L367.8 156.7L378.4 158.5L388.7 160.6L398.8 163.1L408.5 165.9L417.9 169.1L426.8 172.5L435.3 176.3L443.3 180.3L450.8 184.6L457.7 189.1L464 193.9L469.6 198.8L474.7 204L479.1 209.2L482.8 214.7L485.8 220.2L488.1 225.8L489.7 231.5L490.5 237.3L490.6 243L490.6 246.9L490 252.7L488.7 258.4L486.6 264.1L483.9 269.6L480.4 275.1L476.2 280.4L471.4 285.6L465.9 290.6L459.8 295.4L453.1 300L445.8 304.4L438 308.5L429.7 312.4L420.9 315.9L411.7 319.2L402.1 322.1L392.1 324.7L381.9 327L371.3 328.9L360.6 330.4L349.6 331.6L338.6 332.4L327.4 332.8L316.3 332.9L305.1 332.6L294 331.9L283.1 330.8L272.2 329.4L261.6 327.6L251.3 325.5L241.2 323L231.5 320.2L222.1 317L213.2 313.6L204.7 309.8L196.7 305.8L189.2 301.5L182.3 297L176 292.3L170.4 287.3L165.3 282.2L160.9 276.9L157.2 271.5L154.2 265.9L151.9 260.3L150.3 254.6L149.5 248.9L149.4 243.1Z"/><g class="iso-solid"><path class="iso-fill" d="M149.4 239.2L150 233.4L151.3 227.7L153.4 222.1L156.1 216.5L159.6 211L163.8 205.7L168.6 200.5L174.1 195.5L180.2 190.7L186.9 186.1L194.2 181.7L202 177.6L210.3 173.8L219.1 170.2L228.3 167L237.9 164L247.9 161.4L258.1 159.2L268.7 157.3L279.4 155.7L290.4 154.5L301.4 153.7L312.6 153.3L323.7 153.2L334.9 153.5L346 154.2L356.9 155.3L367.8 156.7L378.4 158.5L388.7 160.6L398.8 163.1L408.5 165.9L417.9 169.1L426.8 172.5L435.3 176.3L443.3 180.3L450.8 184.6L457.7 189.1L464 193.9L469.6 198.8L474.7 204L479.1 209.2L482.8 214.7L485.8 220.2L488.1 225.8L489.7 231.5L490.5 237.3L490.6 243L490.6 246.9L490 252.7L488.7 258.4L486.6 264.1L483.9 269.6L480.4 275.1L476.2 280.4L471.4 285.6L465.9 290.6L459.8 295.4L453.1 300L445.8 304.4L438 308.5L429.7 312.4L420.9 315.9L411.7 319.2L402.1 322.1L392.1 324.7L381.9 327L371.3 328.9L360.6 330.4L349.6 331.6L338.6 332.4L327.4 332.8L316.3 332.9L305.1 332.6L294 331.9L283.1 330.8L272.2 329.4L261.6 327.6L251.3 325.5L241.2 323L231.5 320.2L222.1 317L213.2 313.6L204.7 309.8L196.7 305.8L189.2 301.5L182.3 297L176 292.3L170.4 287.3L165.3 282.2L160.9 276.9L157.2 271.5L154.2 265.9L151.9 260.3L150.3 254.6L149.5 248.9L149.4 243.1Z"/><path class="iso-shade" data-shade="0" d="M429.7 312.4L420.9 315.9L420.9 312L429.7 308.4ZM420.9 315.9L411.7 319.2L411.7 315.2L420.9 312ZM411.7 319.2L402.1 322.1L402.1 318.2L411.7 315.2ZM490.6 246.9L490 252.7L490 248.8L490.6 243ZM490 252.7L488.7 258.4L488.7 254.5L490 248.8ZM488.7 258.4L486.6 264.1L486.6 260.1L488.7 254.5ZM486.6 264.1L483.9 269.6L483.9 265.7L486.6 260.1ZM483.9 269.6L480.4 275.1L480.4 271.2L483.9 265.7ZM480.4 275.1L476.2 280.4L476.2 276.5L480.4 271.2ZM476.2 280.4L471.4 285.6L471.4 281.7L476.2 276.5ZM471.4 285.6L465.9 290.6L465.9 286.7L471.4 281.7ZM465.9 290.6L459.8 295.4L459.8 291.5L465.9 286.7ZM459.8 295.4L453.1 300L453.1 296.1L459.8 291.5ZM453.1 300L445.8 304.4L445.8 300.5L453.1 296.1ZM445.8 304.4L438 308.5L438 304.6L445.8 300.5ZM438 308.5L429.7 312.4L429.7 308.4L438 304.6Z"/><path class="iso-shade" data-shade="1" d="M402.1 322.1L392.1 324.7L392.1 320.8L402.1 318.2ZM392.1 324.7L381.9 327L381.9 323L392.1 320.8ZM381.9 327L371.3 328.9L371.3 324.9L381.9 323ZM371.3 328.9L360.6 330.4L360.6 326.5L371.3 324.9ZM360.6 330.4L349.6 331.6L349.6 327.7L360.6 326.5ZM349.6 331.6L338.6 332.4L338.6 328.5L349.6 327.7ZM338.6 332.4L327.4 332.8L327.4 328.9L338.6 328.5ZM327.4 332.8L316.3 332.9L316.3 329L327.4 328.9Z"/><path class="iso-shade" data-shade="2" d="M316.3 332.9L305.1 332.6L305.1 328.7L316.3 329ZM305.1 332.6L294 331.9L294 328L305.1 328.7ZM294 331.9L283.1 330.8L283.1 326.9L294 328ZM283.1 330.8L272.2 329.4L272.2 325.5L283.1 326.9ZM272.2 329.4L261.6 327.6L261.6 323.7L272.2 325.5ZM261.6 327.6L251.3 325.5L251.3 321.6L261.6 323.7ZM251.3 325.5L241.2 323L241.2 319.1L251.3 321.6ZM241.2 323L231.5 320.2L231.5 316.3L241.2 319.1Z"/><path class="iso-shade" data-shade="3" d="M231.5 320.2L222.1 317L222.1 313.1L231.5 316.3ZM222.1 317L213.2 313.6L213.2 309.7L222.1 313.1ZM213.2 313.6L204.7 309.8L204.7 305.9L213.2 309.7ZM204.7 309.8L196.7 305.8L196.7 301.9L204.7 305.9ZM196.7 305.8L189.2 301.5L189.2 297.6L196.7 301.9ZM189.2 301.5L182.3 297L182.3 293.1L189.2 297.6ZM182.3 297L176 292.3L176 288.3L182.3 293.1ZM176 292.3L170.4 287.3L170.4 283.4L176 288.3ZM170.4 287.3L165.3 282.2L165.3 278.3L170.4 283.4ZM165.3 282.2L160.9 276.9L160.9 273L165.3 278.3ZM160.9 276.9L157.2 271.5L157.2 267.5L160.9 273ZM157.2 271.5L154.2 265.9L154.2 262L157.2 267.5ZM154.2 265.9L151.9 260.3L151.9 256.4L154.2 262ZM151.9 260.3L150.3 254.6L150.3 250.7L151.9 256.4ZM150.3 254.6L149.5 248.9L149.5 244.9L150.3 250.7ZM149.5 248.9L149.4 243.1L149.4 239.2L149.5 244.9Z"/><path class="iso-top" d="M429.7 308.4L420.9 312L411.7 315.2L402.1 318.2L392.1 320.8L381.9 323L371.3 324.9L360.6 326.5L349.6 327.7L338.6 328.5L327.4 328.9L316.3 329L305.1 328.7L294 328L283.1 326.9L272.2 325.5L261.6 323.7L251.3 321.6L241.2 319.1L231.5 316.3L222.1 313.1L213.2 309.7L204.7 305.9L196.7 301.9L189.2 297.6L182.3 293.1L176 288.3L170.4 283.4L165.3 278.3L160.9 273L157.2 267.5L154.2 262L151.9 256.4L150.3 250.7L149.5 244.9L149.4 239.2L150 233.4L151.3 227.7L153.4 222.1L156.1 216.5L159.6 211L163.8 205.7L168.6 200.5L174.1 195.5L180.2 190.7L186.9 186.1L194.2 181.7L202 177.6L210.3 173.8L219.1 170.2L228.3 167L237.9 164L247.9 161.4L258.1 159.2L268.7 157.3L279.4 155.7L290.4 154.5L301.4 153.7L312.6 153.3L323.7 153.2L334.9 153.5L346 154.2L356.9 155.3L367.8 156.7L378.4 158.5L388.7 160.6L398.8 163.1L408.5 165.9L417.9 169.1L426.8 172.5L435.3 176.3L443.3 180.3L450.8 184.6L457.7 189.1L464 193.9L469.6 198.8L474.7 204L479.1 209.2L482.8 214.7L485.8 220.2L488.1 225.8L489.7 231.5L490.5 237.3L490.6 243L490 248.8L488.7 254.5L486.6 260.1L483.9 265.7L480.4 271.2L476.2 276.5L471.4 281.7L465.9 286.7L459.8 291.5L453.1 296.1L445.8 300.5L438 304.6Z"/><path class="iso-line iso-crease" data-tone="faint" d="M490.6 243L490 248.8L488.7 254.5L486.6 260.1L483.9 265.7L480.4 271.2L476.2 276.5L471.4 281.7L465.9 286.7L459.8 291.5L453.1 296.1L445.8 300.5L438 304.6L429.7 308.4L420.9 312L411.7 315.2L402.1 318.2L392.1 320.8L381.9 323L371.3 324.9L360.6 326.5L349.6 327.7L338.6 328.5L327.4 328.9L316.3 329L305.1 328.7L294 328L283.1 326.9L272.2 325.5L261.6 323.7L251.3 321.6L241.2 319.1L231.5 316.3L222.1 313.1L213.2 309.7L204.7 305.9L196.7 301.9L189.2 297.6L182.3 293.1L176 288.3L170.4 283.4L165.3 278.3L160.9 273L157.2 267.5L154.2 262L151.9 256.4L150.3 250.7L149.5 244.9L149.4 239.2"/><path class="iso-line iso-edge" data-tone="lo" d="M149.4 239.2L150 233.4L151.3 227.7L153.4 222.1L156.1 216.5L159.6 211L163.8 205.7L168.6 200.5L174.1 195.5L180.2 190.7L186.9 186.1L194.2 181.7L202 177.6L210.3 173.8L219.1 170.2L228.3 167L237.9 164L247.9 161.4L258.1 159.2L268.7 157.3L279.4 155.7L290.4 154.5L301.4 153.7L312.6 153.3L323.7 153.2L334.9 153.5L346 154.2L356.9 155.3L367.8 156.7L378.4 158.5L388.7 160.6L398.8 163.1L408.5 165.9L417.9 169.1L426.8 172.5L435.3 176.3L443.3 180.3L450.8 184.6L457.7 189.1L464 193.9L469.6 198.8L474.7 204L479.1 209.2L482.8 214.7L485.8 220.2L488.1 225.8L489.7 231.5L490.5 237.3L490.6 243M490.6 246.9L490 252.7L488.7 258.4L486.6 264.1L483.9 269.6L480.4 275.1L476.2 280.4L471.4 285.6L465.9 290.6L459.8 295.4L453.1 300L445.8 304.4L438 308.5L429.7 312.4L420.9 315.9L411.7 319.2L402.1 322.1L392.1 324.7L381.9 327L371.3 328.9L360.6 330.4L349.6 331.6L338.6 332.4L327.4 332.8L316.3 332.9L305.1 332.6L294 331.9L283.1 330.8L272.2 329.4L261.6 327.6L251.3 325.5L241.2 323L231.5 320.2L222.1 317L213.2 313.6L204.7 309.8L196.7 305.8L189.2 301.5L182.3 297L176 292.3L170.4 287.3L165.3 282.2L160.9 276.9L157.2 271.5L154.2 265.9L151.9 260.3L150.3 254.6L149.5 248.9L149.4 243.1M149.4 239.2L149.4 243.1M490.6 243L490.6 246.9"/></g><g class="iso-solid"><path class="iso-fill" d="M161.5 222.3L162.1 217L163.3 211.7L165.3 206.5L167.8 201.3L171.1 196.2L174.9 191.2L179.4 186.4L184.5 181.8L190.2 177.3L196.4 173L203.1 169L210.4 165.2L218.1 161.6L226.3 158.3L234.8 155.3L243.8 152.6L253 150.1L262.6 148L272.3 146.3L282.3 144.8L292.5 143.7L302.7 143L313.1 142.6L323.5 142.5L333.8 142.8L344.1 143.4L354.3 144.4L364.4 145.8L374.2 147.4L383.8 149.4L393.2 151.7L402.2 154.3L410.9 157.3L419.2 160.5L427.1 163.9L434.5 167.7L441.4 171.6L447.8 175.9L453.7 180.3L459 184.9L463.6 189.6L467.7 194.5L471.2 199.6L474 204.7L476.1 209.9L477.6 215.2L478.3 220.6L478.5 225.9L478.5 242.9L477.9 248.2L476.7 253.5L474.7 258.8L472.2 263.9L468.9 269L465.1 274L460.6 278.8L455.5 283.5L449.8 287.9L443.6 292.2L436.9 296.3L429.6 300.1L421.9 303.6L413.7 306.9L405.2 310L396.2 312.7L387 315.1L377.4 317.2L367.7 319L357.7 320.4L347.5 321.5L337.3 322.2L326.9 322.7L316.5 322.7L306.2 322.4L295.9 321.8L285.7 320.8L275.6 319.5L265.8 317.8L256.2 315.8L246.8 313.5L237.8 310.9L229.1 308L220.8 304.8L212.9 301.3L205.5 297.6L198.6 293.6L192.2 289.4L186.3 285L181 280.4L176.4 275.6L172.3 270.7L168.8 265.7L166 260.5L163.9 255.3L162.4 250L161.7 244.7L161.5 239.3Z"/><path class="iso-shade" data-shade="0" d="M421.9 303.6L413.7 306.9L413.7 290L421.9 286.7ZM413.7 306.9L405.2 310L405.2 293L413.7 290ZM405.2 310L396.2 312.7L396.2 295.7L405.2 293ZM478.5 242.9L477.9 248.2L477.9 231.2L478.5 225.9ZM477.9 248.2L476.7 253.5L476.7 236.5L477.9 231.2ZM476.7 253.5L474.7 258.8L474.7 241.8L476.7 236.5ZM474.7 258.8L472.2 263.9L472.2 247L474.7 241.8ZM472.2 263.9L468.9 269L468.9 252L472.2 247ZM468.9 269L465.1 274L465.1 257L468.9 252ZM465.1 274L460.6 278.8L460.6 261.8L465.1 257ZM460.6 278.8L455.5 283.5L455.5 266.5L460.6 261.8ZM455.5 283.5L449.8 287.9L449.8 270.9L455.5 266.5ZM449.8 287.9L443.6 292.2L443.6 275.2L449.8 270.9ZM443.6 292.2L436.9 296.3L436.9 279.3L443.6 275.2ZM436.9 296.3L429.6 300.1L429.6 283.1L436.9 279.3ZM429.6 300.1L421.9 303.6L421.9 286.7L429.6 283.1Z"/><path class="iso-shade" data-shade="1" d="M396.2 312.7L387 315.1L387 298.1L396.2 295.7ZM387 315.1L377.4 317.2L377.4 300.2L387 298.1ZM377.4 317.2L367.7 319L367.7 302L377.4 300.2ZM367.7 319L357.7 320.4L357.7 303.4L367.7 302ZM357.7 320.4L347.5 321.5L347.5 304.5L357.7 303.4ZM347.5 321.5L337.3 322.2L337.3 305.3L347.5 304.5ZM337.3 322.2L326.9 322.7L326.9 305.7L337.3 305.3ZM326.9 322.7L316.5 322.7L316.5 305.7L326.9 305.7Z"/><path class="iso-shade" data-shade="2" d="M316.5 322.7L306.2 322.4L306.2 305.4L316.5 305.7ZM306.2 322.4L295.9 321.8L295.9 304.8L306.2 305.4ZM295.9 321.8L285.7 320.8L285.7 303.8L295.9 304.8ZM285.7 320.8L275.6 319.5L275.6 302.5L285.7 303.8ZM275.6 319.5L265.8 317.8L265.8 300.8L275.6 302.5ZM265.8 317.8L256.2 315.8L256.2 298.8L265.8 300.8ZM256.2 315.8L246.8 313.5L246.8 296.5L256.2 298.8ZM246.8 313.5L237.8 310.9L237.8 293.9L246.8 296.5Z"/><path class="iso-shade" data-shade="3" d="M237.8 310.9L229.1 308L229.1 291L237.8 293.9ZM229.1 308L220.8 304.8L220.8 287.8L229.1 291ZM220.8 304.8L212.9 301.3L212.9 284.3L220.8 287.8ZM212.9 301.3L205.5 297.6L205.5 280.6L212.9 284.3ZM205.5 297.6L198.6 293.6L198.6 276.6L205.5 280.6ZM198.6 293.6L192.2 289.4L192.2 272.4L198.6 276.6ZM192.2 289.4L186.3 285L186.3 268L192.2 272.4ZM186.3 285L181 280.4L181 263.4L186.3 268ZM181 280.4L176.4 275.6L176.4 258.6L181 263.4ZM176.4 275.6L172.3 270.7L172.3 253.7L176.4 258.6ZM172.3 270.7L168.8 265.7L168.8 248.7L172.3 253.7ZM168.8 265.7L166 260.5L166 243.5L168.8 248.7ZM166 260.5L163.9 255.3L163.9 238.3L166 243.5ZM163.9 255.3L162.4 250L162.4 233L163.9 238.3ZM162.4 250L161.7 244.7L161.7 227.7L162.4 233ZM161.7 244.7L161.5 239.3L161.5 222.3L161.7 227.7Z"/><path class="iso-top" d="M421.9 286.7L413.7 290L405.2 293L396.2 295.7L387 298.1L377.4 300.2L367.7 302L357.7 303.4L347.5 304.5L337.3 305.3L326.9 305.7L316.5 305.7L306.2 305.4L295.9 304.8L285.7 303.8L275.6 302.5L265.8 300.8L256.2 298.8L246.8 296.5L237.8 293.9L229.1 291L220.8 287.8L212.9 284.3L205.5 280.6L198.6 276.6L192.2 272.4L186.3 268L181 263.4L176.4 258.6L172.3 253.7L168.8 248.7L166 243.5L163.9 238.3L162.4 233L161.7 227.7L161.5 222.3L162.1 217L163.3 211.7L165.3 206.5L167.8 201.3L171.1 196.2L174.9 191.2L179.4 186.4L184.5 181.8L190.2 177.3L196.4 173L203.1 169L210.4 165.2L218.1 161.6L226.3 158.3L234.8 155.3L243.8 152.6L253 150.1L262.6 148L272.3 146.3L282.3 144.8L292.5 143.7L302.7 143L313.1 142.6L323.5 142.5L333.8 142.8L344.1 143.4L354.3 144.4L364.4 145.8L374.2 147.4L383.8 149.4L393.2 151.7L402.2 154.3L410.9 157.3L419.2 160.5L427.1 163.9L434.5 167.7L441.4 171.6L447.8 175.9L453.7 180.3L459 184.9L463.6 189.6L467.7 194.5L471.2 199.6L474 204.7L476.1 209.9L477.6 215.2L478.3 220.6L478.5 225.9L477.9 231.2L476.7 236.5L474.7 241.8L472.2 247L468.9 252L465.1 257L460.6 261.8L455.5 266.5L449.8 270.9L443.6 275.2L436.9 279.3L429.6 283.1Z"/><path class="iso-line iso-crease" data-tone="faint" d="M478.5 225.9L477.9 231.2L476.7 236.5L474.7 241.8L472.2 247L468.9 252L465.1 257L460.6 261.8L455.5 266.5L449.8 270.9L443.6 275.2L436.9 279.3L429.6 283.1L421.9 286.7L413.7 290L405.2 293L396.2 295.7L387 298.1L377.4 300.2L367.7 302L357.7 303.4L347.5 304.5L337.3 305.3L326.9 305.7L316.5 305.7L306.2 305.4L295.9 304.8L285.7 303.8L275.6 302.5L265.8 300.8L256.2 298.8L246.8 296.5L237.8 293.9L229.1 291L220.8 287.8L212.9 284.3L205.5 280.6L198.6 276.6L192.2 272.4L186.3 268L181 263.4L176.4 258.6L172.3 253.7L168.8 248.7L166 243.5L163.9 238.3L162.4 233L161.7 227.7L161.5 222.3"/><path class="iso-line iso-edge" data-tone="lo" d="M161.5 222.3L162.1 217L163.3 211.7L165.3 206.5L167.8 201.3L171.1 196.2L174.9 191.2L179.4 186.4L184.5 181.8L190.2 177.3L196.4 173L203.1 169L210.4 165.2L218.1 161.6L226.3 158.3L234.8 155.3L243.8 152.6L253 150.1L262.6 148L272.3 146.3L282.3 144.8L292.5 143.7L302.7 143L313.1 142.6L323.5 142.5L333.8 142.8L344.1 143.4L354.3 144.4L364.4 145.8L374.2 147.4L383.8 149.4L393.2 151.7L402.2 154.3L410.9 157.3L419.2 160.5L427.1 163.9L434.5 167.7L441.4 171.6L447.8 175.9L453.7 180.3L459 184.9L463.6 189.6L467.7 194.5L471.2 199.6L474 204.7L476.1 209.9L477.6 215.2L478.3 220.6L478.5 225.9M478.5 242.9L477.9 248.2L476.7 253.5L474.7 258.8L472.2 263.9L468.9 269L465.1 274L460.6 278.8L455.5 283.5L449.8 287.9L443.6 292.2L436.9 296.3L429.6 300.1L421.9 303.6L413.7 306.9L405.2 310L396.2 312.7L387 315.1L377.4 317.2L367.7 319L357.7 320.4L347.5 321.5L337.3 322.2L326.9 322.7L316.5 322.7L306.2 322.4L295.9 321.8L285.7 320.8L275.6 319.5L265.8 317.8L256.2 315.8L246.8 313.5L237.8 310.9L229.1 308L220.8 304.8L212.9 301.3L205.5 297.6L198.6 293.6L192.2 289.4L186.3 285L181 280.4L176.4 275.6L172.3 270.7L168.8 265.7L166 260.5L163.9 255.3L162.4 250L161.7 244.7L161.5 239.3M161.5 222.3L161.5 239.3M478.5 225.9L478.5 242.9"/></g><g class="iso-solid"><path class="iso-fill" d="M112.7 216.1L112.9 210.9L113.5 205.7L114.7 200.5L116.3 195.3L118.4 190.2L121 185.1L124.1 180.1L127.7 175.2L131.7 170.4L136.2 165.7L141.1 161.1L146.4 156.6L152.2 152.3L158.4 148.2L164.9 144.2L171.9 140.3L179.1 136.7L186.8 133.2L194.7 129.9L203 126.9L211.5 124L220.3 121.4L229.3 119L238.6 116.8L248.1 114.9L257.7 113.2L267.4 111.7L277.3 110.5L287.4 109.6L297.4 108.9L307.6 108.4L317.7 108.2L327.9 108.3L338.1 108.6L348.2 109.2L358.2 110.1L368.2 111.2L378 112.5L387.7 114.1L397.2 115.9L406.6 118L415.7 120.3L424.6 122.8L433.3 125.6L441.6 128.5L449.7 131.7L457.5 135.1L465 138.7L472 142.4L478.8 146.4L485.1 150.5L491.1 154.7L496.6 159.1L501.7 163.6L506.4 168.3L510.6 173.1L514.4 177.9L517.7 182.9L520.5 187.9L522.8 193L524.7 198.2L526 203.4L526.9 208.6L527.3 213.8L527.3 223L527.1 228.2L526.5 233.4L525.3 238.6L523.7 243.8L521.6 248.9L519 254L515.9 259L512.3 263.9L508.3 268.7L503.8 273.4L498.9 278L493.6 282.5L487.8 286.8L481.6 290.9L475.1 294.9L468.1 298.8L460.9 302.4L453.2 305.9L445.3 309.2L437 312.2L428.5 315.1L419.7 317.7L410.7 320.1L401.4 322.3L391.9 324.2L382.3 325.9L372.6 327.4L362.7 328.6L352.6 329.5L342.6 330.2L332.4 330.7L322.3 330.9L312.1 330.8L301.9 330.5L291.8 329.9L281.8 329L271.8 327.9L262 326.6L252.3 325L242.8 323.2L233.4 321.1L224.3 318.8L215.4 316.3L206.7 313.5L198.4 310.6L190.3 307.4L182.5 304L175 300.4L168 296.7L161.2 292.7L154.9 288.6L148.9 284.4L143.4 280L138.3 275.5L133.6 270.8L129.4 266L125.6 261.2L122.3 256.2L119.5 251.2L117.2 246.1L115.3 240.9L114 235.7L113.1 230.5L112.7 225.3Z"/><path class="iso-shade" data-shade="0" d="M453.2 305.9L445.3 309.2L445.3 300L453.2 296.8ZM445.3 309.2L437 312.2L437 303.1L445.3 300ZM437 312.2L428.5 315.1L428.5 305.9L437 303.1ZM428.5 315.1L419.7 317.7L419.7 308.6L428.5 305.9ZM527.3 223L527.1 228.2L527.1 219.1L527.3 213.8ZM527.1 228.2L526.5 233.4L526.5 224.3L527.1 219.1ZM526.5 233.4L525.3 238.6L525.3 229.5L526.5 224.3ZM525.3 238.6L523.7 243.8L523.7 234.7L525.3 229.5ZM523.7 243.8L521.6 248.9L521.6 239.8L523.7 234.7ZM521.6 248.9L519 254L519 244.8L521.6 239.8ZM519 254L515.9 259L515.9 249.8L519 244.8ZM515.9 259L512.3 263.9L512.3 254.8L515.9 249.8ZM512.3 263.9L508.3 268.7L508.3 259.6L512.3 254.8ZM508.3 268.7L503.8 273.4L503.8 264.3L508.3 259.6ZM503.8 273.4L498.9 278L498.9 268.9L503.8 264.3ZM498.9 278L493.6 282.5L493.6 273.3L498.9 268.9ZM493.6 282.5L487.8 286.8L487.8 277.6L493.6 273.3ZM487.8 286.8L481.6 290.9L481.6 281.8L487.8 277.6ZM481.6 290.9L475.1 294.9L475.1 285.8L481.6 281.8ZM475.1 294.9L468.1 298.8L468.1 289.6L475.1 285.8ZM468.1 298.8L460.9 302.4L460.9 293.3L468.1 289.6ZM460.9 302.4L453.2 305.9L453.2 296.8L460.9 293.3Z"/><path class="iso-shade" data-shade="1" d="M419.7 317.7L410.7 320.1L410.7 311L419.7 308.6ZM410.7 320.1L401.4 322.3L401.4 313.1L410.7 311ZM401.4 322.3L391.9 324.2L391.9 315.1L401.4 313.1ZM391.9 324.2L382.3 325.9L382.3 316.8L391.9 315.1ZM382.3 325.9L372.6 327.4L372.6 318.2L382.3 316.8ZM372.6 327.4L362.7 328.6L362.7 319.4L372.6 318.2ZM362.7 328.6L352.6 329.5L352.6 320.4L362.7 319.4ZM352.6 329.5L342.6 330.2L342.6 321.1L352.6 320.4ZM342.6 330.2L332.4 330.7L332.4 321.5L342.6 321.1ZM332.4 330.7L322.3 330.9L322.3 321.7L332.4 321.5Z"/><path class="iso-shade" data-shade="2" d="M322.3 330.9L312.1 330.8L312.1 321.6L322.3 321.7ZM312.1 330.8L301.9 330.5L301.9 321.3L312.1 321.6ZM301.9 330.5L291.8 329.9L291.8 320.7L301.9 321.3ZM291.8 329.9L281.8 329L281.8 319.9L291.8 320.7ZM281.8 329L271.8 327.9L271.8 318.8L281.8 319.9ZM271.8 327.9L262 326.6L262 317.5L271.8 318.8ZM262 326.6L252.3 325L252.3 315.9L262 317.5ZM252.3 325L242.8 323.2L242.8 314L252.3 315.9ZM242.8 323.2L233.4 321.1L233.4 312L242.8 314ZM233.4 321.1L224.3 318.8L224.3 309.7L233.4 312ZM224.3 318.8L215.4 316.3L215.4 307.1L224.3 309.7Z"/><path class="iso-shade" data-shade="3" d="M215.4 316.3L206.7 313.5L206.7 304.4L215.4 307.1ZM206.7 313.5L198.4 310.6L198.4 301.4L206.7 304.4ZM198.4 310.6L190.3 307.4L190.3 298.2L198.4 301.4ZM190.3 307.4L182.5 304L182.5 294.9L190.3 298.2ZM182.5 304L175 300.4L175 291.3L182.5 294.9ZM175 300.4L168 296.7L168 287.5L175 291.3ZM168 296.7L161.2 292.7L161.2 283.6L168 287.5ZM161.2 292.7L154.9 288.6L154.9 279.5L161.2 283.6ZM154.9 288.6L148.9 284.4L148.9 275.2L154.9 279.5ZM148.9 284.4L143.4 280L143.4 270.9L148.9 275.2ZM143.4 280L138.3 275.5L138.3 266.3L143.4 270.9ZM138.3 275.5L133.6 270.8L133.6 261.7L138.3 266.3ZM133.6 270.8L129.4 266L129.4 256.9L133.6 261.7ZM129.4 266L125.6 261.2L125.6 252L129.4 256.9ZM125.6 261.2L122.3 256.2L122.3 247.1L125.6 252ZM122.3 256.2L119.5 251.2L119.5 242L122.3 247.1ZM119.5 251.2L117.2 246.1L117.2 236.9L119.5 242ZM117.2 246.1L115.3 240.9L115.3 231.8L117.2 236.9ZM115.3 240.9L114 235.7L114 226.6L115.3 231.8ZM114 235.7L113.1 230.5L113.1 221.4L114 226.6ZM113.1 230.5L112.7 225.3L112.7 216.1L113.1 221.4Z"/><path class="iso-top" d="M453.2 296.8L445.3 300L437 303.1L428.5 305.9L419.7 308.6L410.7 311L401.4 313.1L391.9 315.1L382.3 316.8L372.6 318.2L362.7 319.4L352.6 320.4L342.6 321.1L332.4 321.5L322.3 321.7L312.1 321.6L301.9 321.3L291.8 320.7L281.8 319.9L271.8 318.8L262 317.5L252.3 315.9L242.8 314L233.4 312L224.3 309.7L215.4 307.1L206.7 304.4L198.4 301.4L190.3 298.2L182.5 294.9L175 291.3L168 287.5L161.2 283.6L154.9 279.5L148.9 275.2L143.4 270.9L138.3 266.3L133.6 261.7L129.4 256.9L125.6 252L122.3 247.1L119.5 242L117.2 236.9L115.3 231.8L114 226.6L113.1 221.4L112.7 216.1L112.9 210.9L113.5 205.7L114.7 200.5L116.3 195.3L118.4 190.2L121 185.1L124.1 180.1L127.7 175.2L131.7 170.4L136.2 165.7L141.1 161.1L146.4 156.6L152.2 152.3L158.4 148.2L164.9 144.2L171.9 140.3L179.1 136.7L186.8 133.2L194.7 129.9L203 126.9L211.5 124L220.3 121.4L229.3 119L238.6 116.8L248.1 114.9L257.7 113.2L267.4 111.7L277.3 110.5L287.4 109.6L297.4 108.9L307.6 108.4L317.7 108.2L327.9 108.3L338.1 108.6L348.2 109.2L358.2 110.1L368.2 111.2L378 112.5L387.7 114.1L397.2 115.9L406.6 118L415.7 120.3L424.6 122.8L433.3 125.6L441.6 128.5L449.7 131.7L457.5 135.1L465 138.7L472 142.4L478.8 146.4L485.1 150.5L491.1 154.7L496.6 159.1L501.7 163.6L506.4 168.3L510.6 173.1L514.4 177.9L517.7 182.9L520.5 187.9L522.8 193L524.7 198.2L526 203.4L526.9 208.6L527.3 213.8L527.1 219.1L526.5 224.3L525.3 229.5L523.7 234.7L521.6 239.8L519 244.8L515.9 249.8L512.3 254.8L508.3 259.6L503.8 264.3L498.9 268.9L493.6 273.3L487.8 277.6L481.6 281.8L475.1 285.8L468.1 289.6L460.9 293.3Z"/><path class="iso-line iso-crease" data-tone="lo" d="M527.3 213.8L527.1 219.1L526.5 224.3L525.3 229.5L523.7 234.7L521.6 239.8L519 244.8L515.9 249.8L512.3 254.8L508.3 259.6L503.8 264.3L498.9 268.9L493.6 273.3L487.8 277.6L481.6 281.8L475.1 285.8L468.1 289.6L460.9 293.3L453.2 296.8L445.3 300L437 303.1L428.5 305.9L419.7 308.6L410.7 311L401.4 313.1L391.9 315.1L382.3 316.8L372.6 318.2L362.7 319.4L352.6 320.4L342.6 321.1L332.4 321.5L322.3 321.7L312.1 321.6L301.9 321.3L291.8 320.7L281.8 319.9L271.8 318.8L262 317.5L252.3 315.9L242.8 314L233.4 312L224.3 309.7L215.4 307.1L206.7 304.4L198.4 301.4L190.3 298.2L182.5 294.9L175 291.3L168 287.5L161.2 283.6L154.9 279.5L148.9 275.2L143.4 270.9L138.3 266.3L133.6 261.7L129.4 256.9L125.6 252L122.3 247.1L119.5 242L117.2 236.9L115.3 231.8L114 226.6L113.1 221.4L112.7 216.1"/><path class="iso-line iso-bevel" data-tone="lo" d="M527.3 213.8L525.6 219L525 224.2L523.8 229.4L522.2 234.5L520.1 239.6L517.5 244.6L514.5 249.6L510.9 254.5L506.9 259.2L502.5 263.9L497.6 268.5L492.3 272.9L486.6 277.2L480.5 281.3L473.9 285.3L467.1 289.1L459.8 292.7L452.2 296.2L444.4 299.4L436.2 302.4L427.7 305.3L419 307.9L410 310.3L400.8 312.4L391.4 314.4L381.9 316L372.2 317.5L362.3 318.7L352.4 319.6L342.4 320.3L332.3 320.8L322.2 320.9L312.1 320.9L302.1 320.5L292 320L282.1 319.1L272.2 318L262.4 316.7L252.8 315.1L243.3 313.3L234.1 311.3L225 309L216.2 306.5L207.6 303.7L199.3 300.8L191.2 297.6L183.5 294.3L176.1 290.7L169.1 287L162.4 283.1L156.1 279L150.2 274.8L144.7 270.4L139.6 265.9L135 261.3L130.8 256.6L127.1 251.8L123.8 246.8L121 241.8L118.7 236.8L116.8 231.7L115.5 226.5L114.6 221.3L112.7 216.1"/><path class="iso-line iso-edge" data-tone="mid" d="M112.7 216.1L112.9 210.9L113.5 205.7L114.7 200.5L116.3 195.3L118.4 190.2L121 185.1L124.1 180.1L127.7 175.2L131.7 170.4L136.2 165.7L141.1 161.1L146.4 156.6L152.2 152.3L158.4 148.2L164.9 144.2L171.9 140.3L179.1 136.7L186.8 133.2L194.7 129.9L203 126.9L211.5 124L220.3 121.4L229.3 119L238.6 116.8L248.1 114.9L257.7 113.2L267.4 111.7L277.3 110.5L287.4 109.6L297.4 108.9L307.6 108.4L317.7 108.2L327.9 108.3L338.1 108.6L348.2 109.2L358.2 110.1L368.2 111.2L378 112.5L387.7 114.1L397.2 115.9L406.6 118L415.7 120.3L424.6 122.8L433.3 125.6L441.6 128.5L449.7 131.7L457.5 135.1L465 138.7L472 142.4L478.8 146.4L485.1 150.5L491.1 154.7L496.6 159.1L501.7 163.6L506.4 168.3L510.6 173.1L514.4 177.9L517.7 182.9L520.5 187.9L522.8 193L524.7 198.2L526 203.4L526.9 208.6L527.3 213.8M527.3 223L527.1 228.2L526.5 233.4L525.3 238.6L523.7 243.8L521.6 248.9L519 254L515.9 259L512.3 263.9L508.3 268.7L503.8 273.4L498.9 278L493.6 282.5L487.8 286.8L481.6 290.9L475.1 294.9L468.1 298.8L460.9 302.4L453.2 305.9L445.3 309.2L437 312.2L428.5 315.1L419.7 317.7L410.7 320.1L401.4 322.3L391.9 324.2L382.3 325.9L372.6 327.4L362.7 328.6L352.6 329.5L342.6 330.2L332.4 330.7L322.3 330.9L312.1 330.8L301.9 330.5L291.8 329.9L281.8 329L271.8 327.9L262 326.6L252.3 325L242.8 323.2L233.4 321.1L224.3 318.8L215.4 316.3L206.7 313.5L198.4 310.6L190.3 307.4L182.5 304L175 300.4L168 296.7L161.2 292.7L154.9 288.6L148.9 284.4L143.4 280L138.3 275.5L133.6 270.8L129.4 266L125.6 261.2L122.3 256.2L119.5 251.2L117.2 246.1L115.3 240.9L114 235.7L113.1 230.5L112.7 225.3M112.7 216.1L112.7 225.3M527.3 213.8L527.3 223"/></g><g class="iso-solid"><path class="iso-fill" d="M157.5 154.3L157.8 153.6L158.4 152.8L159.2 152.2L160.2 151.6L246.6 114.3L247.9 113.9L249.2 113.6L250.7 113.4L252.2 113.4L253.7 113.5L255 113.8L256.3 114.3L257.4 114.8L386.7 194.2L387.5 194.8L388.1 195.5L388.4 196.3L388.4 197L388.4 207.5L388.1 208.2L387.6 208.9L386.8 209.6L385.7 210.1L299.3 247.5L298.1 247.9L296.7 248.2L295.3 248.4L293.8 248.4L292.3 248.2L290.9 247.9L289.7 247.5L288.6 247L159.3 167.6L158.4 167L157.9 166.3L157.6 165.5L157.5 164.8Z"/><path class="iso-shade" data-shade="0" d="M388.4 207.5L388.1 208.2L388.1 197.8L388.4 197ZM388.1 208.2L387.6 208.9L387.6 198.5L388.1 197.8ZM387.6 208.9L386.8 209.6L386.8 199.1L387.6 198.5ZM386.8 209.6L385.7 210.1L385.7 199.7L386.8 199.1ZM385.7 210.1L299.3 247.5L299.3 237L385.7 199.7ZM299.3 247.5L298.1 247.9L298.1 237.5L299.3 237Z"/><path class="iso-shade" data-shade="1" d="M298.1 247.9L296.7 248.2L296.7 237.8L298.1 237.5ZM296.7 248.2L295.3 248.4L295.3 237.9L296.7 237.8ZM295.3 248.4L293.8 248.4L293.8 237.9L295.3 237.9Z"/><path class="iso-shade" data-shade="2" d="M293.8 248.4L292.3 248.2L292.3 237.8L293.8 237.9ZM292.3 248.2L290.9 247.9L290.9 237.5L292.3 237.8Z"/><path class="iso-shade" data-shade="3" d="M290.9 247.9L289.7 247.5L289.7 237.1L290.9 237.5ZM289.7 247.5L288.6 247L288.6 236.5L289.7 237.1ZM288.6 247L159.3 167.6L159.3 157.2L288.6 236.5ZM159.3 167.6L158.4 167L158.4 156.5L159.3 157.2ZM158.4 167L157.9 166.3L157.9 155.8L158.4 156.5ZM157.9 166.3L157.6 165.5L157.6 155.1L157.9 155.8ZM157.6 165.5L157.5 164.8L157.5 154.3L157.6 155.1Z"/><path class="iso-top" d="M386.7 194.2L387.5 194.8L388.1 195.5L388.4 196.3L388.4 197L388.1 197.8L387.6 198.5L386.8 199.1L385.7 199.7L299.3 237L298.1 237.5L296.7 237.8L295.3 237.9L293.8 237.9L292.3 237.8L290.9 237.5L289.7 237.1L288.6 236.5L159.3 157.2L158.4 156.5L157.9 155.8L157.6 155.1L157.5 154.3L157.8 153.6L158.4 152.8L159.2 152.2L160.2 151.6L246.6 114.3L247.9 113.9L249.2 113.6L250.7 113.4L252.2 113.4L253.7 113.5L255 113.8L256.3 114.3L257.4 114.8Z"/><path class="iso-line iso-crease" data-tone="faint" d="M388.4 197L388.1 197.8L387.6 198.5L386.8 199.1L385.7 199.7L299.3 237L298.1 237.5L296.7 237.8L295.3 237.9L293.8 237.9L292.3 237.8L290.9 237.5L289.7 237.1L288.6 236.5L159.3 157.2L158.4 156.5L157.9 155.8L157.6 155.1L157.5 154.3"/><path class="iso-line iso-bevel" data-tone="faint" d="M388.4 197L386.7 197.6L386.2 198.1L385.6 198.6L384.7 199.1L298.4 236.4L297.4 236.8L296.3 237L295.1 237.1L293.9 237.1L292.7 237L291.6 236.8L290.6 236.5L289.7 236L160.5 156.7L159.8 156.2L159.3 155.6L159.1 155L157.5 154.3"/><path class="iso-line" data-tone="faint" d="M388.4 203.6L388.1 204.3L387.6 205L386.8 205.7L385.7 206.2L299.3 243.6L298.1 244L296.7 244.3L295.3 244.5L293.8 244.5L292.3 244.3L290.9 244L289.7 243.6L288.6 243.1L159.3 163.7L158.4 163.1L157.9 162.4L157.6 161.6L157.5 160.8"/><path class="iso-line iso-edge" data-tone="mid" d="M157.5 154.3L157.8 153.6L158.4 152.8L159.2 152.2L160.2 151.6L246.6 114.3L247.9 113.9L249.2 113.6L250.7 113.4L252.2 113.4L253.7 113.5L255 113.8L256.3 114.3L257.4 114.8L386.7 194.2L387.5 194.8L388.1 195.5L388.4 196.3L388.4 197M388.4 207.5L388.1 208.2L387.6 208.9L386.8 209.6L385.7 210.1L299.3 247.5L298.1 247.9L296.7 248.2L295.3 248.4L293.8 248.4L292.3 248.2L290.9 247.9L289.7 247.5L288.6 247L159.3 167.6L158.4 167L157.9 166.3L157.6 165.5L157.5 164.8M388.4 197L388.4 207.5M157.5 154.3L157.5 164.8"/></g><g class="iso-solid"><path class="iso-fill" d="M308.4 246.9L308.7 246.1L309.2 245.4L310 244.8L311.1 244.2L397.5 206.9L398.7 206.5L400.1 206.2L401.6 206L403 206L404.5 206.1L405.9 206.4L407.1 206.8L408.2 207.4L480.7 251.9L481.6 252.5L482.1 253.2L482.4 254L482.5 254.7L482.5 265.2L482.2 266L481.6 266.7L480.8 267.3L479.8 267.9L393.4 305.2L392.1 305.6L390.8 305.9L389.3 306.1L387.8 306.1L386.3 306L385 305.7L383.7 305.3L382.6 304.7L310.2 260.2L309.3 259.6L308.7 258.9L308.4 258.1L308.4 257.4Z"/><path class="iso-shade" data-shade="0" d="M482.5 265.2L482.2 266L482.2 255.5L482.5 254.7ZM482.2 266L481.6 266.7L481.6 256.2L482.2 255.5ZM481.6 266.7L480.8 267.3L480.8 256.9L481.6 256.2ZM480.8 267.3L479.8 267.9L479.8 257.4L480.8 256.9ZM479.8 267.9L393.4 305.2L393.4 294.7L479.8 257.4ZM393.4 305.2L392.1 305.6L392.1 295.2L393.4 294.7Z"/><path class="iso-shade" data-shade="1" d="M392.1 305.6L390.8 305.9L390.8 295.5L392.1 295.2ZM390.8 305.9L389.3 306.1L389.3 295.6L390.8 295.5ZM389.3 306.1L387.8 306.1L387.8 295.7L389.3 295.6Z"/><path class="iso-shade" data-shade="2" d="M387.8 306.1L386.3 306L386.3 295.5L387.8 295.7ZM386.3 306L385 305.7L385 295.2L386.3 295.5Z"/><path class="iso-shade" data-shade="3" d="M385 305.7L383.7 305.3L383.7 294.8L385 295.2ZM383.7 305.3L382.6 304.7L382.6 294.3L383.7 294.8ZM382.6 304.7L310.2 260.2L310.2 249.8L382.6 294.3ZM310.2 260.2L309.3 259.6L309.3 249.1L310.2 249.8ZM309.3 259.6L308.7 258.9L308.7 248.4L309.3 249.1ZM308.7 258.9L308.4 258.1L308.4 247.7L308.7 248.4ZM308.4 258.1L308.4 257.4L308.4 246.9L308.4 247.7Z"/><path class="iso-top" d="M480.7 251.9L481.6 252.5L482.1 253.2L482.4 254L482.5 254.7L482.2 255.5L481.6 256.2L480.8 256.9L479.8 257.4L393.4 294.7L392.1 295.2L390.8 295.5L389.3 295.6L387.8 295.7L386.3 295.5L385 295.2L383.7 294.8L382.6 294.3L310.2 249.8L309.3 249.1L308.7 248.4L308.4 247.7L308.4 246.9L308.7 246.1L309.2 245.4L310 244.8L311.1 244.2L397.5 206.9L398.7 206.5L400.1 206.2L401.6 206L403 206L404.5 206.1L405.9 206.4L407.1 206.8L408.2 207.4Z"/><path class="iso-line iso-crease" data-tone="faint" d="M482.5 254.7L482.2 255.5L481.6 256.2L480.8 256.9L479.8 257.4L393.4 294.7L392.1 295.2L390.8 295.5L389.3 295.6L387.8 295.7L386.3 295.5L385 295.2L383.7 294.8L382.6 294.3L310.2 249.8L309.3 249.1L308.7 248.4L308.4 247.7L308.4 246.9"/><path class="iso-line iso-bevel" data-tone="faint" d="M482.5 254.7L480.7 255.3L480.3 255.9L479.6 256.4L478.7 256.8L392.5 294.1L391.4 294.5L390.3 294.7L389.1 294.9L387.9 294.9L386.8 294.8L385.7 294.5L384.7 294.2L383.8 293.7L311.4 249.3L310.6 248.8L310.2 248.2L309.9 247.6L308.4 246.9"/><path class="iso-line" data-tone="faint" d="M482.5 261.3L482.2 262L481.6 262.7L480.8 263.4L479.8 263.9L393.4 301.3L392.1 301.7L390.8 302L389.3 302.2L387.8 302.2L386.3 302L385 301.8L383.7 301.3L382.6 300.8L310.2 256.3L309.3 255.7L308.7 255L308.4 254.2L308.4 253.4"/><path class="iso-line iso-edge" data-tone="mid" d="M308.4 246.9L308.7 246.1L309.2 245.4L310 244.8L311.1 244.2L397.5 206.9L398.7 206.5L400.1 206.2L401.6 206L403 206L404.5 206.1L405.9 206.4L407.1 206.8L408.2 207.4L480.7 251.9L481.6 252.5L482.1 253.2L482.4 254L482.5 254.7M482.5 265.2L482.2 266L481.6 266.7L480.8 267.3L479.8 267.9L393.4 305.2L392.1 305.6L390.8 305.9L389.3 306.1L387.8 306.1L386.3 306L385 305.7L383.7 305.3L382.6 304.7L310.2 260.2L309.3 259.6L308.7 258.9L308.4 258.1L308.4 257.4M482.5 254.7L482.5 265.2M308.4 246.9L308.4 257.4"/></g></svg><p class="an-pending">figura 3D pendiente</p></div></div><figcaption class="iso-legend"><span class="iso-keys"><span class="iso-key"><svg class="iso-swatch" data-mark="lit" viewBox="0 0 16 10" aria-hidden="true"><path d="M2 4.5 8 1.5 14 4.5 14 6 8 9 2 6Z"/><path class="iso-swatch-crease" d="M2 4.5 8 7.5 14 4.5"/></svg>La tarjeta: la solicitud que viaja</span><span class="iso-key"><svg class="iso-swatch" data-mark="raised" viewBox="0 0 16 10" aria-hidden="true"><path d="M2 4.5 8 1.5 14 4.5 14 6 8 9 2 6Z"/><path class="iso-swatch-crease" d="M2 4.5 8 7.5 14 4.5"/></svg>Todo lo que gira con la mesa</span></span><span class="iso-caption">A la izquierda, el chatbot; a la derecha, Hermes. Solo los une el puente FHIR, y el sello solo lo pone Hermes.</span></figcaption></figure>
+<section class="an-walk" aria-labelledby="an-pasos">
+<h2 id="an-pasos">Los cinco pasos</h2>
+<ol class="an-steps"><li><button type="button" class="an-step" data-step="0" aria-pressed="true"><span class="an-step-n">1</span><span class="an-step-t">Menú</span></button></li><li><button type="button" class="an-step" data-step="1" aria-pressed="false"><span class="an-step-n">2</span><span class="an-step-t">Verificación</span></button></li><li><button type="button" class="an-step" data-step="2" aria-pressed="false"><span class="an-step-n">3</span><span class="an-step-t">Recorrido</span></button></li><li><button type="button" class="an-step" data-step="3" aria-pressed="false"><span class="an-step-n">4</span><span class="an-step-t">Solicitud a Hermes</span></button></li><li><button type="button" class="an-step" data-step="4" aria-pressed="false"><span class="an-step-n">5</span><span class="an-step-t">Hermes confirma</span></button></li></ol>
+<div class="an-step-panel" aria-live="polite">
+<h3 data-step-title>Menú</h3>
+<p data-step-text>El paciente abre el chat y elige qué quiere hacer. La solicitud todavía es un borrador sobre el carro.</p>
+</div>
+</section>
+<section class="an-block" aria-labelledby="an-piezas">
+<h2 id="an-piezas">Las piezas</h2>
+<dl class="an-defs"><div><dt>La tarjeta</dt><dd>Es la solicitud del paciente. Es la única pieza iluminada: síguela con la vista.</dd></div><div><dt>El carro sobre rieles</dt><dd>Es la conversación. Avanza paso a paso y nunca se sale del camino.</dd></div><div><dt>La perilla de cinco posiciones</dt><dd>Es la máquina de estados. Cada posición es un paso fijo: mismo paso y mismos datos, misma respuesta.</dd></div><div><dt>La compuerta</dt><dd>Es la verificación. Solo se abre si el paciente demuestra quién es.</dd></div><div><dt>El puente FHIR</dt><dd>Es la única conexión entre el chatbot y Hermes. No hay otra puerta.</dd></div><div><dt>La bandeja y el sello</dt><dd>Son Hermes, la fuente de verdad. Lo que Hermes sella, queda en firme.</dd></div><div><dt>El tablero</dt><dd>Es la agenda. Cada ficha marca un cupo libre, apartado o confirmado.</dd></div><div><dt>La mesa giratoria</dt><dd>Sirve para mirar la máquina desde cualquier lado. Arrástrala.</dd></div></dl>
+</section>
+<section class="an-block" aria-labelledby="an-nunca">
+<h2 id="an-nunca">Lo que nunca hace</h2>
+<ul class="an-never"><li><strong>No usa inteligencia artificial.</strong> Nada de LLM, embeddings, RAG ni n8n. Cada frase sale de la configuración de la clínica, de su base de conocimiento o de la agenda.</li><li><strong>No confirma citas.</strong> Solo deja solicitudes. Confirmar, mover o cancelar es cosa de Hermes.</li><li><strong>No adivina de quién es la cuenta.</strong> La clínica (el tenant) sale solo del token JWT, nunca de lo que escribe el usuario.</li><li><strong>No guarda lo que no debe.</strong> Ni las respuestas de verificación ni datos clínicos quedan en mensajes, registros o auditoría.</li></ul>
+</section>
+<section class="an-block" aria-labelledby="an-va">
+<h2 id="an-va">Cómo va</h2>
+<ol class="an-phases"><li data-state="hecho"><span class="an-phase-state">Hecho</span><strong>Fases 1 a 3</strong><span>Cerradas: base del proyecto, agenda y el chat completo.</span></li><li data-state="hecho"><span class="an-phase-state">Hecho</span><strong>Fase 4.1, 4.2 y 4.3</strong><span>En main: lectura FHIR, escritura de maestros y pre-agenda por FHIR.</span></li><li data-state="siguiente"><span class="an-phase-state">Siguiente</span><strong>Fase 4.4</strong><span>Lo que sigue: el simulador de Hermes hablando por FHIR.</span></li></ol>
+</section>
+</main>
+<footer class="an-foot">
+<p>Esta vista es la versión sencilla. Si quieres el detalle de arquitectura, contratos y pruebas, lee el <a href="index.html">relato técnico completo</a>.</p>
+</footer>
+<script type="module">// Modelo puro de la figura: un parámetro t (0…4) mueve todas las piezas.
+// Lo comparten la geometría (figure.mjs), el runtime (live.js, inlinado) y la página.
+
+const STEPS = [
+  {
+    title: "Menú",
+    readout: "paso 1/5 · menú",
+    detail:
+      "El paciente abre el chat y elige qué quiere hacer. La solicitud todavía es un borrador sobre el carro.",
+  },
+  {
+    title: "Verificación",
+    readout: "paso 2/5 · verificación",
+    detail:
+      "Antes de seguir, el bot verifica quién es con preguntas de su propio banco. Si acierta, la compuerta se abre. La respuesta no se guarda en ninguna parte.",
+  },
+  {
+    title: "Recorrido",
+    readout: "paso 3/5 · recorrido",
+    detail:
+      "La conversación avanza paso a paso por los rieles: mismo paso y mismos datos, misma respuesta. La compuerta se cierra detrás.",
+  },
+  {
+    title: "Solicitud a Hermes",
+    readout: "paso 4/5 · cupo apartado",
+    detail:
+      "La solicitud cruza el puente FHIR, la única conexión entre las dos piezas. El cupo queda apartado (busy_tentative), no confirmado.",
+  },
+  {
+    title: "Hermes confirma",
+    readout: "paso 5/5 · cita confirmada",
+    detail:
+      "Solo Hermes pone el sello. La cita en firme la confirma, reprograma o cancela Hermes; el chatbot nunca.",
+  },
+];
+const LAST = STEPS.length - 1;
+
+// Geometría compartida (unidades del mundo, z hacia arriba, z = 0 es el tablero de la mesa).
+const MESA = { pivot: [0, 0], r: 136, h: 7 };
+const BASE_H = 8;
+const CHATBOT = { x: -119, y: -42, w: 142, d: 84, r: 5 };
+const HERMES = { x: 35, y: -42, w: 84, d: 84, r: 5 };
+const SELECTOR = [-100, -30];
+const TRAVEL = { carro: 92, tarjeta: 140, compuerta: 16, sello: 14, ficha: 24 };
+const PERILLA_STEP = -60;
+
+const clamp01 = (v) => Math.min(1, Math.max(0, v));
+const ease = (v) => v * v * (3 - 2 * v);
+const seg = (t, a, b) => ease(clamp01((t - a) / (b - a)));
+
+// Valores de figura { mesa, t } → valores de grupo del motor 3D.
+const follow = (values) => {
+  const t = values.t ?? 0;
+  const carro = 16 * seg(t, 0, 0.5) + 76 * seg(t, 1, 1.6);
+  return {
+    ...values,
+    carro,
+    compuerta: 16 * (seg(t, 0.55, 0.95) - seg(t, 1.65, 1.95)),
+    tarjeta: carro + 48 * seg(t, 2.1, 2.8),
+    sello: 14 * (seg(t, 3, 3.35) - seg(t, 3.6, 3.95)),
+    ficha: 12 * seg(t, 2.6, 2.9) + 12 * seg(t, 3.3, 3.55),
+    perilla: PERILLA_STEP * t,
+  };
+};
+
+// Estados alcanzables para T.build: el giro completo y todo el recorrido de t.
+const poses = () => {
+  const out = [];
+  for (let i = 0; i < 720; i++) out.push(follow({ mesa: i * 0.5, t: ((i % 160) / 160) * LAST }));
+  for (let i = 0; i <= 400; i++) out.push(follow({ mesa: 30, t: (i / 400) * LAST }));
+  return out;
+};
+
+(function fallbackLive() {
+  const body = document.body;
+  const readout = document.querySelector("[data-readout]");
+  const title = document.querySelector("[data-step-title]");
+  const text = document.querySelector("[data-step-text]");
+  const buttons = [...document.querySelectorAll("button[data-step]")];
+  const show = (index) => {
+    const step = STEPS[index];
+    for (const button of buttons) {
+      button.setAttribute("aria-pressed", String(Number(button.dataset.step) === index));
+    }
+    if (readout) readout.textContent = step.readout;
+    if (title) title.textContent = step.title;
+    if (text) text.textContent = step.detail;
+  };
+  for (const button of buttons) {
+    button.addEventListener("click", () => show(Number(button.dataset.step)));
+  }
+  if (window.matchMedia("(prefers-color-scheme: light)").matches) body.dataset.theme = "light";
+  document.querySelector("[data-theme-toggle]")?.addEventListener("click", () => {
+    body.dataset.theme = body.dataset.theme === "light" ? "dark" : "light";
+  });
+})();
+</script>
+</body>
+</html>

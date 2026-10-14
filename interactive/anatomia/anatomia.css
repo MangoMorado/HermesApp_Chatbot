@@ -1,0 +1,457 @@
+/* Página «Anatomía del chatbot». La tarjeta del kit (.iso-plate) conserva sus tokens --anatomy-*;
+   aquí solo viven los de la página (--anatomia-*), tomados de la marca de styles.css. */
+
+:root,
+.iso {
+  --anatomia-bg: #140c33;
+  --anatomia-surface: #1e1450;
+  --anatomia-raised: #271a63;
+  --anatomia-rule: #3a2c86;
+  --anatomia-ink: #f4f1ff;
+  --anatomia-ink-2: #b9b0e0;
+  --anatomia-ink-3: #9d94c9;
+  --anatomia-accent: #8851fa;
+  --anatomia-accent-ink: #c8b0fb;
+  --anatomia-focus: #c8b0fb;
+  --anatomia-ok: #4ade9a;
+  --anatomia-bar: #1e1450;
+  --anatomia-bar-rule: #3a2c86;
+  --anatomia-bar-ink: #b9b0e0;
+  --anatomia-sans: "Figtree", system-ui, sans-serif;
+  --anatomia-mono: "Martian Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --anatomia-bg: #f4f1ff;
+  --anatomia-surface: #ffffff;
+  --anatomia-raised: #ebe5ff;
+  --anatomia-rule: #d6cdf6;
+  --anatomia-ink: #140c33;
+  --anatomia-ink-2: #3d3470;
+  --anatomia-ink-3: #5e5590;
+  --anatomia-accent: #6a35e0;
+  --anatomia-accent-ink: #5a28cc;
+  --anatomia-focus: #6a35e0;
+  --anatomia-ok: #1c7a4c;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body.an-page {
+  margin: 0;
+  background: var(--anatomia-bg);
+  color: var(--anatomia-ink);
+  font-family: var(--anatomia-sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--anatomia-accent);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--anatomia-focus);
+  outline-offset: 3px;
+}
+
+.an-stage:focus-visible {
+  outline-offset: 6px;
+  border-radius: 2px;
+}
+
+a {
+  color: var(--anatomia-accent-ink);
+  text-underline-offset: 3px;
+}
+
+.an-skip {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--anatomia-accent);
+  color: #fff;
+  text-decoration: none;
+}
+
+.an-skip:focus {
+  top: 8px;
+}
+
+/* Barra superior: siempre oscura, porque el logotipo es claro. */
+.an-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--anatomia-bar);
+  border-bottom: 1px solid var(--anatomia-bar-rule);
+}
+
+.an-brand {
+  display: flex;
+  flex: none;
+}
+
+.an-brand img {
+  display: block;
+  height: 28px;
+  width: auto;
+}
+
+.an-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.an-nav a,
+.an-theme {
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--anatomia-bar-ink);
+  font: 550 0.8125rem / 1 var(--anatomia-sans);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.an-theme {
+  box-shadow: inset 0 0 0 1px var(--anatomia-bar-rule);
+}
+
+.an-nav a:hover,
+.an-theme:hover {
+  background: #271a63;
+  color: #f4f1ff;
+}
+
+.an-bar :focus-visible {
+  outline-color: #c8b0fb;
+}
+
+/* Columna de lectura. */
+.an-main,
+.an-foot {
+  width: min(760px, 100% - 32px);
+  margin: 0 auto;
+}
+
+.an-main {
+  padding: 56px 0 24px;
+}
+
+.an-intro {
+  max-width: 38em;
+}
+
+.an-eyebrow {
+  margin: 0 0 14px;
+  color: var(--anatomia-accent-ink);
+  font: 500 0.75rem / 1 var(--anatomia-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.an-page h1,
+.an-page h2,
+.an-page h3 {
+  margin: 0 0 0.75rem;
+  color: var(--anatomia-ink);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.an-page h1 {
+  font-size: clamp(2rem, 5vw, 2.7rem);
+}
+
+.an-page h2 {
+  font-size: clamp(1.4rem, 3vw, 1.75rem);
+}
+
+.an-page h3 {
+  font-size: 1.2rem;
+}
+
+.an-lead,
+.an-page p {
+  color: var(--anatomia-ink-2);
+  text-wrap: pretty;
+}
+
+.an-lead {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+/* Tarjeta del kit: solo se ajusta el margen y la nota provisional. */
+.an-page .iso-figure {
+  margin: 40px 0 8px;
+}
+
+.an-page .iso-legend {
+  color: var(--anatomia-ink-3);
+}
+
+.an-stage {
+  position: relative;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.an-pending {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  margin: 0;
+  transform: translateX(-50%);
+  color: var(--anatomy-muted);
+  font: 10.5px / 1 var(--anatomy-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Pasos. */
+.an-walk,
+.an-block {
+  margin-top: 56px;
+}
+
+.an-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.an-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  border: 1px solid var(--anatomia-rule);
+  border-radius: 8px;
+  background: var(--anatomia-surface);
+  color: var(--anatomia-ink-2);
+  font: 600 0.9375rem / 1.25 var(--anatomia-sans);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.an-step:hover {
+  border-color: var(--anatomia-accent);
+  color: var(--anatomia-ink);
+}
+
+.an-step[aria-pressed="true"] {
+  border-color: var(--anatomia-accent);
+  background: var(--anatomia-raised);
+  color: var(--anatomia-ink);
+  box-shadow: inset 0 -2px 0 var(--anatomia-accent);
+}
+
+.an-step-n {
+  color: var(--anatomia-ink-3);
+  font: 500 0.75rem / 1 var(--anatomia-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.an-step[aria-pressed="true"] .an-step-n {
+  color: var(--anatomia-accent-ink);
+}
+
+.an-step-panel {
+  min-height: 9.5rem;
+  padding: 20px;
+  border-left: 2px solid var(--anatomia-accent);
+  background: var(--anatomia-surface);
+  border-radius: 0 8px 8px 0;
+}
+
+.an-step-panel p {
+  margin: 0;
+  max-width: 38em;
+}
+
+/* Piezas. */
+.an-defs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--anatomia-rule);
+  border-radius: 8px;
+  background: var(--anatomia-rule);
+  overflow: hidden;
+}
+
+.an-defs div {
+  padding: 16px;
+  background: var(--anatomia-surface);
+}
+
+.an-defs dt {
+  margin-bottom: 4px;
+  color: var(--anatomia-ink);
+  font-weight: 650;
+}
+
+.an-defs dd {
+  margin: 0;
+  color: var(--anatomia-ink-2);
+  font-size: 0.975rem;
+}
+
+/* Lo que nunca hace. */
+.an-never {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.an-never li {
+  position: relative;
+  padding-left: 28px;
+  color: var(--anatomia-ink-2);
+}
+
+.an-never li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 14px;
+  height: 2px;
+  background: var(--anatomia-accent);
+}
+
+.an-never strong {
+  color: var(--anatomia-ink);
+  font-weight: 650;
+}
+
+/* Cómo va. */
+.an-phases {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--anatomia-rule);
+}
+
+.an-phases li {
+  display: grid;
+  grid-template-columns: 6.5rem 10rem minmax(0, 1fr);
+  gap: 4px 16px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--anatomia-rule);
+  color: var(--anatomia-ink-2);
+}
+
+.an-phases strong {
+  color: var(--anatomia-ink);
+  font-weight: 650;
+}
+
+.an-phase-state {
+  color: var(--anatomia-ok);
+  font: 500 0.75rem / 1.4 var(--anatomia-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.an-phases li[data-state="siguiente"] .an-phase-state {
+  color: var(--anatomia-accent-ink);
+}
+
+/* Pie. */
+.an-foot {
+  margin-top: 56px;
+  padding: 24px 0 64px;
+  border-top: 1px solid var(--anatomia-rule);
+}
+
+.an-foot p {
+  margin: 0;
+  max-width: 38em;
+  color: var(--anatomia-ink-3);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+  .an-main {
+    padding-top: 36px;
+  }
+
+  .an-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .an-step {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .an-defs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .an-phases li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .an-page .iso-figure {
+    margin-top: 28px;
+  }
+}
+
+@media (max-width: 420px) {
+  .an-nav a {
+    padding-inline: 6px;
+  }
+
+  .an-brand img {
+    height: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .an-step {
+    transition: none;
+  }
+}
