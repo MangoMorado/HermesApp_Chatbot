@@ -4,7 +4,20 @@ Plan de producto en **cinco fases** hasta el MVP desplegable, y una fase posteri
 de correcciones y features. Arranca con hexágono, gobernanza, skills, puertas de
 calidad y Docker listos en la primera versión.
 
-> Última revisión: 13 de octubre de 2026.
+## Estado
+
+> Revisión: 14 de octubre de 2026. El cálculo y la obligación de reescribir este
+> bloque al lanzar o cerrar una spec están en `GOBERNANZA.md` §7.1. Solo cuenta lo
+> cerrado en `main`.
+
+| Alcance | Avance |
+| --- | --- |
+| MVP (fases 1–5) | **75%** |
+| Roadmap completo (fases 1–6) | **62,5%** |
+
+Las fases 1, 2 y 3 están cerradas. La Fase 4 va en cuatro sub-proyectos de igual peso: la 4.1 (PR #9), la 4.2 (PR #10) y la 4.3 (PR #11) están en `main`. Las fases 5 y 6 no están abiertas.
+
+**Siguiente tarea:** Fase **4.4 — Simulador por FHIR**. Sustituir el gateway en proceso por un cliente FHIR con token `service`: sincronizar maestros, leer pre-agendas, aprobar o rechazar y confirmar el pre-registro solo por `/fhir`. Cierra el entregable 10 y el criterio 1 de la Fase 4. Aún no tiene spec.
 
 ---
 
@@ -340,6 +353,8 @@ Ese mínimo rige desde la Fase 1. La matriz completa (lint, calidad, seguridad, 
 **Opcional** en: bugfixes localizados y chores.
 
 Artefactos: `docs/superpowers/specs/`, `docs/superpowers/plans/`, ledger en `.superpowers/sdd/` según gobernanza.
+
+Al lanzar o cerrar una spec, el bloque **Estado** de este archivo se recalcula en la misma entrega (`GOBERNANZA.md` §7.1).
 
 ### 3.6 Definition of Done del MVP
 

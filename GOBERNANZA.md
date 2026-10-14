@@ -233,6 +233,7 @@ de revisión.
 5. Si toca `/api/v1`: OpenAPI regenerado y cliente del frontend sin edición manual.
 6. Si toca FHIR: `/fhir/metadata` y las suites de conformidad alineadas **en la misma PR**.
 7. Si cambia política: este documento se actualiza **en la misma PR**.
+8. Si lanza o cierra una spec: el bloque **Estado** de `ROADMAP.md` queda recalculado **en la misma PR** (§7.1).
 
 Una PR roja no se mergea. No se desactiva una regla para pasar la puerta: se arregla el
 código, o se cambia la regla en una PR aparte que argumente el cambio.
@@ -305,6 +306,29 @@ o FHIR, idempotencia, roles o tenant.
 Artefactos: `docs/superpowers/specs/` y `docs/superpowers/plans/` para la tarea en curso;
 ledger en `.superpowers/sdd/`.
 
+### 7.1 Estado del roadmap al lanzar una spec
+
+Quien **lanza** una spec (archivo nuevo en `docs/superpowers/specs/`) actualiza en la
+**misma entrega** el bloque **Estado** al inicio de `ROADMAP.md`. Lo mismo al
+**cerrarla** (merge a `main`). El bloque lleva el porcentaje de desarrollo, la
+siguiente tarea a ejecutar y la fecha de la revisión.
+
+**Porcentaje.** Las seis fases pesan igual. Se publican dos cifras con esa regla:
+
+- **MVP:** fases 1 a 5. La Fase 6 queda fuera.
+- **Roadmap completo:** fases 1 a 6.
+
+Si la fase en curso está partida en sub-proyectos y ese corte está escrito en una
+spec, el peso de la fase se reparte a partes iguales entre ellos. Solo suma lo
+cerrado en `main`. Lanzar la spec no sube el porcentaje: nombra la tarea. El
+porcentaje sube cuando el sub-proyecto o la fase queda en `main`.
+
+**Siguiente tarea.** El primer entregable o sub-proyecto que el roadmap deja
+abierto. Si la spec recién lanzada es esa tarea, el bloque la marca en curso y
+deja como siguiente la que el corte pone después.
+
+El porcentaje se recalcula con esta regla. No se estima a ojo.
+
 ---
 
 ## 8. Límites de los agentes
@@ -323,3 +347,6 @@ límites:
 5. **No commitea ni pushea sin que se lo pidan.** Y nunca directo a `main` sin rama.
 6. **Reporta lo que dejó fuera.** Si una parte quedó bloqueada, se termina todo lo demás y
    se nombra explícitamente lo que falta.
+7. **Al lanzar o cerrar una spec, actualiza el estado del roadmap.** Porcentaje y
+   siguiente tarea del bloque al inicio de `ROADMAP.md`, con la regla de la §7.1,
+   en la misma entrega.
