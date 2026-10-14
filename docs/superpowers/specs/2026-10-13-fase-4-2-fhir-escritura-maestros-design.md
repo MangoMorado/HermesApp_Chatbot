@@ -209,3 +209,15 @@ ya dicen que la escritura queda auditada como hecha por Hermes y que `/fhir` es 
 leer de ambos (4.3). El cliente FHIR del simulador y la sincronización automática de
 maestros (4.4). La colección Postman y el barrido periódico (Fase 5). Keycloak (Fase 6).
 Borrar recursos, `PATCH`, `PUT` por id y versiones (`If-Match`).
+
+## 9. Refinamientos al planificar
+
+1. **Envoltorio de escritura aparte.** `serviceFhirRoute` siempre responde 200; el `PUT`
+   usa `serviceFhirIdempotentRoute` con status del resultado y `Location`.
+2. **Rechazo del apartado sin liberar.** El upsert de `Slot` no llama a
+   `resolveAppointmentRequest` (ese caso de uso pone el cupo en `free` al rechazar).
+   Escribe el estado de Hermes, hace `markResolved` y audita.
+3. **`Allow` en 405.** Escribibles: `GET, PUT`. Resto: `GET`.
+4. **Hash de idempotencia** = método + `pathname+search` + cuerpo.
+5. **Helper `fhirPut`** con cuerpo e `Idempotency-Key`.
+6. **Docs de la PR:** `README.md`, `backend/AGENTS.md`. `CLAUDE.md` y `ROADMAP.md` fuera.

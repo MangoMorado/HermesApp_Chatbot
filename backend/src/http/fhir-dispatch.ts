@@ -36,6 +36,6 @@ export function handleFhirRead(request: Request, path: readonly string[]): Promi
 export function handleFhirWrite(request: Request, path: readonly string[]): Promise<NextResponse> {
   return serviceFhirRoute(request, async () => {
     const [type] = path;
-    throw type !== undefined && isResourceType(type) ? fhirMethodNotAllowed() : fhirNotFound();
+    throw type !== undefined && isResourceType(type) ? fhirMethodNotAllowed("GET") : fhirNotFound();
   });
 }

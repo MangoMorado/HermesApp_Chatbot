@@ -76,6 +76,7 @@ export type IssueCode =
   | "not-found"
   | "not-supported"
   | "invalid"
+  | "conflict"
   | "exception";
 
 export type OperationOutcome = {
@@ -120,7 +121,11 @@ export type CapabilityStatement = {
     readonly security: { readonly description: string };
     readonly resource: readonly {
       readonly type: ResourceType;
-      readonly interaction: readonly { readonly code: "read" | "search-type" }[];
+      readonly interaction: readonly {
+        readonly code: "read" | "search-type" | "update";
+      }[];
+      readonly conditionalUpdate?: boolean;
+      readonly updateCreate?: boolean;
       readonly searchParam: readonly { readonly name: string; readonly type: SearchParamType }[];
     }[];
   }[];

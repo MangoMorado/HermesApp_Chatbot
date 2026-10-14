@@ -4,12 +4,14 @@ import type { IssueCode } from "./resources/types";
 export class FhirError extends Error {
   readonly status: number;
   readonly code: IssueCode;
+  readonly allow?: string;
 
-  constructor(status: number, code: IssueCode, message: string) {
+  constructor(status: number, code: IssueCode, message: string, allow?: string) {
     super(message);
     this.name = "FhirError";
     this.status = status;
     this.code = code;
+    this.allow = allow;
   }
 }
 
@@ -34,8 +36,16 @@ export function fhirNotSupported(message: string): FhirError {
   return new FhirError(400, "not-supported", message);
 }
 
-export function fhirMethodNotAllowed(): FhirError {
-  return new FhirError(405, "not-supported", "Interaccion no soportada sobre este recurso");
+export function fhirConflict(message: string): FhirError {
+  return new FhirError(409, "conflict", message);
+}
+
+export function fhirMultipleMatches(message: string): FhirError {
+  return new FhirError(412, "conflict", message);
+}
+
+export function fhirMethodNotAllowed(allow: string): FhirError {
+  return new FhirError(405, "not-supported", "Interaccion no soportada sobre este recurso", allow);
 }
 
 export function fhirException(): FhirError {
