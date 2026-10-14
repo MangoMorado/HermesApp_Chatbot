@@ -21,5 +21,6 @@ export type HermesMasterStore = {
   getSchedule(tenantId: TenantId, id: string): Promise<Schedule | null>;
   saveSchedule(row: Schedule, mode: "insert" | "update"): Promise<void>;
   findSlotByIdentifier(tenantId: TenantId, identifier: Slot["identifier"]): Promise<Slot | null>;
+  lockSlotForUpdate(tenantId: TenantId, id: string): Promise<Slot | null>;
   saveSlot(row: Slot, mode: "insert" | "update"): Promise<void>;
 };

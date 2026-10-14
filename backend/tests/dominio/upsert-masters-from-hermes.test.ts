@@ -23,6 +23,7 @@ function dependencies() {
     getSchedule: vi.fn(async () => null as Schedule | null),
     saveSchedule: vi.fn(async () => {}),
     findSlotByIdentifier: vi.fn(async () => null as Slot | null),
+    lockSlotForUpdate: vi.fn(async () => null as Slot | null),
     saveSlot: vi.fn(async () => {}),
   };
   return {

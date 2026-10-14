@@ -21,7 +21,10 @@ export type UpsertSlotFromHermes = (input: {
 }) => Promise<{ readonly outcome: "created" | "updated"; readonly record: Slot }>;
 
 type Dependencies = {
-  readonly store: Pick<HermesMasterStore, "findSlotByIdentifier" | "getSchedule" | "saveSlot">;
+  readonly store: Pick<
+    HermesMasterStore,
+    "findSlotByIdentifier" | "getSchedule" | "lockSlotForUpdate" | "saveSlot"
+  >;
   readonly preAgenda: Pick<PreAgendaStore, "expireDue" | "findLiveHoldBySlot" | "markResolved">;
   readonly ids: IdGenerator;
   readonly clock: Clock;
@@ -98,7 +101,8 @@ async function loadExistingAndHold(
   if (!(await deps.store.getSchedule(input.tenantId, input.scheduleId))) {
     throw new ValidationError("La agenda no existe");
   }
-  const existing = await deps.store.findSlotByIdentifier(input.tenantId, input.identifier);
+  const found = await deps.store.findSlotByIdentifier(input.tenantId, input.identifier);
+  const existing = found ? await deps.store.lockSlotForUpdate(input.tenantId, found.id) : null;
   const hold = existing
     ? await deps.preAgenda.findLiveHoldBySlot(input.tenantId, existing.id, now)
     : null;

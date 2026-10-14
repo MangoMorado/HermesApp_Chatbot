@@ -49,6 +49,7 @@ function dependencies(status: SlotStatus = "busy_tentative") {
   };
   const store = {
     findSlotByIdentifier: vi.fn(async () => existing as Slot | null),
+    lockSlotForUpdate: vi.fn(async () => existing as Slot | null),
     getSchedule: vi.fn(async () => schedule as Schedule | null),
     saveSlot: vi.fn(async () => {}),
   };
@@ -94,6 +95,8 @@ describe("dominio: upsert Slot desde Hermes", () => {
     });
     expect(deps.preAgenda.expireDue).toHaveBeenCalledWith("t1", now);
     expect(deps.preAgenda.expireDue).toHaveBeenCalledBefore(deps.preAgenda.findLiveHoldBySlot);
+    expect(deps.store.lockSlotForUpdate).toHaveBeenCalledWith("t1", "slot-1");
+    expect(deps.store.lockSlotForUpdate).toHaveBeenCalledBefore(deps.preAgenda.findLiveHoldBySlot);
     expect(deps.store.saveSlot).toHaveBeenCalledWith(result.record, "update");
     expect(deps.preAgenda.markResolved).toHaveBeenCalledWith("t1", "request-1", {
       status: "rejected",

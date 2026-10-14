@@ -166,6 +166,18 @@ export function createPrismaHermesMasterStore(db: PrismaExecutor): HermesMasterS
       return row ? mapSlot(row) : null;
     },
 
+    async lockSlotForUpdate(tenantId, id) {
+      const locked = await db.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "public"."slots"
+        WHERE "tenant_id" = ${tenantId} AND "id" = ${id}
+        FOR UPDATE`;
+      if (locked.length === 0) {
+        return null;
+      }
+      const row = await db.slot.findFirst({ where: { tenantId, id } });
+      return row ? mapSlot(row) : null;
+    },
+
     async saveSlot(row, mode) {
       await translateUniqueViolation(() =>
         mode === "insert"
