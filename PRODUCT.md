@@ -30,7 +30,7 @@ Máquina de estados **sin IA** integrada con **Hermes como única fuente de verd
 - Monorepo `backend/` + `frontend/` (Next.js App Router, Prisma, Postgres); UI en español, código en inglés.
 - Superficies HTTP: REST `/api/v1` (widget, panel, chat) y FHIR R4 `/fhir` (Hermes).
 - Roles JWT: `widget` · `operator` · `admin` · `service`. Tenant solo del claim.
-- Hoy (Fase 3 cerrada): panel de lectura y ajustes, base de conocimiento, configuración del bot, simulador CRUD con bandeja, y chat como widget (script, iframe y consola). Tokens de panel emitidos por `/api/platform/v1` y pegados en la franja de sesión; con tests unitarios, suites de BD (`test:db`) y puertas en verde, y el recorrido manual en navegador hecho.
+- Hoy: fases 1 a 3 cerradas y Fase 4 en curso. En `main` están el chat (script, iframe y consola), el panel (agenda, ajustes, conocimiento, bot), el simulador con bandeja y `/fhir` R4 (lectura, escritura condicional de maestros y resolución de pre-agenda). La 4.4, el ciclo del simulador solo por FHIR, está en la rama `fase-4-4-simulador-fhir` y todavía no está en `main`. Tokens de panel emitidos por `/api/platform/v1` y pegados en la franja de sesión.
 - Arranque local: `npm --prefix frontend run dev` → `http://localhost:3000`; backend en `3001`.
 - Despliegue actual: Docker / Easypanel; compose con Postgres.
 
@@ -44,12 +44,13 @@ Máquina de estados **sin IA** integrada con **Hermes como única fuente de verd
 - No divulgación: no persistir respuestas de verificación ni datos clínicos en mensajes, auditoría o logs.
 - Idempotencia de escrituras con `Idempotency-Key`.
 - Chatbot desplegable vs simulador Hermes (apagable en producción); el chatbot no depende de nada del simulador que Hermes no ofrezca por FHIR.
-- Roadmap en cinco fases estrictas hasta el MVP y una Fase 6 posterior (`ROADMAP.md`); no abrir una fase sin cerrar la anterior.
+- Roadmap en cinco fases estrictas hasta el MVP (la 5 es Keycloak) y una Fase 6 posterior de endurecimiento (`ROADMAP.md`); no abrir una fase sin cerrar la anterior.
 
 **Abiertos / por fase**
 
-- FHIR de escritura y ciclo Hermes completo: Fase 4.
-- Rate limits compartidos, handoff-tickets de panel, secretos fuera del compose: Fase 5.
+- Cerrar la 4.4 en `main`: el simulador sincroniza maestros, resuelve la pre-agenda y confirma el pre-registro solo por `/fhir`.
+- Keycloak para panel y rol `service`, la colección Postman, la prueba de rutas contra OpenAPI y Swagger UI: Fase 5, aún no abierta. Cierra el MVP.
+- Pipelines de CI, cobertura al 100%, oleadas de fixes de SonarQube, rate limits compartidos, handoff-tickets de panel, barrido y secretos fuera del compose: Fase 6, después del MVP.
 
 ## Brand Commitments
 

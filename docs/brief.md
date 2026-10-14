@@ -217,13 +217,21 @@ asesor, sin que dos solicitudes concurrentes aparten el mismo cupo.
 - El simulador cierra el ciclo **solo por FHIR** (como lo hará Hermes real).
 - `GET /fhir/metadata` declara exactamente lo implementado (ni más ni menos).
 
-### Fase 5 — Endurecimiento y entrega
+### Fase 5 — Keycloak, JWT, sesiones y contrato
+
+- Panel y cliente `service` entran por Keycloak. El backend verifica esos JWT y deja de firmar los de panel con el secreto local.
+- Colección Postman de punta a punta, prueba de rutas contra OpenAPI y Swagger UI servido desde ese contrato generado. Cierra el MVP.
+
+### Fase 6 — Endurecimiento y entrega
+
+Queda fuera del MVP. Se abre cuando la Fase 5 esté cerrada.
 
 - Rate limits compartidos (válidos con varias réplicas del servidor).
 - Gestión de handoff-tickets en el panel.
 - Barrido periódico de solicitudes vencidas.
-- Auditoría completa, secretos fuera del compose, colección Postman E2E y pruebas de
-  carga básica.
+- Auditoría completa, secretos fuera del compose y pruebas de carga básica.
+- Pipelines de CI, uno por superficie, y cobertura al 100%.
+- Revisiones en oleadas de fixes de SonarQube hasta dejar el quality gate en verde, sin apagar reglas ni excluir archivos.
 
 ---
 

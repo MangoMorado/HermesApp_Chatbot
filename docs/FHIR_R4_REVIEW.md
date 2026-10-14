@@ -7,8 +7,9 @@
 > Criterio: especificación FHIR R4 (`4.0.1`), con la skill `fhir-developer-skill`. Manda
 > `GOBERNANZA.md` ante cualquier conflicto.
 
-> Resolución: los hallazgos 1–14 quedaron incorporados en la rama de la 4.2; los hallazgos
-> 15–17 se reservan para la spec de la 4.3.
+> Resolución: los hallazgos 1–14 quedaron incorporados en la 4.2 (PR #10). La cabecera de
+> la spec 4.1 ya dice «cerrada en `main`» (hallazgo 14). Los hallazgos 15–17 quedaron en la
+> spec de la 4.3, cerrada en `main` (PR #11).
 
 Esta revisión no modifica specs, planes ni código. Cada hallazgo indica dónde está y qué se
 propone.

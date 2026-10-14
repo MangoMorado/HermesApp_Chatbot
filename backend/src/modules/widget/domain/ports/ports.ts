@@ -26,7 +26,7 @@ export type RateDecision =
   | { readonly allowed: true }
   | { readonly allowed: false; readonly retryAfterSeconds: number };
 
-/** Ventana fija de 60 s por cubo. In-memory en Fase 3; store compartido en Fase 5. */
+/** Ventana fija de 60 s por cubo. In-memory en Fase 3; store compartido en Fase 6. */
 export type RateLimiter = {
   hit(bucket: string, limit: number, now: Date): RateDecision;
 };

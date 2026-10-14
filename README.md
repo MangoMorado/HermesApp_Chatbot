@@ -6,9 +6,10 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fases 1, 2 y 3 cerradas. La Fase 4 (FHIR e integración con Hermes) va en cuatro
-> sub-proyectos: la 4.1 y la 4.2 están en `main`. La 4.3 (pre-agenda por FHIR) está en
-> curso. Sigue la 4.4 (simulador por FHIR).
+> Estado: Fases 1, 2 y 3 cerradas. La Fase 4 va en cuatro sub-proyectos: la 4.1 (PR #9),
+> la 4.2 (PR #10) y la 4.3 (PR #11) están en `main`. La 4.4 (simulador por FHIR) está en
+> curso en la rama `fase-4-4-simulador-fhir` y todavía no está en `main`. Sigue la Fase 5
+> (Keycloak). La Fase 6 es el endurecimiento y queda fuera del MVP.
 
 ## Requisitos
 
@@ -158,7 +159,7 @@ docker compose up --build
 
 Levanta Postgres (con healthcheck), el backend en `3001` y el frontend en `3000`. El
 frontend espera a que el backend esté sano. Las contraseñas en claro del compose son
-provisionales hasta la Fase 5, donde salen del YAML versionado.
+provisionales hasta la Fase 6, donde salen del YAML versionado.
 
 ## Variables
 
@@ -171,7 +172,8 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 | `JWT_ISSUER` / `JWT_AUDIENCE` | backend | Emisor y audiencia esperados |
 | `PLATFORM_SECRET` | backend | Secreto de la superficie de plataforma (≥ 32 caracteres). Sin él, `/api/platform/v1` responde 404 |
 | `TRUST_PROXY` | backend | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible |
-| `FHIR_BASE_URL` | backend | Base pública de `/fhir` para los enlaces y `fullUrl` de los `Bundle`. Debe ser una URL absoluta `http(s)` que **incluya** la ruta `/fhir` (p. ej. `https://api.clinica.com/fhir`); si no es una URL absoluta, el backend se niega a arrancar. Opcional, pero detrás de un proxy que termina TLS (Traefik/Easypanel) conviene definirla: sin ella los enlaces se construyen con el origen de la petición y pueden salir como `http://` |
+| `FHIR_BASE_URL` | backend | Base pública de `/fhir` para los enlaces y `fullUrl` de los `Bundle`, y destino del cliente del simulador. Debe ser una URL absoluta `http(s)` que **incluya** la ruta `/fhir` (p. ej. `https://api.clinica.com/fhir`); si no es una URL absoluta, el backend se niega a arrancar. Obligatoria cuando `HERMES_SIMULATOR_ENABLED=true` y `FHIR_GATEWAY=fetch`. Sin ella, y con el simulador apagado, los enlaces se construyen con el origen de la petición |
+| `FHIR_GATEWAY` | backend | `fetch` (el proceso y `hermes:sync`) o `handlers` (las pruebas invocan `/fhir` sin abrir un puerto). Por defecto `fetch` |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose | Credenciales del contenedor de Postgres |
 | `BACKEND_URL` | frontend | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio) |
 | `PUBLIC_BACKEND_URL` | frontend | URL del backend alcanzable desde el navegador; la usa el widget del chat (CORS). Por defecto `http://localhost:3001` |
@@ -181,9 +183,11 @@ provisionales hasta la Fase 5, donde salen del YAML versionado.
 ## FHIR
 
 `/fhir` es la superficie de Hermes: R4, solo JSON y solo rol `service`. Expone lectura y
-búsqueda de `Patient`, `Practitioner`, `HealthcareService`, `Schedule`, `Slot` y
-`Appointment`. Los cinco primeros admiten escritura mediante `PUT` condicional por
-`identifier`; `Idempotency-Key` es obligatoria en cada escritura.
+búsqueda de `Patient`, `Practitioner`, `HealthcareService`, `Schedule`, `Slot`,
+`Appointment` y `Task`. Los cinco maestros admiten `PUT` condicional por `identifier`.
+`Appointment` y `Task` se resuelven con `PUT` por id (pre-agenda: cita `proposed` o
+cancelación). `Idempotency-Key` es obligatoria en cada escritura. `GET /fhir/metadata`
+declara exactamente eso.
 
 ```bash
 curl http://localhost:3001/fhir/metadata                 # publico: que existe
@@ -202,6 +206,17 @@ El token `service` se emite por `/api/platform/v1/tokens` (o `npm --prefix backe
 en local). El `PUT` crea con `201` o actualiza con `200`; repetir la misma clave y petición
 devuelve la respuesta persistida. Los errores son `OperationOutcome` con
 `application/fhir+json`; un parámetro de búsqueda no declarado en `metadata` responde `400`.
+
+El simulador cierra el ciclo por esa superficie, no en proceso. Con el simulador encendido y
+`FHIR_BASE_URL` apuntando al propio backend (en local, `http://localhost:3001/fhir`):
+
+```bash
+npm --prefix backend run hermes:sync
+```
+
+Sincroniza los maestros de `hermes_sim`, aprueba o rechaza la pre-agenda y confirma los
+pre-registros. Un `409` al escribir un cupo apartado no aborta la corrida: se reintenta en la
+siguiente. La bandeja del simulador usa el mismo cliente.
 
 ## Mapa del código
 
@@ -255,7 +270,11 @@ con `-t "<nombre>"`.
 | `sesion-widget` | Clave pública, `Origin`, límite por IP, renovación e idempotencia sin JWT persistido |
 | `idempotencia` | Repetición sin efectos duplicados en todas las escrituras |
 | `sin-ia` | Ninguna dependencia ni import de IA o n8n |
-| `fhir-conformance` | Forma R4 de los recursos, búsqueda y paginación, `OperationOutcome`, `metadata` igual a lo implementado y vencimiento al leer en `Slot` |
+| `flujo` | Motor, pasos, recorrido del chat y conversación por HTTP |
+| `verificacion` | Banco de preguntas, par fijo, bloqueo y redacción |
+| `pre-agenda` | Apartado atómico, tope, vencimiento y bandeja |
+| `fhir-conformance` | Forma R4, búsqueda, `OperationOutcome`, `metadata` igual a lo implementado y vencimiento al leer |
+| `hermes-simulador` | El simulador cierra maestros, pre-agenda y pre-registro solo por `/fhir` |
+| `cors` | CORS del widget y alta / baja de orígenes |
 
-Las demás (`flujo`, `verificacion`…) llegan con sus fases; están
-listadas en `GOBERNANZA.md`.
+`carga-basica` llega con la Fase 6. El inventario completo está en `GOBERNANZA.md` §5.1.

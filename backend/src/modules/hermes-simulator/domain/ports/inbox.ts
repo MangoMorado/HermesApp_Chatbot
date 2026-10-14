@@ -53,5 +53,12 @@ export type SimInboxStore = {
   ): Promise<{ readonly id: string; readonly slotId: string } | null>;
   setSlotStatus(tenantId: string, id: string, status: SimSlotStatus): Promise<void>;
   cancelAppointment(tenantId: string, id: string): Promise<void>;
+  setAppointmentStatus(tenantId: string, id: string, status: "booked" | "cancelled"): Promise<void>;
+  deleteAppointment(tenantId: string, id: string): Promise<void>;
   createAppointment(row: NewSimAppointment): Promise<void>;
+};
+
+/** Transaccion de Hermes que confirma antes de hablar con el chatbot. */
+export type HermesSession = {
+  run<T>(fn: (store: SimInboxStore) => Promise<T>): Promise<T>;
 };

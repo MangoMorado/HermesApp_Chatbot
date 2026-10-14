@@ -4,7 +4,22 @@ Plan de producto en **cinco fases** hasta el MVP desplegable, y una fase posteri
 de correcciones y features. Arranca con hexágono, gobernanza, skills, puertas de
 calidad y Docker listos en la primera versión.
 
-> Última revisión: 13 de octubre de 2026.
+## Estado
+
+> Revisión: 14 de octubre de 2026. El cálculo y la obligación de reescribir este
+> bloque al lanzar o cerrar una spec están en `GOBERNANZA.md` §7.1. Solo cuenta lo
+> cerrado en `main`.
+
+| Alcance | Avance |
+| --- | --- |
+| MVP (fases 1–5) | **75%** |
+| Roadmap completo (fases 1–6) | **62,5%** |
+
+Las fases 1, 2 y 3 están cerradas. La Fase 4 va en cuatro sub-proyectos de igual peso: la 4.1 (PR #9), la 4.2 (PR #10) y la 4.3 (PR #11) están en `main`. La 4.4 está en curso en la rama `fase-4-4-simulador-fhir` (spec `docs/superpowers/specs/2026-10-14-fase-4-4-simulador-fhir-design.md`); no está en `main`, así que no suma al porcentaje. Las fases 5 y 6 no están abiertas.
+
+**En curso:** Fase **4.4 — Simulador por FHIR**. El simulador deja el gateway en proceso y cierra el ciclo con un cliente FHIR y token `service`: sincronizar maestros, leer pre-agendas, aprobar o rechazar y confirmar el pre-registro solo por `/fhir`. Cierra el entregable 10 y el criterio 1 de la Fase 4.
+
+**Siguiente tarea:** Fase **5 — Keycloak, JWT, sesiones y contrato**. El panel y el cliente `service` dejan el secreto local y verifican tokens de Keycloak. Entran también la colección Postman, la prueba de rutas contra OpenAPI y Swagger UI sobre ese contrato generado. No se abre hasta que la 4.4 esté en `main`. La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a que la 5 esté cerrada.
 
 ---
 
@@ -91,7 +106,7 @@ la Fase 5 cerrada. No se abre una fase sin cerrar el criterio de la anterior.
 | 3 | `GET /api/v1/health` responde en local y en contenedor |
 | 4 | Request sin token → `401`; recurso de otro tenant → `404` |
 | 5 | `domain` / `application` no importan Next, Prisma ni `node:*` (regla de Biome o test de fronteras) |
-| 6 | `docker compose up` levanta Postgres + apps; secretos vía env (passwords en claro en el YAML solo como provisional hasta Fase 5) |
+| 6 | `docker compose up` levanta Postgres + apps; secretos vía env (passwords en claro en el YAML solo como provisional hasta Fase 6) |
 
 **Verificación:** suites `contrato-api` (mínima), `roles`, fronteras de capas.
 
@@ -130,14 +145,14 @@ la Fase 5 cerrada. No se abre una fase sin cerrar el criterio de la anterior.
 **Entregables**
 
 1. Emisión de tokens cerrada (ningún token sin credencial / secreto de plataforma según roles).
-2. Sesión del widget; límites básicos (pueden ser in-memory; store compartido en Fase 5).
+2. Sesión del widget; límites básicos (pueden ser in-memory; store compartido en Fase 6).
 3. Motor de flujo determinista; textos desde config del tenant / KB / datos de dominio.
 4. Verificación de identidad: bloqueo por documento, par fijo, redacción; nada de respuestas persistidas en mensajes ni auditoría.
 5. Consola `/chat` en el frontend.
 6. Pre-agenda: agendar, reprogramar y cancelar como **solicitudes**; apartado atómico `free` → `busy_tentative` en la misma transacción; vencimiento evaluado al leer.
 7. Base de conocimiento CRUD; `bot-config` con rotación de clave; consultas generales con «ver más».
 8. Bandeja del simulador: aprobar / rechazar solicitudes; coherencia de cupos y citas.
-9. El flujo puede **crear** handoff-tickets (lectura y gestión de panel en Fase 5).
+9. El flujo puede **crear** handoff-tickets (lectura y gestión de panel en Fase 6).
 10. Idempotencia de escrituras en base de datos.
 
 **Criterios de aceptación**
@@ -191,39 +206,11 @@ la Fase 5 cerrada. No se abre una fase sin cerrar el criterio de la anterior.
 
 ---
 
-### Fase 5 — Endurecimiento y entrega
-
-**Objetivo:** producción operable: límites, tickets, barrido, secretos y aceptación de despliegue.
-
-**Entregables**
-
-1. Rate limits (sesiones nuevas por IP, etc.) en **store compartido** (válido con varias réplicas); `Retry-After` en `429`.
-2. `GET` / `PATCH /api/v1/handoff-tickets` (`operator` · `admin`) + página de panel.
-3. Barrido periódico de solicitudes vencidas (además del vencimiento al leer).
-4. Auditoría completa (campos y acciones definidos en gobernanza / política de producto).
-5. Secretos fuera de `docker-compose.yml` (incluida password de Postgres); despliegue documentado en `README.md`.
-6. Colección Postman: widget E2E, panel (bandeja, KB, config, tickets) y ciclo Hermes por FHIR, con ambos tenants.
-7. Suite `carga-basica`: latencia y límites bajo concurrencia moderada.
-8. Prueba de rutas `/api/v1` ↔ OpenAPI; revalidar higiene de Fase 1 (LF, CI).
-
-**Criterios de aceptación**
-
-| # | Criterio |
-| --- | --- |
-| 1 | Postman se ejecuta de punta a punta contra el entorno desplegado sin pasos manuales |
-| 2 | Tests automatizados de ambos proyectos en verde |
-| 3 | Checklist MVP de la sección 3 en verde |
-
-**Paralelismo:** handoff-tickets, barrido y auditoría pueden avanzar en paralelo al pulido ops; la colección Postman cierra la fase (depende del ciclo Hermes de la Fase 4).
-
----
-
-### Fase 6 — Fixes y nuevas features
+### Fase 5 — Keycloak, JWT, sesiones y contrato
 
 **Objetivo:** pasar la administración de identidades y el manejo de JWT y sesiones
-a Keycloak, y dejar pipelines que prueben la aplicación en todas sus superficies.
-Las reglas de tenant y el alcance de los roles se mantienen. Esta fase queda fuera
-del Definition of Done del MVP (sección 3.6).
+a Keycloak, y publicar el contrato (Postman, OpenAPI y Swagger UI).
+Las reglas de tenant y el alcance de los roles se mantienen. Cierra el MVP.
 
 **Entregables**
 
@@ -234,6 +221,44 @@ del Definition of Done del MVP (sección 3.6).
 5. El rol `widget` conserva su alcance (solo el chat de su sesión). Si su JWT también lo emite Keycloak, el `session_id` y el `tenant_id` siguen siendo claims; el widget no gana datos de dominio ni `/fhir`.
 6. Los roles del producto (`widget` · `operator` · `admin` · `service`) se leen de los claims de Keycloak. El `tenant_id` sale solo del claim. Recurso de otro tenant → `404`.
 7. Secretos y clientes de Keycloak fuera del YAML versionado; arranque local y despliegue documentados en `README.md`. `token:dev` deja de ser camino de admins y operadores.
+8. Colección Postman: widget E2E, panel (bandeja, KB, config, tickets) y ciclo Hermes por FHIR, con ambos tenants.
+9. Prueba de rutas `/api/v1` ↔ OpenAPI.
+10. Swagger UI publicado desde el OpenAPI generado (`openapi.json`, `openapi-platform.json` y `openapi-sim.json`). El JSON no se edita a mano.
+
+**Criterios de aceptación**
+
+| # | Criterio |
+| --- | --- |
+| 1 | Admin y operador entran por Keycloak; el API acepta ese JWT y rechaza uno firmado con el secreto local de panel |
+| 2 | Alta y cambio de rol se reflejan en el siguiente token, sin usuarios de panel persistidos en Postgres |
+| 3 | Logout cierra la sesión; token expirado o de sesión cerrada → `401` |
+| 4 | `tenant_id` solo del claim; recurso de otro tenant → `404` |
+| 5 | El rol `widget` no alcanza datos de dominio ni `/fhir` |
+| 6 | Suites `roles`, `sesion-widget` y `aislamiento-tenant` en verde contra el verificador de Keycloak |
+| 7 | Postman se ejecuta de punta a punta contra el entorno desplegado sin pasos manuales |
+| 8 | Las rutas `/api/v1` coinciden con OpenAPI y Swagger UI sirve ese mismo contrato generado |
+
+**Verificación:** suites `roles`, `sesion-widget` y `aislamiento-tenant` contra el verificador de Keycloak, la colección Postman y Swagger UI alineado con OpenAPI.
+
+**SDD:** obligatorio (arquitectura de auth, roles, tenant y sesiones).
+
+---
+
+### Fase 6 — Endurecimiento y entrega
+
+**Objetivo:** producción operable: límites, tickets, barrido, secretos, pipelines de CI,
+cobertura al 100% y el quality gate de SonarQube en verde.
+Esta fase queda fuera del Definition of Done del MVP (sección 3.6). Se abre solo con la Fase 5 cerrada.
+
+**Entregables**
+
+1. Rate limits (sesiones nuevas por IP, etc.) en **store compartido** (válido con varias réplicas); `Retry-After` en `429`.
+2. `GET` / `PATCH /api/v1/handoff-tickets` (`operator` · `admin`) + página de panel.
+3. Barrido periódico de solicitudes vencidas (además del vencimiento al leer).
+4. Auditoría completa (campos y acciones definidos en gobernanza / política de producto).
+5. Secretos fuera de `docker-compose.yml` (incluida password de Postgres); despliegue documentado en `README.md`.
+6. Suite `carga-basica`: latencia y límites bajo concurrencia moderada.
+7. Revalidar higiene de Fase 1 (LF, CI).
 8. Pipelines de CI, uno por superficie. El workflow de la Fase 1 (Biome, typecheck, tests, React Doctor, `test:db`) se conserva y se reparte en jobs que fallan el PR por separado. Cada job corre las suites de su fila enteras, no un subconjunto de humo:
 
 | Pipeline | Superficie que prueba |
@@ -245,7 +270,7 @@ del Definition of Done del MVP (sección 3.6).
 | Contrato | suites `contrato-api` y `fhir-conformance`: rutas `/api/v1` alineadas con OpenAPI, `GET /fhir/metadata` igual a lo implementado, envoltura REST y `OperationOutcome` cada una en su superficie |
 | Persistencia | `test:db` contra Postgres: `dominio`, `simetria-seed`, `idempotencia`, `aislamiento-tenant` y `pre-agenda` |
 | HTTP | `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `hermes-simulador` y `cors`, con token de Keycloak en los roles que ya no firma el backend |
-| Runtime | health de los contenedores, suite `carga-basica` y la colección Postman de la Fase 5 contra el entorno desplegado |
+| Runtime | health de los contenedores, la colección Postman de la Fase 5 y la suite `carga-basica` de esta fase |
 
 9. Suites completas y cobertura al 100%. Al cerrar la fase corren las dieciocho de `GOBERNANZA.md` §5.1: casos unitarios y, cuando la suite toca Postgres o HTTP, el proyecto Vitest `db`. No se apaga un caso para dejar el pipeline en verde. El Vitest del frontend (widget, proxy, idempotencia de cliente y panel) corre con el pipeline de Calidad.
 
@@ -272,24 +297,23 @@ del Definition of Done del MVP (sección 3.6).
 | `carga-basica` | Runtime | Latencia y límites bajo concurrencia moderada, con el store compartido de rate limit |
 | `cors` | Seguridad, HTTP | Respuestas CORS de las rutas del widget y alta / baja de orígenes |
 
+10. Revisiones en oleadas de fixes de SonarQube. Cada oleada toma un lote de issues abiertos, los corrige y vuelve a medir. No se apaga una regla ni se excluye un archivo para dejar el quality gate en verde. La fase no cierra mientras ese gate tenga issues abiertos.
+
 **Criterios de aceptación**
 
 | # | Criterio |
 | --- | --- |
-| 1 | Admin y operador entran por Keycloak; el API acepta ese JWT y rechaza uno firmado con el secreto local de panel |
-| 2 | Alta y cambio de rol se reflejan en el siguiente token, sin usuarios de panel persistidos en Postgres |
-| 3 | Logout cierra la sesión; token expirado o de sesión cerrada → `401` |
-| 4 | `tenant_id` solo del claim; recurso de otro tenant → `404` |
-| 5 | El rol `widget` no alcanza datos de dominio ni `/fhir` |
-| 6 | Suites `roles`, `sesion-widget` y `aislamiento-tenant` en verde contra el verificador de Keycloak |
-| 7 | Los ocho pipelines corren en CI; cualquiera en rojo deja el PR en rojo |
-| 8 | Lint, calidad, seguridad, JWT, contrato, persistencia, HTTP y runtime tienen job propio |
-| 9 | Las dieciocho suites de la tabla anterior están en verde, con su parte unitaria y su parte `test:db` cuando la suite toca base o HTTP |
-| 10 | Cobertura de código al 100% en sentencias, ramas, funciones y líneas, en `backend/src` y en `frontend/src` (sin Prisma ni clientes orval) |
+| 1 | Tests automatizados de ambos proyectos en verde |
+| 2 | Checklist MVP de la sección 3 en verde |
+| 3 | Los ocho pipelines corren en CI; cualquiera en rojo deja el PR en rojo |
+| 4 | Lint, calidad, seguridad, JWT, contrato, persistencia, HTTP y runtime tienen job propio |
+| 5 | Las dieciocho suites de la tabla anterior están en verde, con su parte unitaria y su parte `test:db` cuando la suite toca base o HTTP |
+| 6 | Cobertura de código al 100% en sentencias, ramas, funciones y líneas, en `backend/src` y en `frontend/src` (sin Prisma ni clientes orval) |
+| 7 | El quality gate de SonarQube queda en verde tras las oleadas de fixes, sin reglas apagadas ni archivos excluidos |
 
-**Verificación:** las dieciocho suites (`fronteras`, `contrato-api`, `roles`, `dominio`, `simetria-seed`, `aislamiento-tenant`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`), cobertura al 100% y el workflow con los ocho pipelines en verde.
+**Verificación:** las dieciocho suites (`fronteras`, `contrato-api`, `roles`, `dominio`, `simetria-seed`, `aislamiento-tenant`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`), cobertura al 100%, el workflow con los ocho pipelines en verde y el quality gate de SonarQube sin issues abiertos.
 
-**SDD:** obligatorio (arquitectura de auth, roles, tenant y sesiones).
+**Paralelismo:** handoff-tickets, barrido, auditoría y las oleadas de SonarQube pueden avanzar en paralelo al pulido ops. Los pipelines y la cobertura cierran la fase. Depende del ciclo Hermes de la Fase 4 y del Keycloak de la Fase 5.
 
 ---
 
@@ -324,14 +348,14 @@ del Definition of Done del MVP (sección 3.6).
 6. Si toca FHIR: `/fhir/metadata` y suites de conformidad alineadas
 7. Si cambia política: actualizar `GOBERNANZA.md` en la misma PR
 
-Ese mínimo rige desde la Fase 1. La matriz completa (lint, calidad, seguridad, JWT, contrato, persistencia, HTTP y runtime) se construye en la Fase 6, y con ella corren enteras las dieciocho suites de `GOBERNANZA.md` §5.1 y la cobertura de código queda en el 100%.
+Ese mínimo rige desde la Fase 1. La matriz completa (lint, calidad, seguridad, JWT, contrato, persistencia, HTTP y runtime) se construye en la Fase 6, y con ella corren enteras las dieciocho suites de `GOBERNANZA.md` §5.1 y la cobertura de código queda en el 100%. Las oleadas de fixes de SonarQube también cierran en la Fase 6.
 
 ### 3.4 Docker
 
 - Un Dockerfile multi-stage por aplicación (`backend`, `frontend`).
 - Compose: Postgres + servicios; variables por entorno.
 - Fase 1: arranque reproducible y health.
-- Fase 5: cero secretos en el YAML versionado; procedimiento de deploy en README.
+- Fase 6: cero secretos en el YAML versionado; procedimiento de deploy en README.
 
 ### 3.5 SDD (Superpowers)
 
@@ -340,6 +364,8 @@ Ese mínimo rige desde la Fase 1. La matriz completa (lint, calidad, seguridad, 
 **Opcional** en: bugfixes localizados y chores.
 
 Artefactos: `docs/superpowers/specs/`, `docs/superpowers/plans/`, ledger en `.superpowers/sdd/` según gobernanza.
+
+Al lanzar o cerrar una spec, el bloque **Estado** de este archivo se recalcula en la misma entrega (`GOBERNANZA.md` §7.1).
 
 ### 3.6 Definition of Done del MVP
 
@@ -353,9 +379,11 @@ Artefactos: `docs/superpowers/specs/`, `docs/superpowers/plans/`, ledger en `.su
 | 6 | Bandeja aprueba/rechaza con cupos y citas coherentes | 3 |
 | 7 | Cada tenant administra KB y config; alta con predeterminados | 3 |
 | 8 | Simulador Hermes completa el ciclo; metadata exacta | 4 |
-| 9 | Postman completo contra entorno desplegado | 5 |
-| 10 | Auditoría sin fugas clínicas; escrituras FHIR auditadas | 4–5 |
+| 9 | Postman completo contra entorno desplegado; rutas alineadas con OpenAPI y Swagger UI | 5 |
+| 10 | Auditoría sin fugas clínicas; escrituras FHIR auditadas | 4 y 6 |
 | 11 | Sin IA ni n8n en código ni despliegue | 1–3 (garantía continua) |
+
+Los criterios 1 a 9 y el 11 cierran el MVP. El 10 sigue en la tabla; la auditoría completa la entrega la Fase 6, después del MVP. Las escrituras FHIR ya se auditan en la Fase 4.
 
 ---
 
@@ -364,10 +392,10 @@ Artefactos: `docs/superpowers/specs/`, `docs/superpowers/plans/`, ledger en `.su
 | Riesgo | Mitigación |
 | --- | --- |
 | Fuerza bruta en verificación | Fase 3: bloqueo, par fijo, redacción |
-| Acaparamiento de cupos | Fase 3: tope de pendientes + vencimiento; Fase 5: límites por IP |
+| Acaparamiento de cupos | Fase 3: tope de pendientes + vencimiento; Fase 6: límites por IP |
 | Contrato FHIR ≠ Hermes | Fase 4: perfiles en un módulo; simulador como contrato ejecutable |
-| Apartados vencidos visibles a Hermes | Fase 4: expirar en lecturas FHIR; Fase 5: barrido |
-| Estado en memoria con varias réplicas | Fase 5: store compartido para rate limits; idempotencia en DB desde Fase 3 |
+| Apartados vencidos visibles a Hermes | Fase 4: expirar en lecturas FHIR; Fase 6: barrido |
+| Estado en memoria con varias réplicas | Fase 6: store compartido para rate limits; idempotencia en DB desde Fase 3 |
 | Documentación divergente | Gobernanza + este roadmap + OpenAPI / `metadata` + pruebas de rutas |
 
 ---
@@ -376,8 +404,8 @@ Artefactos: `docs/superpowers/specs/`, `docs/superpowers/plans/`, ledger en `.su
 
 | Decisión | Elección |
 | --- | --- |
-| Alcance | Cinco fases hasta el MVP (chatbot, panel, simulador, FHIR, entrega); después, Fixes y nuevas features |
-| Corte de fases | Cimientos → Dominio → Chat / pre-agenda → FHIR / Hermes → Endurecimiento → Keycloak (JWT y sesiones) y pipelines de todas las superficies |
+| Alcance | Cinco fases hasta el MVP (chatbot, panel, simulador, FHIR, Keycloak); después, endurecimiento y entrega |
+| Corte de fases | Cimientos → Dominio → Chat / pre-agenda → FHIR / Hermes → Keycloak (JWT y sesiones) y contrato → Endurecimiento (pipelines, cobertura al 100% y oleadas de SonarQube) |
 | Superficies HTTP | REST + FHIR |
 | Stack día 1 | Next.js + Prisma + Postgres |
 | Persistencia de este plan | `ROADMAP.md` en el repositorio limpio |

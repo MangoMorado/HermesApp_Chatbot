@@ -3,7 +3,7 @@ import type { RateLimiter } from "../domain/ports/ports";
 const WINDOW_MS = 60_000;
 const MAX_BUCKETS = 10_000;
 
-/** Ventana fija en memoria. Valida con una sola replica; la Fase 5 la cambia por un store compartido. */
+/** Ventana fija en memoria. Valida con una sola replica; la Fase 6 la cambia por un store compartido. */
 export function createInMemoryRateLimiter(): RateLimiter {
   const windows = new Map<string, { start: number; count: number }>();
 

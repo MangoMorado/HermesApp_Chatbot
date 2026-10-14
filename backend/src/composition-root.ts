@@ -12,6 +12,7 @@ import {
   preAgendaWritePorts,
 } from "./composition/pre-agenda-wiring";
 import { simReads } from "./composition/sim-wiring";
+import { simulatorGateway } from "./composition/simulator-gateway";
 import { widgetReads, widgetWritePorts } from "./composition/widget-wiring";
 import { type AppConfig, loadConfig } from "./config/env";
 import { type Authenticate, createAuthenticate } from "./modules/auth/application/authenticate";
@@ -35,11 +36,16 @@ import { createPrismaWidgetKeyRepository } from "./modules/bot-config/infrastruc
 import { type CheckHealth, createCheckHealth } from "./modules/health/application/check-health";
 import { createGenerateSimSlots } from "./modules/hermes-simulator/application/generate-slots";
 import type {
+  ChatbotRequestsGateway,
+  HermesSession,
+} from "./modules/hermes-simulator/domain/ports/inbox";
+import type {
   SimHealthcareServiceStore,
   SimPatientStore,
   SimPractitionerStore,
   SimScheduleStore,
 } from "./modules/hermes-simulator/domain/ports/stores";
+import { createPrismaHermesSession } from "./modules/hermes-simulator/infrastructure/prisma-hermes-session";
 import {
   createPrismaSimHealthcareServiceStore,
   createPrismaSimPatientStore,
@@ -314,12 +320,17 @@ function patientReads(prisma: PrismaClient) {
   };
 }
 
-function buildWritePorts(db: PrismaExecutor, config: AppConfig): WritePorts {
+function buildWritePorts(
+  db: PrismaExecutor,
+  config: AppConfig,
+  gateway: ChatbotRequestsGateway,
+  hermes: HermesSession,
+): WritePorts {
   const tenantSettings = createPrismaTenantSettingsRepository(db);
   const auditLog = createPrismaAuditLog(db, uuidV7Generator);
   const idempotencyStore = createPrismaIdempotencyStore(db);
   const simSchedules = createPrismaSimScheduleStore(db);
-  const preAgenda = preAgendaWritePorts(db, auditLog);
+  const preAgenda = preAgendaWritePorts(db, auditLog, gateway, hermes);
   return {
     clock: systemClock,
     ids: uuidV7Generator,
@@ -357,7 +368,9 @@ export function getContainer(): Container {
   if (!container) {
     const config = loadConfig();
     prisma = createPrismaClient(config.databaseUrl);
-    const preAgenda = preAgendaReads(prisma);
+    const gateway = simulatorGateway(config);
+    const hermes = createPrismaHermesSession(prisma);
+    const preAgenda = preAgendaReads(prisma, gateway);
 
     container = {
       config,
@@ -379,7 +392,7 @@ export function getContainer(): Container {
         if (!prisma) {
           throw new Error("Prisma no inicializado");
         }
-        return prisma.$transaction((tx) => fn(buildWritePorts(tx, config)));
+        return prisma.$transaction((tx) => fn(buildWritePorts(tx, config, gateway, hermes)));
       },
     };
   }

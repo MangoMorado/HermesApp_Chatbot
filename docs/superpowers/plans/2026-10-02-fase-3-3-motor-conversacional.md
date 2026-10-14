@@ -342,7 +342,7 @@ model VerificationChallenge {
   @@schema("public")
 }
 
-// Solo creacion en la 3.3; lectura y gestion en la Fase 5.
+// Solo creacion en la 3.3; lectura y gestion en la Fase 6.
 model HandoffTicket {
   id              String        @id
   tenantId        String        @map("tenant_id")
@@ -2344,7 +2344,7 @@ export function createPreRegisterPatient(deps: {
 ```ts
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
 
-/** Por que el chat deriva a un asesor. La gestion del ticket llega en la Fase 5. */
+/** Por que el chat deriva a un asesor. La gestion del ticket llega en la Fase 6. */
 export type HandoffReason = "requested" | "verification_locked" | "unverifiable";
 
 export type HandoffTicket = {

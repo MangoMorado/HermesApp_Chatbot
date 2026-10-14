@@ -164,7 +164,7 @@ La 3.2 y la 3.3 añaden sus claves con predeterminado en su propia PR.
   `sub = widget:<session_id>`, claim `session_id`, expira con la sesión.
 - Las rutas del widget comprueban además que la sesión siga vigente en la base (al leer).
 - `RateLimiter` in-memory de ventana fija por IP. IP = primera entrada de `X-Forwarded-For`
-  solo con `TRUST_PROXY=true`; si no, un único cubo común. Store compartido en la Fase 5.
+  solo con `TRUST_PROXY=true`; si no, un único cubo común. Store compartido en la Fase 6.
 - `token:dev` aborta con `NODE_ENV=production`.
 - Auditoría del actor de plataforma: `actor_subject = platform`, `actor_role = platform`,
   `tenant_id` del tenant afectado.

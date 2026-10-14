@@ -19,7 +19,7 @@ Incluye:
 - Páginas de panel: base de conocimiento y configuración del bot.
 - Bandeja del simulador.
 
-No incluye: tema o colores por tenant; lectura y gestión de handoff-tickets (Fase 5); control
+No incluye: tema o colores por tenant; lectura y gestión de handoff-tickets (Fase 6); control
 de quién incrusta el iframe (§2); FHIR (Fase 4); los dos hallazgos aparcados de la 3.3 (pista
 de correo y eco de documento), que son de backend y van por su propio arreglo.
 

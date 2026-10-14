@@ -39,7 +39,7 @@ el contrato ejecutable (roadmap §4).
 | Rango de fechas | Sin rango obligatorio ni `max_query_range_days` | Hermes sincroniza agendas completas; el tamaño lo acota `_count` |
 | Paginación | `_count` (50 por defecto, máximo 200, se recorta) y `_offset`; `Bundle.total` | Entregable 1 del roadmap |
 | Auditoría | La 4.1 no audita | Es solo lectura, como las lecturas REST; «escrito por Hermes» llega con la 4.2 |
-| Proveedor de identidad | `/fhir` autentica por el puerto `TokenVerifier` existente | La Fase 6 (Keycloak) cambia el adaptador sin tocar esta superficie |
+| Proveedor de identidad | `/fhir` autentica por el puerto `TokenVerifier` existente | La Fase 5 (Keycloak) cambia el adaptador sin tocar esta superficie |
 
 ## 3. Arquitectura del backend
 
@@ -227,8 +227,7 @@ Umbrales de Clean Code de la gobernanza §4, en particular 400 líneas por archi
 
 Toda escritura FHIR (`PUT` condicional, idempotencia, auditoría) y la confirmación del
 pre-registro (4.2); `Appointment` `proposed`, `Task` y sus vencimientos (4.3); el cliente FHIR
-del simulador y la sincronización de maestros (4.4); la colección Postman del ciclo Hermes y el
-barrido periódico (Fase 5); Keycloak (Fase 6).
+del simulador y la sincronización de maestros (4.4); el barrido periódico (Fase 6); Keycloak, la colección Postman, OpenAPI y Swagger (Fase 5).
 
 ## 8. Refinamientos al planificar
 

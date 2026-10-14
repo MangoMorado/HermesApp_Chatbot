@@ -1,6 +1,7 @@
 /**
- * Unico modulo con literales FHIR: version, MIME, systems, tags y value sets
- * (GOBERNANZA §3.1). Ningun otro archivo repite estos valores.
+ * Unico modulo del chatbot con literales FHIR: version, MIME, systems, tags y value sets
+ * (GOBERNANZA §3.1). El simulador copia los que envia en `hermes-simulator/domain/fhir-contract.ts`
+ * y no importa este archivo; un test de paridad mantiene las dos copias iguales.
  */
 
 export const FHIR_VERSION = "4.0.1";

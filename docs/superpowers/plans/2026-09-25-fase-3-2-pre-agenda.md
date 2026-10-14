@@ -1971,7 +1971,7 @@ import type {
   RequestExpirer,
 } from "../domain/ports/pre-agenda";
 
-/** Vencimiento al leer; el barrido de la Fase 5 llamara a este mismo caso de uso. */
+/** Vencimiento al leer; el barrido de la Fase 6 llamara a este mismo caso de uso. */
 export type ExpireDueRequests = (tenantId: TenantId) => Promise<void>;
 
 export function createExpireDueRequests(deps: {

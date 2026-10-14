@@ -26,6 +26,17 @@ export type SimSchedule = {
   readonly active: boolean;
 };
 
+export type SimSlot = {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly identifierSystem: string;
+  readonly identifierValue: string;
+  readonly scheduleId: string;
+  readonly startAt: Date;
+  readonly endAt: Date;
+  readonly status: "free" | "busy" | "busy_tentative" | "busy_unavailable";
+};
+
 export type SimPatient = {
   readonly id: string;
   readonly tenantId: string;

@@ -22,7 +22,7 @@ solicitudes nacen de un caso de uso de aplicación que consumirá el motor conve
 | Plazo del apartado | `request_hold_minutes`: 240 por defecto, rango 15–4320, recortado al inicio del cupo | Cubre una jornada de recepción con revisiones cada pocas horas |
 | Tope de pendientes | `max_pending_requests_per_patient`: 2 por defecto, rango 1–5, cuenta solo `book` y `reschedule` vivas | Lo que acapara cupos es el apartado; cancelar no acapara |
 | Cambios sobre una cita | Una sola solicitud viva (`reschedule` o `cancel`) por cita, por índice único parcial | Evita decisiones contradictorias de Hermes sobre la misma cita |
-| Vencimiento | Al leer y al crear, con un `UPDATE` por conjunto; el barrido de la Fase 5 reutiliza el mismo caso de uso | Regla de gobernanza §3: Hermes nunca ve un apartado vencido como vigente |
+| Vencimiento | Al leer y al crear, con un `UPDATE` por conjunto; el barrido de la Fase 6 reutiliza el mismo caso de uso | Regla de gobernanza §3: Hermes nunca ve un apartado vencido como vigente |
 | Orden en la bandeja | Primero escribe `hermes_sim`, después resuelve en el chatbot; si el chatbot rechaza por vencimiento, el simulador deshace lo suyo | Hermes es la fuente de verdad; el chatbot refleja su decisión |
 | Errores | Sin códigos nuevos: `409 conflict` con `details.reason` | El contrato de errores REST no cambia |
 
@@ -113,7 +113,7 @@ La tabla no guarda nada propio de FHIR. En la Fase 4 una solicitud `pending` se 
 | --- | --- |
 | `createAppointmentRequest(cmd)` | Motor conversacional (3.3) y tests |
 | `resolveAppointmentRequest(tenantId, id, resolution)` | Bandeja del simulador (3.2); `PUT` FHIR (Fase 4) |
-| `expireDueRequests(tenantId)` | Lecturas y creación; barrido (Fase 5) |
+| `expireDueRequests(tenantId)` | Lecturas y creación; barrido (Fase 6) |
 | `listAppointmentRequests`, `getAppointmentRequest` | Bandeja del simulador; búsquedas FHIR (Fase 4) |
 
 `cmd` es una unión discriminada por `kind`, con `tenantId`, `medicalRecordId`, `actor` y
@@ -254,7 +254,7 @@ Solo se regenera el cliente orval del simulador. La interfaz de la bandeja es de
 ## 12. Fuera de alcance
 
 Chat, conversaciones, verificación y pre-registro (3.3); interfaz de la bandeja (3.4); FHIR
-(Fase 4); barrido periódico (Fase 5); ruta REST de creación de solicitudes y solicitudes en el
+(Fase 4); barrido periódico (Fase 6); ruta REST de creación de solicitudes y solicitudes en el
 seed.
 
 ## 13. Refinamientos al planificar
