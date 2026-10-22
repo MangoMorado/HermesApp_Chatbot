@@ -2,11 +2,8 @@ import type { AuditActor } from "@/modules/shared/domain/audit-event";
 import type { Page } from "@/modules/shared/domain/pagination";
 import type { InboxIdentifier, InboxRequest, InboxResolution } from "../inbox";
 
-/**
- * El chatbot visto desde Hermes. En la 3.2 lo cumple el composition root en proceso;
- * en la Fase 4, un cliente FHIR con token `service`.
- */
-export type ChatbotRequestsGateway = {
+/** Solicitudes del chatbot vistas desde Hermes. Lo cumple el cliente FHIR con token `service`. */
+export type ChatbotRequests = {
   listPending(filter: {
     readonly tenantId: string;
     readonly cursor: string | null;

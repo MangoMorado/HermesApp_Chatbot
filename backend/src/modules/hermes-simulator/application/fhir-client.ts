@@ -4,7 +4,7 @@ import { decodeCursor, encodeCursor, type Page } from "@/modules/shared/domain/p
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 import type { InboxRequest, InboxResolution } from "../domain/inbox";
 import type { FhirHttp, FhirHttpResponse, ServiceTokenIssuer } from "../domain/ports/fhir-http";
-import type { ChatbotRequestsGateway } from "../domain/ports/inbox";
+import type { ChatbotRequests } from "../domain/ports/inbox";
 import {
   bookedAppointment,
   cancelledAppointment,
@@ -104,10 +104,10 @@ function assertLive(record: Record<string, unknown>, expected: string): void {
   }
 }
 
-export function createFhirChatbotGateway(deps: {
+export function createFhirChatbotClient(deps: {
   readonly http: FhirHttp;
   readonly tokens: ServiceTokenIssuer;
-}): ChatbotRequestsGateway {
+}): ChatbotRequests {
   const { http, tokens } = deps;
 
   async function searchAll(token: string, query: string): Promise<unknown[]> {

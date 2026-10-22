@@ -7,7 +7,7 @@ import {
   createRejectInboxRequest,
 } from "../modules/hermes-simulator/application/inbox";
 import type {
-  ChatbotRequestsGateway,
+  ChatbotRequests,
   HermesSession,
 } from "../modules/hermes-simulator/domain/ports/inbox";
 import { createExpireDueRequests } from "../modules/scheduling/application/appointment-request-queries";
@@ -40,13 +40,13 @@ export function preAgendaPolicy(db: PrismaExecutor): PreAgendaPolicy {
   };
 }
 
-export function preAgendaReads(prisma: PrismaClient, gateway: ChatbotRequestsGateway) {
+export function preAgendaReads(prisma: PrismaClient, chatbot: ChatbotRequests) {
   return {
     expireDueRequests: createExpireDueRequests({
       expirer: createPrismaRequestExpirer(prisma),
       clock: systemClock,
     }),
-    listInbox: createListInbox({ gateway }),
+    listInbox: createListInbox({ chatbot }),
   };
 }
 
@@ -55,7 +55,7 @@ export type PreAgendaReads = ReturnType<typeof preAgendaReads>;
 export function preAgendaWritePorts(
   db: PrismaExecutor,
   auditLog: AuditLog,
-  gateway: ChatbotRequestsGateway,
+  chatbot: ChatbotRequests,
   hermes: HermesSession,
 ) {
   return {
@@ -67,10 +67,10 @@ export function preAgendaWritePorts(
       audit: auditLog,
     }),
     approveInboxRequest: createApproveInboxRequest({
-      gateway,
+      chatbot,
       session: hermes,
       ids: uuidV7Generator,
     }),
-    rejectInboxRequest: createRejectInboxRequest({ gateway }),
+    rejectInboxRequest: createRejectInboxRequest({ chatbot }),
   };
 }

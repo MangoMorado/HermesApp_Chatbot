@@ -17,7 +17,14 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 - **3.3 motor conversacional — cerrada** y en `main` (PR #5). Spec en `docs/superpowers/specs/2026-10-02-fase-3-3-motor-conversacional-design.md`: conversaciones con historial redactado, verificación con banco de preguntas y par fijo, pre-registro, handoff-tickets (solo creación), CORS del widget y alta/baja de orígenes.
 - **3.4 frontend del chat — cerrada** y en `main` (PR #6). Spec en `docs/superpowers/specs/2026-10-13-fase-3-4-frontend-chat-design.md`: widget con un núcleo (`frontend/src/widget/`) y tres montajes (script `widget.js`, iframe `/widget`, consola `/chat`), páginas `/panel/conocimiento` y `/panel/bot`, y bandeja `/simulador/bandeja`. El widget habla directo al backend por CORS (`PUBLIC_BACKEND_URL`), no por el proxy.
 
-**Fase 4 en curso.** Cuatro sub-proyectos de igual peso. La 4.1 (PR #9), la 4.2 (PR #10) y la 4.3 (PR #11) están en `main`: `/fhir` R4 con lectura y búsqueda, `PUT` condicional de maestros, `Appointment` `proposed` y `Task` de cancelación resueltos por `PUT` por id, y `GET /fhir/metadata` generado del registro. La 4.4 (simulador por FHIR) está en curso en la rama `fase-4-4-simulador-fhir`; spec en `docs/superpowers/specs/2026-10-14-fase-4-4-simulador-fhir-design.md`. El cliente con token `service` sustituye al gateway en proceso (`hermes:sync` y la bandeja). No está en `main`, así que el porcentaje del roadmap sigue en 75% del MVP. La Fase 5 (Keycloak) no está abierta. La Fase 6 es el endurecimiento y queda fuera del MVP.
+**Fase 4 cerrada** el 22 de octubre de 2026, con sus cuatro sub-proyectos en `main`. El porcentaje del roadmap queda en 80% del MVP (cuatro de cinco fases) y 66,7% del roadmap completo.
+
+- **4.1 base y lectura — cerrada** y en `main` (PR #9). Spec en `docs/superpowers/specs/2026-10-13-fase-4-1-fhir-base-lectura-design.md`: `/fhir` R4 con lectura y búsqueda, `OperationOutcome` y `GET /fhir/metadata` generado del registro.
+- **4.2 escritura de maestros — cerrada** y en `main` (PR #10). Spec en `docs/superpowers/specs/2026-10-13-fase-4-2-fhir-escritura-maestros-design.md`: `PUT` condicional de `Patient`, `Practitioner`, `HealthcareService`, `Schedule` y `Slot`.
+- **4.3 pre-agenda por FHIR — cerrada** y en `main` (PR #11). Spec en `docs/superpowers/specs/2026-10-14-fase-4-3-pre-agenda-fhir-design.md`: `Appointment` `proposed` y `Task` de cancelación, resueltos por `PUT` por id.
+- **4.4 simulador por FHIR — cerrada** y en `main` (PR #12). Spec en `docs/superpowers/specs/2026-10-14-fase-4-4-simulador-fhir-design.md`: el cliente con token `service` sustituye al gateway en proceso. `hermes:sync` y la bandeja cierran maestros, pre-agenda y pre-registro solo por `/fhir`.
+
+La Fase 5 (Keycloak, JWT, sesiones y contrato) es la siguiente y no está abierta. La Fase 6 es el endurecimiento y queda fuera del MVP.
 
 Fuera del plan de fases, `main` incluye el rediseño del panel operativo (tablero oscuro; sistema visual en `DESIGN.md`).
 

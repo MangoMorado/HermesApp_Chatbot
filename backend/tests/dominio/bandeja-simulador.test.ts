@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createApproveInboxRequest } from "@/modules/hermes-simulator/application/inbox";
 import type { InboxRequest } from "@/modules/hermes-simulator/domain/inbox";
 import type {
-  ChatbotRequestsGateway,
+  ChatbotRequests,
   HermesSession,
   SimInboxStore,
 } from "@/modules/hermes-simulator/domain/ports/inbox";
@@ -33,7 +33,7 @@ const request = (overrides: Partial<InboxRequest> = {}): InboxRequest => ({
 });
 
 function fakes(pending: InboxRequest, slotStatus: "free" | "busy" = "free") {
-  const gateway: ChatbotRequestsGateway = {
+  const chatbot: ChatbotRequests = {
     listPending: vi.fn(),
     get: vi.fn(async () => pending),
     resolve: vi.fn(async ({ resolution }) => ({
@@ -63,22 +63,22 @@ function fakes(pending: InboxRequest, slotStatus: "free" | "busy" = "free") {
   const session: HermesSession = { run: (fn) => fn(store) };
   let n = 0;
   const approve = createApproveInboxRequest({
-    gateway,
+    chatbot,
     session,
     ids: { next: () => `id-${n++}` },
   });
-  return { gateway, store, approve };
+  return { chatbot, store, approve };
 }
 
 const command = { tenantId: "t", requestId: "req-1", actor: ACTOR };
 
 describe("hermes-simulador: decision de la bandeja", () => {
   it("cupo libre: Hermes crea su cita y aprueba con su identificador", async () => {
-    const { gateway, store, approve } = fakes(request());
+    const { chatbot, store, approve } = fakes(request());
     await approve(command);
     expect(store.setSlotStatus).toHaveBeenCalledWith("t", "sim-slot", "busy");
     expect(store.createAppointment).toHaveBeenCalledOnce();
-    expect(gateway.resolve).toHaveBeenCalledWith(
+    expect(chatbot.resolve).toHaveBeenCalledWith(
       expect.objectContaining({
         resolution: {
           outcome: "approved",
@@ -89,11 +89,11 @@ describe("hermes-simulador: decision de la bandeja", () => {
   });
 
   it("cupo ocupado en Hermes: rechaza por slot_unavailable sin escribir nada", async () => {
-    const { gateway, store, approve } = fakes(request(), "busy");
+    const { chatbot, store, approve } = fakes(request(), "busy");
     await approve(command);
     expect(store.setSlotStatus).not.toHaveBeenCalled();
     expect(store.createAppointment).not.toHaveBeenCalled();
-    expect(gateway.resolve).toHaveBeenCalledWith(
+    expect(chatbot.resolve).toHaveBeenCalledWith(
       expect.objectContaining({ resolution: { outcome: "rejected", reason: "slot_unavailable" } }),
     );
   });
@@ -133,8 +133,8 @@ describe("hermes-simulador: decision de la bandeja", () => {
   });
 
   it("si el PUT falla, deshace la reserva que Hermes ya confirmo", async () => {
-    const { gateway, store, approve } = fakes(request());
-    vi.mocked(gateway.resolve).mockRejectedValue(
+    const { chatbot, store, approve } = fakes(request());
+    vi.mocked(chatbot.resolve).mockRejectedValue(
       new ConflictError("vencida", { reason: "request_not_pending" }),
     );
     await expect(approve(command)).rejects.toMatchObject({
@@ -145,11 +145,11 @@ describe("hermes-simulador: decision de la bandeja", () => {
   });
 
   it("si Hermes ya reservo esa solicitud, reenvia el PUT sin volver a ocupar el cupo", async () => {
-    const { gateway, store, approve } = fakes(request());
+    const { chatbot, store, approve } = fakes(request());
     vi.mocked(store.findAppointment).mockResolvedValue({ id: "ya", slotId: "sim-slot" });
     await approve(command);
     expect(store.createAppointment).not.toHaveBeenCalled();
-    expect(gateway.resolve).toHaveBeenCalledWith(
+    expect(chatbot.resolve).toHaveBeenCalledWith(
       expect.objectContaining({
         resolution: {
           outcome: "approved",

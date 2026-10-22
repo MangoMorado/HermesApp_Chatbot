@@ -18,7 +18,7 @@ confirmar citas: book y reschedule salen como `Appointment` `proposed`; cancel s
 | 4.1 Base y lectura | Cerrada en `main` | 1, 9, 11, 5 (lectura), 7 (`Slot`) | 7 (parcial), 5 (parcial) |
 | 4.2 Escritura de maestros | Cerrada en `main` | 2, 5 (escritura), 6, 8 | 2, 3, 4, 6 |
 | **4.3 Pre-agenda por FHIR** (esta spec) | Cerrada en `main` | 3, 4, 7 | 5 |
-| 4.4 Simulador por FHIR | En curso; aún no está en `main` | 10 | 1, 7 (cierre) |
+| 4.4 Simulador por FHIR | Cerrada en `main` (PR #12) | 10 | 1, 7 (cierre) |
 
 No hay migración. El id de la cita en firme de un book o un reschedule pasa a ser el id de la
 solicitud. `replaces` sale de `appointment_requests.appointment_id`.

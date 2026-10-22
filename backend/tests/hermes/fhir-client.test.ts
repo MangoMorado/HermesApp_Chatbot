@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createFhirChatbotGateway } from "@/modules/hermes-simulator/application/fhir-gateway";
+import { createFhirChatbotClient } from "@/modules/hermes-simulator/application/fhir-client";
 import type { FhirHttp, FhirHttpRequest } from "@/modules/hermes-simulator/domain/ports/fhir-http";
 
 const TOKEN = "service-token";
@@ -87,8 +87,8 @@ describe("hermes-simulador: cliente FHIR", () => {
       }
       return { status: 404, body: {} };
     });
-    const gateway = createFhirChatbotGateway({ http, tokens });
-    const page = await gateway.listPending({ tenantId: "t", cursor: null, limit: 50 });
+    const chatbot = createFhirChatbotClient({ http, tokens });
+    const page = await chatbot.listPending({ tenantId: "t", cursor: null, limit: 50 });
     expect(page.data).toHaveLength(1);
     expect(page.data[0]).toMatchObject({
       id: "req-1",
@@ -136,8 +136,8 @@ describe("hermes-simulador: cliente FHIR", () => {
       }
       return { status: 404, body: {} };
     });
-    const gateway = createFhirChatbotGateway({ http, tokens });
-    const page = await gateway.listPending({ tenantId: "t", cursor: null, limit: 50 });
+    const chatbot = createFhirChatbotClient({ http, tokens });
+    const page = await chatbot.listPending({ tenantId: "t", cursor: null, limit: 50 });
     expect(page.data[0]).toMatchObject({
       kind: "reschedule",
       appointment: { identifier: { value: "AP-a" } },
@@ -164,8 +164,8 @@ describe("hermes-simulador: cliente FHIR", () => {
       }
       return { status: 404, body: {} };
     });
-    const gateway = createFhirChatbotGateway({ http, tokens });
-    const resolved = await gateway.resolve({
+    const chatbot = createFhirChatbotClient({ http, tokens });
+    const resolved = await chatbot.resolve({
       tenantId: "t",
       requestId: "req-1",
       actor: { actorSubject: "admin", actorRole: "admin", requestId: "r" },

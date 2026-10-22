@@ -5,7 +5,7 @@
  */
 import { loadConfig } from "../src/config/env";
 import { createJoseTokenIssuer } from "../src/modules/auth/infrastructure/jose-token-issuer";
-import { createFhirChatbotGateway } from "../src/modules/hermes-simulator/application/fhir-gateway";
+import { createFhirChatbotClient } from "../src/modules/hermes-simulator/application/fhir-client";
 import { createHermesSync } from "../src/modules/hermes-simulator/application/hermes-sync";
 import { createApproveInboxRequest } from "../src/modules/hermes-simulator/application/inbox";
 import { createServiceTokens } from "../src/modules/hermes-simulator/application/service-tokens";
@@ -32,14 +32,14 @@ async function main(): Promise<void> {
   try {
     const http = createFetchFhirHttp(config.fhirBaseUrl);
     const tokens = createServiceTokens(createJoseTokenIssuer(config.jwt));
-    const gateway = createFhirChatbotGateway({ http, tokens });
+    const chatbot = createFhirChatbotClient({ http, tokens });
     const sync = createHermesSync({
       catalog: createPrismaSimCatalog(prisma),
       http,
       tokens,
-      gateway,
+      chatbot,
       approve: createApproveInboxRequest({
-        gateway,
+        chatbot,
         session: createPrismaHermesSession(prisma),
         ids: uuidV7Generator,
       }),

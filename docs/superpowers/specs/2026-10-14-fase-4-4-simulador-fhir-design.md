@@ -1,6 +1,6 @@
 # Fase 4.4 — Simulador por FHIR (diseño)
 
-> Estado: **en implementación**.
+> Estado: **cerrada en `main`** mediante la [PR #12](https://github.com/MangoMorado/HermesApp_Chatbot/pull/12).
 > Fuente del alcance: `ROADMAP.md` §Fase 4, entregable 10 y criterios 1 y 7 (cierre). Corte de
 > sub-proyectos en la §1 de `2026-10-13-fase-4-1-fhir-base-lectura-design.md`. El `409` de un
 > cupo apartado se reintenta más tarde (spec 4.2 §10.7). Manda `GOBERNANZA.md` ante cualquier
@@ -19,7 +19,7 @@ escritura.
 | 4.1 Base y lectura | Cerrada en `main` | 1, 9, 11, 5 (lectura), 7 (`Slot`) | 7 (parcial), 5 (parcial) |
 | 4.2 Escritura de maestros | Cerrada en `main` | 2, 5 (escritura), 6, 8 | 2, 3, 4, 6 |
 | 4.3 Pre-agenda por FHIR | Cerrada en `main` (PR #11) | 3, 4, 7 | 5 |
-| **4.4 Simulador por FHIR** (esta spec) | Cliente FHIR, sincronización de maestros, suite `hermes-simulador` | 10 | 1, 7 (cierre) |
+| **4.4 Simulador por FHIR** (esta spec) | Cerrada en `main` (PR #12) | 10 | 1, 7 (cierre) |
 
 ## 2. Decisiones tomadas
 

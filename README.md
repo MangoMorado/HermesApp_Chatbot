@@ -6,10 +6,10 @@ widget y el panel, y FHIR R4 `/fhir` para la integración con Hermes.
 - **Qué se construye y en qué orden:** [`ROADMAP.md`](ROADMAP.md)
 - **Cómo se trabaja:** [`GOBERNANZA.md`](GOBERNANZA.md)
 
-> Estado: Fases 1, 2 y 3 cerradas. La Fase 4 va en cuatro sub-proyectos: la 4.1 (PR #9),
-> la 4.2 (PR #10) y la 4.3 (PR #11) están en `main`. La 4.4 (simulador por FHIR) está en
-> curso en la rama `fase-4-4-simulador-fhir` y todavía no está en `main`. Sigue la Fase 5
-> (Keycloak). La Fase 6 es el endurecimiento y queda fuera del MVP.
+> Estado: Fases 1, 2, 3 y 4 cerradas. La Fase 4 va en cuatro sub-proyectos, todos en
+> `main`: la 4.1 (PR #9), la 4.2 (PR #10), la 4.3 (PR #11) y la 4.4 (PR #12, simulador
+> por FHIR). Sigue la Fase 5 (Keycloak). La Fase 6 es el endurecimiento y queda fuera
+> del MVP.
 
 ## Requisitos
 

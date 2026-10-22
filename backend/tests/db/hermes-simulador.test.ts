@@ -4,7 +4,7 @@ import { createHandlerFhirHttp } from "@/composition/handler-fhir-http";
 import { resetContainer } from "@/composition-root";
 import { loadConfig } from "@/config/env";
 import { createJoseTokenIssuer } from "@/modules/auth/infrastructure/jose-token-issuer";
-import { createFhirChatbotGateway } from "@/modules/hermes-simulator/application/fhir-gateway";
+import { createFhirChatbotClient } from "@/modules/hermes-simulator/application/fhir-client";
 import {
   createHermesSync,
   createSyncMasters,
@@ -37,16 +37,16 @@ function futureStart(): Date {
 function cycle(db: PrismaClient) {
   const http = createHandlerFhirHttp();
   const tokens = createServiceTokens(createJoseTokenIssuer(loadConfig().jwt));
-  const gateway = createFhirChatbotGateway({ http, tokens });
+  const chatbot = createFhirChatbotClient({ http, tokens });
   const catalog = createPrismaSimCatalog(db);
   return {
     sync: createHermesSync({
       catalog,
       http,
       tokens,
-      gateway,
+      chatbot,
       approve: createApproveInboxRequest({
-        gateway,
+        chatbot,
         session: createPrismaHermesSession(db),
         ids: uuidV7Generator,
       }),

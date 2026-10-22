@@ -6,20 +6,20 @@ calidad y Docker listos en la primera versión.
 
 ## Estado
 
-> Revisión: 14 de octubre de 2026. El cálculo y la obligación de reescribir este
+> Revisión: 22 de octubre de 2026. El cálculo y la obligación de reescribir este
 > bloque al lanzar o cerrar una spec están en `GOBERNANZA.md` §7.1. Solo cuenta lo
 > cerrado en `main`.
 
 | Alcance | Avance |
 | --- | --- |
-| MVP (fases 1–5) | **75%** |
-| Roadmap completo (fases 1–6) | **62,5%** |
+| MVP (fases 1–5) | **80%** |
+| Roadmap completo (fases 1–6) | **66,7%** |
 
-Las fases 1, 2 y 3 están cerradas. La Fase 4 va en cuatro sub-proyectos de igual peso: la 4.1 (PR #9), la 4.2 (PR #10) y la 4.3 (PR #11) están en `main`. La 4.4 está en curso en la rama `fase-4-4-simulador-fhir` (spec `docs/superpowers/specs/2026-10-14-fase-4-4-simulador-fhir-design.md`); no está en `main`, así que no suma al porcentaje. Las fases 5 y 6 no están abiertas.
+Las fases 1, 2, 3 y 4 están cerradas. La Fase 4 se partió en cuatro sub-proyectos de igual peso, todos en `main`: la 4.1 (PR #9), la 4.2 (PR #10), la 4.3 (PR #11) y la 4.4 (PR #12). Las fases 5 y 6 no están abiertas.
 
-**En curso:** Fase **4.4 — Simulador por FHIR**. El simulador deja el gateway en proceso y cierra el ciclo con un cliente FHIR y token `service`: sincronizar maestros, leer pre-agendas, aprobar o rechazar y confirmar el pre-registro solo por `/fhir`. Cierra el entregable 10 y el criterio 1 de la Fase 4.
+**En curso:** ninguna. La Fase 4 quedó cerrada con el simulador por FHIR (spec `docs/superpowers/specs/2026-10-14-fase-4-4-simulador-fhir-design.md`, PR #12): el cliente con token `service` sincroniza maestros, lee pre-agendas, aprueba o rechaza y confirma el pre-registro solo por `/fhir`.
 
-**Siguiente tarea:** Fase **5 — Keycloak, JWT, sesiones y contrato**. El panel y el cliente `service` dejan el secreto local y verifican tokens de Keycloak. Entran también la colección Postman, la prueba de rutas contra OpenAPI y Swagger UI sobre ese contrato generado. No se abre hasta que la 4.4 esté en `main`. La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a que la 5 esté cerrada.
+**Siguiente tarea:** Fase **5 — Keycloak, JWT, sesiones y contrato**. El panel y el cliente `service` dejan el secreto local y verifican tokens de Keycloak. Entran también la colección Postman, la prueba de rutas contra OpenAPI y Swagger UI sobre ese contrato generado. La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a que la 5 esté cerrada.
 
 ---
 

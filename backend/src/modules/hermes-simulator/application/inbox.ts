@@ -2,7 +2,7 @@ import type { AuditActor } from "@/modules/shared/domain/audit-event";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import type { IdGenerator } from "@/modules/shared/domain/ports/id-generator";
 import type { InboxRequest } from "../domain/inbox";
-import type { ChatbotRequestsGateway, HermesSession } from "../domain/ports/inbox";
+import type { ChatbotRequests, HermesSession } from "../domain/ports/inbox";
 import { decide, undo } from "./inbox-decision";
 
 export type InboxCommand = {
@@ -12,14 +12,14 @@ export type InboxCommand = {
 };
 
 type ApproveDeps = {
-  readonly gateway: ChatbotRequestsGateway;
+  readonly chatbot: ChatbotRequests;
   readonly session: HermesSession;
   readonly ids: IdGenerator;
 };
 
-export function createListInbox(deps: { readonly gateway: ChatbotRequestsGateway }) {
+export function createListInbox(deps: { readonly chatbot: ChatbotRequests }) {
   return (filter: { tenantId: string; cursor: string | null; limit: number }) =>
-    deps.gateway.listPending(filter);
+    deps.chatbot.listPending(filter);
 }
 
 function assertPending(request: InboxRequest): void {
@@ -37,7 +37,7 @@ function assertPending(request: InboxRequest): void {
  */
 export function createApproveInboxRequest(deps: ApproveDeps) {
   return async (command: InboxCommand): Promise<InboxRequest> => {
-    const request = await deps.gateway.get(command.tenantId, command.requestId);
+    const request = await deps.chatbot.get(command.tenantId, command.requestId);
     assertPending(request);
     const write = await deps.session.run(async (store) => {
       const patientId = await store.findPatientId(command.tenantId, request.patient.identifier);
@@ -49,7 +49,7 @@ export function createApproveInboxRequest(deps: ApproveDeps) {
       return decide(deps.ids, store, command.tenantId, request, patientId);
     });
     try {
-      return await deps.gateway.resolve({ ...command, resolution: write.resolution });
+      return await deps.chatbot.resolve({ ...command, resolution: write.resolution });
     } catch (error) {
       await deps.session.run((store) => undo(store, command.tenantId, write));
       throw error;
@@ -57,7 +57,7 @@ export function createApproveInboxRequest(deps: ApproveDeps) {
   };
 }
 
-export function createRejectInboxRequest(deps: { readonly gateway: ChatbotRequestsGateway }) {
+export function createRejectInboxRequest(deps: { readonly chatbot: ChatbotRequests }) {
   return (command: InboxCommand): Promise<InboxRequest> =>
-    deps.gateway.resolve({ ...command, resolution: { outcome: "rejected", reason: "declined" } });
+    deps.chatbot.resolve({ ...command, resolution: { outcome: "rejected", reason: "declined" } });
 }

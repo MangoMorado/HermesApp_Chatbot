@@ -9,7 +9,7 @@ import { fingerprint } from "../domain/fingerprint";
 import type { InboxRequest } from "../domain/inbox";
 import type { SimCatalog } from "../domain/ports/catalog";
 import type { FhirHttp, ServiceTokenIssuer } from "../domain/ports/fhir-http";
-import type { ChatbotRequestsGateway } from "../domain/ports/inbox";
+import type { ChatbotRequests } from "../domain/ports/inbox";
 import { patientBody, practitionerBody, scheduleBody, serviceBody, slotBody } from "./fhir-bodies";
 import {
   asRecord,
@@ -38,7 +38,7 @@ type SyncDeps = {
   readonly catalog: SimCatalog;
   readonly http: FhirHttp;
   readonly tokens: ServiceTokenIssuer;
-  readonly gateway: ChatbotRequestsGateway;
+  readonly chatbot: ChatbotRequests;
   readonly approve: (command: InboxCommand) => Promise<InboxRequest>;
 };
 
@@ -186,7 +186,7 @@ async function closePreAgenda(deps: SyncDeps, tenantId: string): Promise<number>
   const pending: InboxRequest[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < PAGE_CAP; page++) {
-    const batch = await deps.gateway.listPending({ tenantId, cursor, limit: 50 });
+    const batch = await deps.chatbot.listPending({ tenantId, cursor, limit: 50 });
     pending.push(...batch.data);
     if (!batch.nextCursor) {
       break;

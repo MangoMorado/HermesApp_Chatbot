@@ -10,7 +10,6 @@ import type {
   WidgetKeyRepository,
 } from "../modules/bot-config/domain/ports/repositories";
 import { createPrismaBotConfigRepository } from "../modules/bot-config/infrastructure/prisma-bot-config-repository";
-import { createPrismaWidgetKeyRepository } from "../modules/bot-config/infrastructure/prisma-widget-key-repository";
 import type { PrismaExecutor } from "../modules/shared/infrastructure/prisma-client";
 import { systemClock } from "../modules/shared/infrastructure/system-clock";
 import { uuidV7Generator } from "../modules/shared/infrastructure/uuid-v7-generator";
@@ -24,6 +23,7 @@ import {
 import type { WidgetKeyResolver, WidgetSettingsReader } from "../modules/widget/domain/ports/ports";
 import { createInMemoryRateLimiter } from "../modules/widget/infrastructure/in-memory-rate-limiter";
 import { createPrismaWidgetSessionRepository } from "../modules/widget/infrastructure/prisma-widget-session-repository";
+import { botConfigStores } from "./bot-config-wiring";
 
 /**
  * Cableado del widget para el composition root. Vive aparte para no empujar
@@ -72,12 +72,10 @@ export function widgetWritePorts(db: PrismaExecutor) {
 }
 
 export function widgetReads(prisma: PrismaClient, config: AppConfig) {
+  const { configs, keys } = botConfigStores(prisma);
   return {
     admitWidget: createAdmitWidget({
-      resolveKey: widgetKeyResolver(
-        createPrismaBotConfigRepository(prisma),
-        createPrismaWidgetKeyRepository(prisma),
-      ),
+      resolveKey: widgetKeyResolver(configs, keys),
       rateLimiter: createInMemoryRateLimiter(),
       clock: systemClock,
     }),
@@ -85,8 +83,7 @@ export function widgetReads(prisma: PrismaClient, config: AppConfig) {
       issuer: createJoseTokenIssuer(config.jwt),
       clock: systemClock,
     }),
-    isWidgetOriginRegistered: (origin: string) =>
-      createPrismaBotConfigRepository(prisma).isOriginRegistered(origin),
+    isWidgetOriginRegistered: (origin: string) => configs.isOriginRegistered(origin),
     getActiveWidgetSession: createGetActiveWidgetSession({
       sessions: createPrismaWidgetSessionRepository(prisma),
       clock: systemClock,
