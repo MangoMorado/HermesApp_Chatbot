@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
+import { createAesGcmSecretBox } from "@/modules/shared/infrastructure/aes-gcm-secret-box";
 import { createPrismaClient } from "@/modules/shared/infrastructure/prisma-client";
+import { TEST_CLIENT_SECRET } from "../helpers/idp";
 
 // Base dedicada a las suites. Por defecto, el Postgres local de desarrollo.
 export const TEST_DATABASE_URL =
@@ -166,11 +168,37 @@ export async function seedTenantDomain(
 
 export type ChatbotTenantSeed = { readonly tenantId: string; readonly widgetKey: string };
 
-/** Tenant con bot-config vacio y una clave vigente, como lo deja el alta. */
+/**
+ * Guarda la credencial del cliente widget del proveedor falso (`widget-<tenantId>`), sellada
+ * con la misma clave que usa el contenedor en las suites.
+ */
+export async function insertWidgetCredential(
+  prisma: PrismaClient,
+  tenantId: string,
+  clientId = `widget-${tenantId}`,
+): Promise<void> {
+  const key = Buffer.from(process.env.CREDENTIALS_ENCRYPTION_KEY ?? "", "base64");
+  const now = new Date();
+  await prisma.machineCredential.create({
+    data: {
+      tenantId,
+      kind: "widget",
+      clientId,
+      secretSealed: createAesGcmSecretBox(key).seal(TEST_CLIENT_SECRET),
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+}
+
+/**
+ * Tenant con bot-config vacio y una clave vigente, como lo deja el alta. Por defecto con
+ * credenciales de widget; `widgetClient: false` simula una clinica sin configurar.
+ */
 export async function insertChatbotTenant(
   prisma: PrismaClient,
   slug: string,
-  options: { allowedOrigins?: string[] } = {},
+  options: { allowedOrigins?: string[]; widgetClient?: boolean } = {},
 ): Promise<ChatbotTenantSeed> {
   const tenantId = await insertTenant(prisma, slug);
   const widgetKey = `wk_${slug.repeat(43).slice(0, 43)}`;
@@ -180,5 +208,8 @@ export async function insertChatbotTenant(
   await prisma.widgetKey.create({
     data: { id: `${tenantId}-key`, tenantId, key: widgetKey, createdAt: new Date() },
   });
+  if (options.widgetClient !== false) {
+    await insertWidgetCredential(prisma, tenantId);
+  }
   return { tenantId, widgetKey };
 }

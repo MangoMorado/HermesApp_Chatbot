@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.3.0
  */
 
-export interface WidgetSession {
-  session_id: string;
-  token: string;
+export interface WidgetSessionRefreshed {
+  access_token: string;
   expires_at: string;
+  session_expires_at: string;
 }

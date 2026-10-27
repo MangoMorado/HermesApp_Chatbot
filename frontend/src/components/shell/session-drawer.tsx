@@ -66,12 +66,6 @@ function Claims() {
       <dd>{me.tenant_id}</dd>
       <dt>subject</dt>
       <dd>{me.subject}</dd>
-      {me.session_id ? (
-        <>
-          <dt>session_id</dt>
-          <dd>{me.session_id}</dd>
-        </>
-      ) : null}
     </dl>
   );
 }

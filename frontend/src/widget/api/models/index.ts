@@ -17,5 +17,6 @@ export * from './conversationTurnInput';
 export * from './error';
 export * from './errorError';
 export * from './errorErrorCode';
-export * from './widgetSession';
+export * from './widgetSessionOpened';
+export * from './widgetSessionRefreshed';
 export * from './widgetSessionRequest';

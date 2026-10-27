@@ -9,7 +9,8 @@ import type {
   ConversationMessageInput,
   ConversationOption,
   ConversationTurn,
-  WidgetSession,
+  WidgetSessionOpened,
+  WidgetSessionRefreshed,
 } from "./api/models";
 import type { WidgetRequestInit } from "./fetcher";
 
@@ -18,7 +19,8 @@ export type {
   ConversationMessageInput,
   ConversationOption,
   ConversationTurn,
-  WidgetSession,
+  WidgetSessionOpened,
+  WidgetSessionRefreshed,
 };
 
 export type WidgetConfig = {
@@ -28,34 +30,68 @@ export type WidgetConfig = {
   readonly widgetKey: string;
 };
 
+/** Lo que identifica la conversación: token del proveedor y secreto propio de la conversación. */
+export type WidgetCredentials = {
+  readonly accessToken: string;
+  readonly conversationSecret: string;
+};
+
 /** Puerto del chat: lo único que el resto del núcleo sabe del HTTP. */
 export type WidgetApi = {
-  openSession(idempotencyKey: string): Promise<WidgetSession>;
-  refreshSession(token: string, idempotencyKey: string): Promise<WidgetSession>;
-  getConversation(token: string): Promise<ConversationHistory>;
+  openSession(idempotencyKey: string): Promise<WidgetSessionOpened>;
+  /** Pública: sin bearer, con la clave del widget y el secreto de la conversación. */
+  refreshSession(
+    conversationSecret: string,
+    idempotencyKey: string,
+  ): Promise<WidgetSessionRefreshed>;
+  getConversation(credentials: WidgetCredentials): Promise<ConversationHistory>;
   sendMessage(
-    token: string,
+    credentials: WidgetCredentials,
     input: ConversationMessageInput,
     idempotencyKey: string,
   ): Promise<ConversationTurn>;
 };
 
 const IDEMPOTENCY_HEADER = "Idempotency-Key";
+const CONVERSATION_SECRET_HEADER = "X-Conversation-Secret";
 
-function requestInit(apiBase: string, token?: string, idempotencyKey?: string): WidgetRequestInit {
+type Call = {
+  readonly token?: string;
+  readonly conversationSecret?: string;
+  readonly idempotencyKey?: string;
+};
+
+function requestInit(apiBase: string, call: Call = {}): WidgetRequestInit {
+  const headers: Record<string, string> = {};
+  if (call.idempotencyKey) {
+    headers[IDEMPOTENCY_HEADER] = call.idempotencyKey;
+  }
+  if (call.conversationSecret) {
+    headers[CONVERSATION_SECRET_HEADER] = call.conversationSecret;
+  }
+  return { apiBase, ...(call.token ? { token: call.token } : {}), headers };
+}
+
+function conversationCall(credentials: WidgetCredentials, idempotencyKey?: string): Call {
   return {
-    apiBase,
-    ...(token ? { token } : {}),
-    ...(idempotencyKey ? { headers: { [IDEMPOTENCY_HEADER]: idempotencyKey } } : {}),
+    token: credentials.accessToken,
+    conversationSecret: credentials.conversationSecret,
+    ...(idempotencyKey ? { idempotencyKey } : {}),
   };
 }
 
 export function createWidgetApi({ apiBase, widgetKey }: WidgetConfig): WidgetApi {
   return {
     openSession: (key) =>
-      openWidgetSession({ widget_key: widgetKey }, requestInit(apiBase, undefined, key)),
-    refreshSession: (token, key) => refreshWidgetSession(requestInit(apiBase, token, key)),
-    getConversation: (token) => getWidgetConversation(requestInit(apiBase, token)),
-    sendMessage: (token, input, key) => sendWidgetMessage(input, requestInit(apiBase, token, key)),
+      openWidgetSession({ widget_key: widgetKey }, requestInit(apiBase, { idempotencyKey: key })),
+    refreshSession: (conversationSecret, key) =>
+      refreshWidgetSession(
+        { widget_key: widgetKey },
+        requestInit(apiBase, { conversationSecret, idempotencyKey: key }),
+      ),
+    getConversation: (credentials) =>
+      getWidgetConversation(requestInit(apiBase, conversationCall(credentials))),
+    sendMessage: (credentials, input, key) =>
+      sendWidgetMessage(input, requestInit(apiBase, conversationCall(credentials, key))),
   };
 }

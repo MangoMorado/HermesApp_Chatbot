@@ -26,6 +26,11 @@ type IdempotentHandler = (context: {
 }) => Promise<IdempotentOutcome>;
 
 type IdempotentRouteOptions = {
+  /**
+   * Sustituye al actor autenticado antes de leer la clave (p. ej. el widget resuelve su
+   * conversacion y pasa a `widget:<sessionId>`). El ambito de idempotencia usa este actor.
+   */
+  readonly resolveActor?: (actor: Actor, request: Request) => Promise<Actor>;
   /** Comprobacion previa a la idempotencia: cubre la primera ejecucion y la repeticion. */
   readonly guard?: (context: { actor: Actor; request: Request }) => Promise<void>;
   /** El cuerpo puede llevar respuestas de verificacion: hash con clave (refinamiento 15). */
@@ -44,10 +49,13 @@ export function idempotentRoute(
     const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
     try {
       const container = getContainer();
-      const actor = requireTenantActor(
+      const authenticated = requireTenantActor(
         await container.authenticate(request.headers.get("Authorization")),
         allowedRoles,
       );
+      const actor = options.resolveActor
+        ? await options.resolveActor(authenticated, request)
+        : authenticated;
       await options.guard?.({ actor, request });
       const idempotent = await readIdempotentRequest(
         request,

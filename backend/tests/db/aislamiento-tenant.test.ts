@@ -488,19 +488,15 @@ describe("aislamiento-tenant: chat", () => {
     resetContainer();
   });
 
-  it("un token con la sesion de otro tenant no alcanza esa conversacion", async () => {
+  it("el secreto de conversacion de la clinica A con un token de la clinica B da 404", async () => {
     const a = await seedTenantDomain(prisma, "chat-a");
     const b = await seedTenantDomain(prisma, "chat-b");
-    const session = await openChat(await enableWidget(prisma, a.tenantId, "chat-a"));
-    await getChat(session.token);
-    const forged = await signToken({
-      role: "widget",
-      tenantId: b.tenantId,
-      extra: { session_id: session.sessionId },
-      subject: `widget:${session.sessionId}`,
-    });
-    expect((await getChat(forged)).status).toBe(401);
-    expect((await sendChat(forged, { text: "hola" })).status).toBe(401);
+    const chatA = await openChat(await enableWidget(prisma, a.tenantId, "chat-a"));
+    const chatB = await openChat(await enableWidget(prisma, b.tenantId, "chat-b"));
+    expect((await getChat(chatA)).status).toBe(200);
+    const crossed = { token: chatB.token, secret: chatA.secret };
+    expect((await getChat(crossed)).status).toBe(404);
+    expect((await sendChat(crossed, { text: "hola" })).status).toBe(404);
     expect(await prisma.conversation.count({ where: { tenantId: b.tenantId } })).toBe(0);
   });
 });

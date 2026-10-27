@@ -8,6 +8,11 @@ export type WidgetSession = {
   readonly createdAt: Date;
   readonly expiresAt: Date;
   readonly lastSeenAt: Date;
+  /**
+   * Hash (sha256 hex) del `conversation_secret`; el secreto en claro solo lo tiene el widget.
+   * `null` en sesiones anteriores al corte de identidad: quedan inalcanzables y vencen solas.
+   */
+  readonly secretHash: string | null;
 };
 
 /** Actor de la apertura anonima en `idempotency_keys`. */
@@ -32,6 +37,21 @@ export function originAllowed(origin: string | null, allowed: readonly string[])
   return origin !== null && allowed.includes(origin.toLowerCase());
 }
 
+const SUBJECT_PREFIX = "widget:";
+
+/**
+ * Sujeto de auditoria e idempotencia de una conversacion. El `sub` del token es el mismo para
+ * todas las conversaciones de la clinica, asi que las rutas del widget lo sustituyen por este.
+ */
 export function sessionSubject(sessionId: string): string {
-  return `widget:${sessionId}`;
+  return `${SUBJECT_PREFIX}${sessionId}`;
+}
+
+/** Inversa de `sessionSubject`; `null` si el sujeto no es de una conversacion. */
+export function sessionIdOfSubject(subject: string): string | null {
+  if (!subject.startsWith(SUBJECT_PREFIX)) {
+    return null;
+  }
+  const sessionId = subject.slice(SUBJECT_PREFIX.length);
+  return sessionId === "" ? null : sessionId;
 }

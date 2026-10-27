@@ -5,6 +5,8 @@ import type { SessionManager } from "@/widget/session";
 import type { ConversationHistory, ConversationTurn, WidgetApi } from "@/widget/widget-api";
 
 const AT = "2026-10-13T15:00:00.000Z";
+const T1 = { accessToken: "t1", conversationSecret: "s1" };
+const T2 = { accessToken: "t2", conversationSecret: "s2" };
 
 const WELCOME: ConversationHistory = {
   messages: [{ author: "bot", text: "Hola, soy el asistente.", redacted: false, created_at: AT }],
@@ -31,8 +33,8 @@ function setup(overrides: Partial<WidgetApi> = {}) {
     ...overrides,
   };
   const session = {
-    token: vi.fn<SessionManager["token"]>(async () => "t1"),
-    reopen: vi.fn<SessionManager["reopen"]>(async () => "t2"),
+    credentials: vi.fn<SessionManager["credentials"]>(async () => T1),
+    reopen: vi.fn<SessionManager["reopen"]>(async () => T2),
     clear: vi.fn<SessionManager["clear"]>(),
     expired: vi.fn<SessionManager["expired"]>(() => false),
   };
@@ -69,15 +71,16 @@ describe("cliente del chat", () => {
     expect(client.view()).toBe(view);
   });
 
-  it("load reabre la sesión una vez si el backend responde 401", async () => {
+  it.each([401, 404])("load reabre la sesión una vez si el backend responde %i", async (status) => {
     const getConversation = vi
       .fn<WidgetApi["getConversation"]>()
-      .mockRejectedValueOnce(apiError(401))
+      .mockRejectedValueOnce(apiError(status))
       .mockResolvedValueOnce(WELCOME);
     const { session, client } = setup({ getConversation });
     await client.load();
     expect(session.reopen).toHaveBeenCalledTimes(1);
     expect(getConversation).toHaveBeenCalledTimes(2);
+    expect(getConversation).toHaveBeenLastCalledWith(T1);
   });
 
   it("enviar una opción añade el eco del historial y las líneas del bot", async () => {
@@ -85,7 +88,7 @@ describe("cliente del chat", () => {
     const { api, client } = setup({ getConversation });
     await client.load();
     const outcome = await client.send(AGENDAR);
-    expect(api.sendMessage).toHaveBeenCalledWith("t1", { option_id: "1.1" }, "key-1");
+    expect(api.sendMessage).toHaveBeenCalledWith(T1, { option_id: "1.1" }, "key-1");
     expect(outcome.kind).toBe("turn");
     expect(client.view().messages.map((m) => `${m.author}:${m.text}`)).toEqual([
       "bot:Hola, soy el asistente.",
@@ -149,7 +152,7 @@ describe("cliente del chat", () => {
     const { api, client } = setup({ getConversation, sendMessage });
     await client.load();
     await client.send({ kind: "text", text: "12345678" });
-    expect(api.sendMessage).toHaveBeenCalledWith("t1", { text: "12345678" }, "key-1");
+    expect(api.sendMessage).toHaveBeenCalledWith(T1, { text: "12345678" }, "key-1");
     const texts = client.view().messages.map((m) => m.text);
     expect(texts).toEqual([
       "Hola, soy el asistente.",
@@ -213,18 +216,21 @@ describe("cliente del chat", () => {
     expect(client.view().options).toEqual([{ id: "3.1", label: "Menú" }]);
   });
 
-  it("401 al enviar abre sesión nueva, recarga y no reenvía el turno", async () => {
-    const sendMessage = vi.fn<WidgetApi["sendMessage"]>(async () => {
-      throw apiError(401);
-    });
-    const { api, session, client } = setup({ sendMessage });
-    await client.load();
-    const outcome = await client.send(AGENDAR);
-    expect(outcome.kind).toBe("reopened");
-    expect(session.reopen).toHaveBeenCalledTimes(1);
-    expect(sendMessage).toHaveBeenCalledTimes(1);
-    expect(api.getConversation).toHaveBeenCalledTimes(2);
-  });
+  it.each([401, 404])(
+    "%i al enviar abre sesión nueva, recarga y no reenvía el turno",
+    async (status) => {
+      const sendMessage = vi.fn<WidgetApi["sendMessage"]>(async () => {
+        throw apiError(status);
+      });
+      const { api, session, client } = setup({ sendMessage });
+      await client.load();
+      const outcome = await client.send(AGENDAR);
+      expect(outcome.kind).toBe("reopened");
+      expect(session.reopen).toHaveBeenCalledTimes(1);
+      expect(sendMessage).toHaveBeenCalledTimes(1);
+      expect(api.getConversation).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("422 devuelve el mensaje del backend y deja el turno como estaba", async () => {
     const sendMessage = vi.fn<WidgetApi["sendMessage"]>(async () => {

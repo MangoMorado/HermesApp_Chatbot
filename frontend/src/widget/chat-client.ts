@@ -53,8 +53,9 @@ function toView(history: ConversationHistory): ChatView {
   return { messages: numbered(lines), options: history.options, input: history.input };
 }
 
-function isUnauthorized(error: unknown): boolean {
-  return error instanceof WidgetApiError && error.status === 401;
+/** `401` (token) o `404` (conversación vencida o desconocida): se abre otra conversación. */
+function isLost(error: unknown): boolean {
+  return error instanceof WidgetApiError && (error.status === 401 || error.status === 404);
 }
 
 export function createChatClient(deps: ChatDeps): ChatClient {
@@ -64,9 +65,9 @@ export function createChatClient(deps: ChatDeps): ChatClient {
 
   async function history(retry = true): Promise<ConversationHistory> {
     try {
-      return await deps.api.getConversation(await deps.session.token());
+      return await deps.api.getConversation(await deps.session.credentials());
     } catch (error) {
-      if (retry && isUnauthorized(error)) {
+      if (retry && isLost(error)) {
         await deps.session.reopen();
         return history(false);
       }
@@ -106,7 +107,7 @@ export function createChatClient(deps: ChatDeps): ChatClient {
     if (error.status === 409 && error.reason === "stale_option") {
       return { kind: "stale", view: await reload() };
     }
-    if (error.status === 401) {
+    if (isLost(error)) {
       await deps.session.reopen();
       return { kind: "reopened", view: await reload() };
     }
@@ -116,7 +117,7 @@ export function createChatClient(deps: ChatDeps): ChatClient {
     throw error;
   }
 
-  /** Sesión vencida en local: igual que un `401`, sin enviar el turno a una conversación nueva. */
+  /** Conversación vencida en local: igual que un `404`, sin enviar el turno a una nueva. */
   async function reopenExpired(): Promise<SendOutcome> {
     pending = null;
     await deps.session.reopen();
@@ -130,7 +131,8 @@ export function createChatClient(deps: ChatDeps): ChatClient {
     const body: ConversationMessageInput =
       outgoing.kind === "option" ? { option_id: outgoing.option.id } : { text: outgoing.text };
     try {
-      const turn = await deps.api.sendMessage(await deps.session.token(), body, keyFor(body));
+      const credentials = await deps.session.credentials();
+      const turn = await deps.api.sendMessage(credentials, body, keyFor(body));
       pending = null;
       const bot = turn.messages.map((text): Line => ({ author: "bot", text }));
       const lines = [...current.messages, ...(await echoOf()), ...bot];

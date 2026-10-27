@@ -18,8 +18,16 @@ export type WidgetSettingsReader = (
 export type WidgetSessionRepository = {
   create(session: WidgetSession): Promise<void>;
   get(tenantId: TenantId, id: string): Promise<WidgetSession | null>;
+  /** Busca por el hash del `conversation_secret`, siempre dentro del tenant del token. */
+  getBySecretHash(tenantId: TenantId, secretHash: string): Promise<WidgetSession | null>;
   /** Actualiza `last_seen_at` y `expires_at`. */
   extend(session: WidgetSession): Promise<void>;
+};
+
+/** Secreto propio de la conversacion: se entrega una vez al widget y solo se guarda su hash. */
+export type ConversationSecrets = {
+  generate(): string;
+  hash(secret: string): string;
 };
 
 export type RateDecision =

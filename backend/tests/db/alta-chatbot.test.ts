@@ -7,7 +7,14 @@ import { PUT as putWidgetClient } from "@/app/api/platform/v1/tenants/[id]/widge
 import { POST as createTenant, GET as listTenants } from "@/app/api/platform/v1/tenants/route";
 import { POST as openWidgetSession } from "@/app/api/v1/widget/sessions/route";
 import { resetContainer } from "@/composition-root";
-import { authedRequest, platformToken, signToken, TEST_CLIENT_SECRET } from "../helpers/idp";
+import {
+  authedRequest,
+  fakeIdpCalls,
+  platformToken,
+  resetFakeIdp,
+  signToken,
+  TEST_CLIENT_SECRET,
+} from "../helpers/idp";
 import { insertChatbotTenant, testPrisma, truncateAll } from "./support";
 
 const prisma: PrismaClient = testPrisma();
@@ -297,5 +304,35 @@ describe("alta-chatbot: la primera clave abre sesion", () => {
       }),
     );
     expect(response.status).toBe(201);
+  });
+
+  it("tras rotar widget-client la siguiente apertura pide token con el client_id nuevo", async () => {
+    const { tenantId, widgetKey } = await insertChatbotTenant(prisma, "a", {
+      allowedOrigins: ["https://nueva.test"],
+    });
+    const openOnce = () =>
+      openWidgetSession(
+        new Request("http://localhost/api/v1/widget/sessions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Origin: "https://nueva.test",
+            "Idempotency-Key": randomUUID(),
+          },
+          body: JSON.stringify({ widget_key: widgetKey }),
+        }),
+      );
+    expect((await openOnce()).status).toBe(201);
+    const rotatedId = `widget-${tenantId}-v2`;
+    const rotated = await widgetClientPut(
+      tenantId,
+      { client_id: rotatedId, client_secret: TEST_CLIENT_SECRET },
+      "wc-rot",
+    );
+    expect(rotated.status).toBe(200);
+    resetFakeIdp();
+    expect((await openOnce()).status).toBe(201);
+    const requested = fakeIdpCalls().flatMap((call) => (call.clientId ? [call.clientId] : []));
+    expect(requested).toEqual([rotatedId]);
   });
 });

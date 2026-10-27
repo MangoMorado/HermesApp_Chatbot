@@ -1,22 +1,20 @@
 import { getContainer } from "@/composition-root";
-import { assertSessionOrigin, widgetPreflight, withWidgetCors } from "@/http/cors";
+import { widgetPreflight, withWidgetCors } from "@/http/cors";
 import { privateRoute } from "@/http/route";
 import { conversationHistoryJson } from "@/http/serializers-conversation";
-import { sessionIdOf } from "@/http/widget-session-response";
+import { resolveWidgetConversation } from "@/http/widget-session-response";
 
 export const dynamic = "force-dynamic";
 
 /** Turno actual e historial redactado; crea la conversacion con la bienvenida si no existe. */
 const getConversation = privateRoute(["widget"], async ({ actor, requestId, request }) => {
-  const container = getContainer();
-  const sessionId = sessionIdOf(actor);
-  assertSessionOrigin(request, await container.getActiveWidgetSession(actor.tenantId, sessionId));
-  const view = await container.withWriteTransaction((ports) =>
+  const { session, actor: resolved } = await resolveWidgetConversation(actor, request);
+  const view = await getContainer().withWriteTransaction((ports) =>
     ports.getConversation({
-      tenantId: actor.tenantId,
-      sessionId,
-      actorSubject: actor.subject,
-      actorRole: actor.role,
+      tenantId: resolved.tenantId,
+      sessionId: session.id,
+      actorSubject: resolved.subject,
+      actorRole: resolved.role,
       requestId,
     }),
   );

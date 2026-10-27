@@ -11,5 +11,4 @@ export interface Identity {
   subject: string;
   tenant_id: string;
   role: IdentityRole;
-  session_id?: string;
 }

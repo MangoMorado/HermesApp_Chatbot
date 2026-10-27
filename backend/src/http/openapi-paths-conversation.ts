@@ -1,5 +1,6 @@
 import {
   authErrors,
+  CONVERSATION_SECRET_PARAMETER,
   IDEMPOTENCY_PARAMETER,
   okJson,
   REQUEST_ID_PARAMETER,
@@ -69,9 +70,9 @@ export const CONVERSATION_PATHS = {
       tags: ["widget"],
       operationId: "getWidgetConversation",
       description:
-        "Solo rol widget: turno actual e historial redactado de su sesion. Crea la conversacion con la bienvenida si no existe.",
+        "Solo rol widget: turno actual e historial redactado de la conversacion de X-Conversation-Secret. Crea la conversacion con la bienvenida si no existe.",
       security: bearer,
-      parameters: [REQUEST_ID_PARAMETER],
+      parameters: [REQUEST_ID_PARAMETER, CONVERSATION_SECRET_PARAMETER],
       responses: { ...okJson({ $ref: "#/components/schemas/ConversationHistory" }), ...authErrors },
     },
   },
@@ -82,7 +83,7 @@ export const CONVERSATION_PATHS = {
       description:
         "Solo rol widget: un turno. option_id de una opcion vigente (409 stale_option si no) o text donde el turno lo pide.",
       security: bearer,
-      parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
+      parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER, CONVERSATION_SECRET_PARAMETER],
       requestBody: {
         required: true,
         content: {

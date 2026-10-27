@@ -1,13 +1,16 @@
 import { WidgetApiError } from "./fetcher";
-import type { WidgetApi, WidgetSession } from "./widget-api";
+import type { WidgetApi, WidgetCredentials } from "./widget-api";
 
 export type SessionStorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 type StoredSession = {
-  readonly token: string;
+  readonly accessToken: string;
+  /** Vence el token del proveedor. */
   readonly expiresAt: number;
-  /** `null` en sesiones guardadas con el formato anterior. */
-  readonly obtainedAt: number | null;
+  readonly conversationSecret: string;
+  /** Vence la conversación (TTL del tenant); el token se renueva mientras siga viva. */
+  readonly sessionExpiresAt: number;
+  readonly obtainedAt: number;
 };
 
 /** Se renueva a la mitad de la vida del token o, como mínimo, con menos de un minuto restante. */
@@ -34,32 +37,48 @@ export function clearStoredSession(widgetKey: string, storage: SessionStorageLik
   }
 }
 
+function instant(value: unknown): number {
+  return typeof value === "string" ? Date.parse(value) : Number.NaN;
+}
+
+/** El formato anterior (token propio con `session_id`, sin secreto) se descarta: `null`. */
 function parseStored(raw: string | null): StoredSession | null {
   if (!raw) {
     return null;
   }
   try {
-    const value = JSON.parse(raw) as {
-      token?: unknown;
-      expires_at?: unknown;
-      obtained_at?: unknown;
-    } | null;
-    const expiresAt =
-      typeof value?.expires_at === "string" ? Date.parse(value.expires_at) : Number.NaN;
-    return typeof value?.token === "string" && Number.isFinite(expiresAt)
-      ? {
-          token: value.token,
-          expiresAt,
-          obtainedAt: typeof value.obtained_at === "number" ? value.obtained_at : null,
-        }
-      : null;
+    const value = JSON.parse(raw) as Record<string, unknown> | null;
+    const session = {
+      accessToken: value?.access_token,
+      expiresAt: instant(value?.expires_at),
+      conversationSecret: value?.conversation_secret,
+      sessionExpiresAt: instant(value?.session_expires_at),
+      obtainedAt: value?.obtained_at,
+    };
+    const valid =
+      typeof session.accessToken === "string" &&
+      typeof session.conversationSecret === "string" &&
+      typeof session.obtainedAt === "number" &&
+      Number.isFinite(session.expiresAt) &&
+      Number.isFinite(session.sessionExpiresAt);
+    return valid ? (session as StoredSession) : null;
   } catch {
     return null;
   }
 }
 
+function serialize(session: StoredSession): string {
+  return JSON.stringify({
+    access_token: session.accessToken,
+    expires_at: new Date(session.expiresAt).toISOString(),
+    conversation_secret: session.conversationSecret,
+    session_expires_at: new Date(session.sessionExpiresAt).toISOString(),
+    obtained_at: session.obtainedAt,
+  });
+}
+
 /** Guarda en el almacenamiento y en memoria: si el primero falla, la sesión no se pierde. */
-function createStore(widgetKey: string, storage: SessionStorageLike | null, now: () => number) {
+function createStore(widgetKey: string, storage: SessionStorageLike | null) {
   const key = storageKey(widgetKey);
   let memory: string | null = null;
   return {
@@ -70,12 +89,8 @@ function createStore(widgetKey: string, storage: SessionStorageLike | null, now:
         return parseStored(memory);
       }
     },
-    write(session: WidgetSession): void {
-      memory = JSON.stringify({
-        token: session.token,
-        expires_at: session.expires_at,
-        obtained_at: now(),
-      });
+    write(session: StoredSession): void {
+      memory = serialize(session);
       try {
         storage?.setItem(key, memory);
       } catch {
@@ -89,6 +104,15 @@ function createStore(widgetKey: string, storage: SessionStorageLike | null, now:
   };
 }
 
+function credentialsOf(session: StoredSession): WidgetCredentials {
+  return { accessToken: session.accessToken, conversationSecret: session.conversationSecret };
+}
+
+/** Un `401` (clave) o `404` (conversación vencida o desconocida): hay que abrir otra. */
+function conversationLost(error: unknown): boolean {
+  return error instanceof WidgetApiError && (error.status === 401 || error.status === 404);
+}
+
 export type SessionDeps = {
   readonly api: WidgetApi;
   readonly widgetKey: string;
@@ -98,61 +122,74 @@ export type SessionDeps = {
 };
 
 export type SessionManager = {
-  /** Token vigente: restaura, renueva o abre sesión según haga falta. */
-  token(): Promise<string>;
-  /** Descarta la sesión guardada y abre una nueva (tras un `401`). */
-  reopen(): Promise<string>;
-  /** `true` si hay sesión guardada y ya venció (se trata como un `401`). */
+  /** Credenciales vigentes: restaura, renueva el token o abre conversación según haga falta. */
+  credentials(): Promise<WidgetCredentials>;
+  /** Descarta la sesión guardada y abre una nueva (tras un `401` o `404`). */
+  reopen(): Promise<WidgetCredentials>;
+  /** `true` si hay conversación guardada y ya venció (se trata como un `404`). */
   expired(): boolean;
   clear(): void;
 };
 
 export function createSessionManager(deps: SessionDeps): SessionManager {
-  const store = createStore(deps.widgetKey, deps.storage, deps.now);
-  let inFlight: Promise<string> | null = null;
+  const store = createStore(deps.widgetKey, deps.storage);
+  let inFlight: Promise<WidgetCredentials> | null = null;
 
-  async function open(): Promise<string> {
-    const session = await deps.api.openSession(deps.newKey());
+  async function open(): Promise<WidgetCredentials> {
+    const opened = await deps.api.openSession(deps.newKey());
+    const session: StoredSession = {
+      accessToken: opened.access_token,
+      expiresAt: Date.parse(opened.expires_at),
+      conversationSecret: opened.conversation_secret,
+      sessionExpiresAt: Date.parse(opened.session_expires_at),
+      obtainedAt: deps.now(),
+    };
     store.write(session);
-    return session.token;
+    return credentialsOf(session);
   }
 
-  async function refresh(current: StoredSession): Promise<string> {
+  async function refresh(current: StoredSession): Promise<WidgetCredentials> {
     try {
-      const session = await deps.api.refreshSession(current.token, deps.newKey());
+      const renewed = await deps.api.refreshSession(current.conversationSecret, deps.newKey());
+      const session: StoredSession = {
+        ...current,
+        accessToken: renewed.access_token,
+        expiresAt: Date.parse(renewed.expires_at),
+        sessionExpiresAt: Date.parse(renewed.session_expires_at),
+        obtainedAt: deps.now(),
+      };
       store.write(session);
-      return session.token;
+      return credentialsOf(session);
     } catch (error) {
-      if (error instanceof WidgetApiError && error.status === 401) {
+      if (conversationLost(error)) {
         return open();
       }
-      // Fallo pasajero: el token actual sigue sirviendo hasta que venza.
-      return current.token;
+      // Fallo pasajero: el token actual sirve mientras no venza; vencido, se reintenta luego.
+      if (current.expiresAt - deps.now() > 0) {
+        return credentialsOf(current);
+      }
+      throw error;
     }
   }
 
   function needsRefresh(current: StoredSession, now: number): boolean {
-    const remaining = current.expiresAt - now;
-    if (remaining < REFRESH_MARGIN_MS) {
+    if (current.expiresAt - now < REFRESH_MARGIN_MS) {
       return true;
     }
-    return (
-      current.obtainedAt !== null &&
-      now - current.obtainedAt >= (current.expiresAt - current.obtainedAt) / 2
-    );
+    return now - current.obtainedAt >= (current.expiresAt - current.obtainedAt) / 2;
   }
 
-  function resolve(): Promise<string> {
+  function resolve(): Promise<WidgetCredentials> {
     const current = store.read();
     const now = deps.now();
-    if (!current || current.expiresAt - now <= 0) {
+    if (!current || current.sessionExpiresAt - now <= 0) {
       return open();
     }
-    return needsRefresh(current, now) ? refresh(current) : Promise.resolve(current.token);
+    return needsRefresh(current, now) ? refresh(current) : Promise.resolve(credentialsOf(current));
   }
 
   /** Varias llamadas a la vez comparten una sola apertura o renovación. */
-  function once(task: () => Promise<string>): Promise<string> {
+  function once(task: () => Promise<WidgetCredentials>): Promise<WidgetCredentials> {
     inFlight ??= task().finally(() => {
       inFlight = null;
     });
@@ -160,7 +197,7 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
   }
 
   return {
-    token: () => once(resolve),
+    credentials: () => once(resolve),
     reopen: () =>
       once(() => {
         store.clear();
@@ -168,7 +205,7 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
       }),
     expired() {
       const current = store.read();
-      return current !== null && current.expiresAt - deps.now() <= 0;
+      return current !== null && current.sessionExpiresAt - deps.now() <= 0;
     },
     clear: () => store.clear(),
   };

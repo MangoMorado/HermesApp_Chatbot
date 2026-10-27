@@ -54,7 +54,6 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             subject: { type: "string" },
             tenant_id: { type: "string" },
             role: { type: "string", enum: ["widget", "operator", "admin", "service"] },
-            session_id: { type: "string" },
           },
         },
         Page: PAGE_SCHEMA,
