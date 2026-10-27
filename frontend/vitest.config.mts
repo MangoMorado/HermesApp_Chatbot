@@ -25,7 +25,19 @@ export default defineConfig({
         "src/sim/**",
         "src/platform/**",
         "src/widget/api/**",
+        // UI presentacional: fuera del denominador (cobertura de lógica).
+        "src/app/**",
+        "src/components/**/*.tsx",
+        "src/widget/**/*.tsx",
+        // Hooks React: requieren RTL (no instalado).
+        "src/lib/use-*.ts",
+        "src/widget/use-*.ts",
+        "src/components/**/use-*.ts",
       ],
+      thresholds: {
+        lines: 80,
+        statements: 80,
+      },
     },
   },
 });

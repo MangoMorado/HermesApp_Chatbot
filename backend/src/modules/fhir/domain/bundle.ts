@@ -13,12 +13,12 @@ export type SearchBundleInput = {
   readonly limit: number;
 };
 
-const CONTROL_PARAMS: readonly string[] = ["_count", "_offset"];
+const CONTROL_PARAMS = new Set(["_count", "_offset"]);
 
 function pageUrl(input: SearchBundleInput, offset: number): string {
   const query = new URLSearchParams();
   for (const [name, value] of input.filters) {
-    if (!CONTROL_PARAMS.includes(name)) {
+    if (!CONTROL_PARAMS.has(name)) {
       query.append(name, value);
     }
   }

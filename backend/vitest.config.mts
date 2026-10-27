@@ -16,7 +16,18 @@ export default defineConfig({
         "**/node_modules/**",
         "**/.next/**",
         "**/coverage/**",
+        // Adaptadores HTTP/DI/Prisma: los cubre `test:db`, no el proyecto unit.
+        "src/app/**",
+        "src/composition/**",
+        "src/composition-root.ts",
+        "**/infrastructure/prisma*",
+        "src/modules/shared/infrastructure/prisma-client.ts",
+        "src/http/openapi*.ts",
       ],
+      thresholds: {
+        lines: 80,
+        statements: 80,
+      },
     },
     projects: [
       {

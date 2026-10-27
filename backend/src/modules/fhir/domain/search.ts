@@ -12,7 +12,7 @@ import type { FhirIdentifier } from "./resources/types";
 /** Parametros de busqueda tal como llegan: nombre -> valores en orden. */
 export type SearchParams = ReadonlyMap<string, readonly string[]>;
 
-const CONTROL_PARAMS: readonly string[] = ["_count", "_offset"];
+const CONTROL_PARAMS = new Set(["_count", "_offset"]);
 
 export function collectParams(entries: Iterable<readonly [string, string]>): SearchParams {
   const collected = new Map<string, string[]>();
@@ -25,7 +25,7 @@ export function collectParams(entries: Iterable<readonly [string, string]>): Sea
 /** Un parametro que el recurso no declara no se ignora: responde `not-supported`. */
 export function assertSupported(params: SearchParams, supported: readonly string[]): void {
   for (const name of params.keys()) {
-    if (!supported.includes(name) && !CONTROL_PARAMS.includes(name)) {
+    if (!supported.includes(name) && !CONTROL_PARAMS.has(name)) {
       throw fhirNotSupported(`Parametro de busqueda no soportado: ${name}`);
     }
   }

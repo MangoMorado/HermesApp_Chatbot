@@ -99,4 +99,9 @@ describe("fetcher del widget", () => {
     expect(error.status).toBe(200);
     expect(error.code).toBeNull();
   });
+
+  it("un 2xx con cuerpo vacío acepta null", async () => {
+    stubFetch(new Response("", { status: 200 }));
+    await expect(widgetFetcher("/x", { apiBase: "https://api.test" })).resolves.toBeNull();
+  });
 });

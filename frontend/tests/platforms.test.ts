@@ -20,4 +20,12 @@ describe("destinos de la consola", () => {
     expect(keys).not.toContain(SESSION_SHORTCUT);
     expect(SESSION_SHORTCUT).toBe("0");
   });
+
+  it("cada destino declara label, detail y roles", () => {
+    for (const item of PLATFORMS) {
+      expect(item.label.length).toBeGreaterThan(0);
+      expect(item.detail.length).toBeGreaterThan(0);
+      expect(item.roles.length).toBeGreaterThan(0);
+    }
+  });
 });

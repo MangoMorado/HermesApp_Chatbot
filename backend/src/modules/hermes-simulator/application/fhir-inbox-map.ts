@@ -20,7 +20,7 @@ function instants(record: Record<string, unknown>): Pick<InboxRef, "startAt" | "
   const startAt = new Date(requiredString(record, "start"));
   const endAt = new Date(requiredString(record, "end"));
   if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
-    throw new Error("start o end invalidos");
+    throw new TypeError("start o end invalidos");
   }
   return { startAt, endAt };
 }
@@ -89,7 +89,7 @@ function whenOf(record: Record<string, unknown>, label: string): InboxRef {
 
 function participantId(value: unknown, type: string): string {
   if (!Array.isArray(value)) {
-    throw new Error("participant es obligatorio");
+    throw new TypeError("participant es obligatorio");
   }
   for (const item of value) {
     const reference = requiredString(

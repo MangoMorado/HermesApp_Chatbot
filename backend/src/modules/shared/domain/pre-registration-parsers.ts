@@ -14,7 +14,7 @@ export function isEmailShape(value: string): boolean {
   if (at < 1 || value.includes(" ") || value.includes("\t")) {
     return false;
   }
-  if (value.indexOf("@", at + 1) !== -1) {
+  if (value.includes("@", at + 1)) {
     return false;
   }
   const domain = value.slice(at + 1);
