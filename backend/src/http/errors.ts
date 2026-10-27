@@ -5,6 +5,7 @@ import {
   MachineCredentialMissingError,
 } from "@/modules/auth/domain/machine-credential-error";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
+import { InvalidRequestError } from "@/modules/shared/domain/invalid-request-error";
 import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
@@ -41,6 +42,9 @@ export function toApiError(error: unknown): ApiError {
   }
   if (error instanceof ValidationError) {
     return new ApiError("validation_failed", error.message, error.details);
+  }
+  if (error instanceof InvalidRequestError) {
+    return new ApiError("invalid_request", error.message);
   }
   if (error instanceof NotFoundError) {
     return new ApiError("not_found", error.message);

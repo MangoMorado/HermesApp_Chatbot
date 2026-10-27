@@ -1,5 +1,9 @@
 import type { AppConfig } from "../config/env";
 import { type Authenticate, createAuthenticate } from "../modules/auth/application/authenticate";
+import {
+  type CloseProviderSession,
+  createCloseProviderSession,
+} from "../modules/auth/application/close-provider-session";
 import type { ClosedSessions } from "../modules/auth/domain/ports/closed-sessions";
 import {
   createOidcDiscovery,
@@ -13,6 +17,7 @@ import { systemClock } from "../modules/shared/infrastructure/system-clock";
 export type AuthWiring = {
   readonly authenticate: Authenticate;
   readonly closedSessions: ClosedSessions;
+  readonly closeProviderSession: CloseProviderSession;
   /** Una sola instancia de discovery: la comparten el verificador y los clientes maquina. */
   readonly oidcDiscovery: () => Promise<OidcDiscovery>;
 };
@@ -28,6 +33,12 @@ export function authWiring(db: PrismaExecutor, config: AppConfig): AuthWiring {
   return {
     authenticate: createAuthenticate({ verifier, closedSessions, clock: systemClock }),
     closedSessions,
+    closeProviderSession: createCloseProviderSession({
+      verifier,
+      closedSessions,
+      clock: systemClock,
+      maxTokenLifetimeSeconds: config.oidc.maxTokenLifetimeSeconds,
+    }),
     oidcDiscovery,
   };
 }

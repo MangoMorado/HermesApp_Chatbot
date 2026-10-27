@@ -699,6 +699,100 @@
         }
       }
     },
+    "/auth/backchannel-logout": {
+      "post": {
+        "operationId": "backchannelLogout",
+        "summary": "Back-channel logout OIDC",
+        "description": "Publica: la llama el proveedor de identidad servidor a servidor. Verifica el logout_token y cierra la sesion (sid) hasta que caduquen sus tokens. Idempotente.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Identificador de correlacion. Si no viene, el servicio genera uno.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "logout_token"
+                ],
+                "properties": {
+                  "logout_token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/practitioners": {
       "get": {
         "operationId": "listPractitioners",

@@ -7,6 +7,8 @@
  */
 
 export * from './allowedOriginInput';
+export * from './backchannelLogout200';
+export * from './backchannelLogoutBody';
 export * from './botConfig';
 export * from './botConfigParams';
 export * from './botConfigPatch';

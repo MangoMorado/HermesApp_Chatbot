@@ -26,6 +26,8 @@ import type {
 
 import type {
   AllowedOriginInput,
+  BackchannelLogout200,
+  BackchannelLogoutBody,
   BotConfig,
   BotConfigPatch,
   DeleteKnowledgeEntry200,
@@ -271,7 +273,97 @@ export function useGetIdentity<TData = Awaited<ReturnType<typeof getIdentity>>, 
 
 
 
-export const getListPractitionersUrl = (params?: ListPractitionersParams,) => {
+export const getBackchannelLogoutUrl = () => {
+
+
+
+
+  return `/api/v1/auth/backchannel-logout`
+}
+
+/**
+ * Publica: la llama el proveedor de identidad servidor a servidor. Verifica el logout_token y cierra la sesion (sid) hasta que caduquen sus tokens. Idempotente.
+ * @summary Back-channel logout OIDC
+ */
+export const backchannelLogout = async (backchannelLogoutBody: BackchannelLogoutBody, options?: Parameters<typeof apiFetcher>[1]): Promise<BackchannelLogout200> => {
+    const formUrlEncoded = new URLSearchParams();
+formUrlEncoded.append(`logout_token`, backchannelLogoutBody.logout_token);
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetcher<BackchannelLogout200>(getBackchannelLogoutUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...getHeaders(options?.headers) },
+    body: formUrlEncoded
+  }
+);}
+
+
+
+
+
+export const getBackchannelLogoutMutationKey = () => ['backchannelLogout'] as const;
+
+export const getBackchannelLogoutMutationOptions = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof backchannelLogout>>, TError,BackchannelLogoutMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+): UseMutationOptions<Awaited<ReturnType<typeof backchannelLogout>>, TError,BackchannelLogoutMutationVariables, TContext> => {
+
+const mutationKey = getBackchannelLogoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof backchannelLogout>>, BackchannelLogoutMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  backchannelLogout(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BackchannelLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof backchannelLogout>>>
+    export type BackchannelLogoutMutationBody = BackchannelLogoutBody
+    export type BackchannelLogoutMutationError = Error
+    export type BackchannelLogoutMutationVariables = {data: BackchannelLogoutBody}
+
+    /**
+ * @summary Back-channel logout OIDC
+ */
+export const useBackchannelLogout = <TError = Error,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof backchannelLogout>>, TError,BackchannelLogoutMutationVariables, TContext>, request?: SecondParameter<typeof apiFetcher>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof backchannelLogout>>,
+        TError,
+        BackchannelLogoutMutationVariables,
+        TContext
+      > => {
+      return useMutation(getBackchannelLogoutMutationOptions(options), queryClient);
+    }
+    export const getListPractitionersUrl = (params?: ListPractitionersParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {

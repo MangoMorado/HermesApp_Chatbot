@@ -91,6 +91,33 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
         },
       },
+      "/auth/backchannel-logout": {
+        post: {
+          operationId: "backchannelLogout",
+          summary: "Back-channel logout OIDC",
+          description:
+            "Publica: la llama el proveedor de identidad servidor a servidor. Verifica el " +
+            "logout_token y cierra la sesion (sid) hasta que caduquen sus tokens. Idempotente.",
+          security: [],
+          parameters: [REQUEST_ID_PARAMETER],
+          requestBody: {
+            required: true,
+            content: {
+              "application/x-www-form-urlencoded": {
+                schema: {
+                  type: "object",
+                  required: ["logout_token"],
+                  properties: { logout_token: { type: "string" } },
+                },
+              },
+            },
+          },
+          responses: {
+            ...okJson({ type: "object" }),
+            ...errorResponses(["invalid_request", "internal_error"]),
+          },
+        },
+      },
       "/practitioners": {
         get: {
           operationId: "listPractitioners",
