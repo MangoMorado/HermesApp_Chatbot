@@ -33,7 +33,7 @@ const postMessage = idempotentRoute(
         request,
         await getContainer().getActiveWidgetSession(actor.tenantId, sessionIdOf(actor)),
       ),
-    rebuild: async (stored, actor) => replayTurn(stored, sessionIdOf(actor)),
+    rebuild: (stored, actor) => Promise.resolve(replayTurn(stored, sessionIdOf(actor))),
   },
 );
 

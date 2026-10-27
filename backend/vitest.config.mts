@@ -6,6 +6,18 @@ const alias = { "@": fileURLToPath(new URL("./src", import.meta.url)) };
 export default defineConfig({
   resolve: { alias },
   test: {
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      reportsDirectory: "./coverage",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "**/*.d.ts",
+        "**/node_modules/**",
+        "**/.next/**",
+        "**/coverage/**",
+      ],
+    },
     projects: [
       {
         resolve: { alias },

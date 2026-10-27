@@ -22,7 +22,7 @@ export function createPrismaMessageRepository(
       });
     },
 
-    async list(tenantId, conversationId) {
+    list(tenantId, conversationId) {
       return db.conversationMessage.findMany({
         where: { tenantId, conversationId },
         orderBy: { seq: "asc" },

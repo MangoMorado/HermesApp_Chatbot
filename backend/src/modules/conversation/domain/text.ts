@@ -103,10 +103,7 @@ export function literal(text: string): BotText {
   return { literal: text };
 }
 
-export function line(
-  key: ConversationTextKey,
-  params?: Readonly<Record<string, string>>,
-): BotLine {
+export function line(key: ConversationTextKey, params?: Readonly<Record<string, string>>): BotLine {
   return { text: t(key, params) };
 }
 

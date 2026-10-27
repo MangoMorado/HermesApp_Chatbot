@@ -1,55 +1,67 @@
 /** Destinos de la consola: una sola lista para la cabecera, los atajos y la portada. */
-export const PLATFORMS = [
-  {
-    href: "/panel",
-    label: "Panel",
-    key: "1",
-    detail: "Agenda, cupos libres y expediente por documento.",
-    roles: "operator · admin",
-  },
-  {
-    href: "/panel/conocimiento",
-    label: "Conocimiento",
-    key: "2",
-    detail: "Lo que el bot responde en las consultas generales.",
-    roles: "operator · admin",
-  },
-  {
-    href: "/panel/bot",
-    label: "Bot",
-    key: "3",
-    detail: "Clave del widget, sitios permitidos, parámetros y textos.",
-    roles: "operator · admin",
-  },
-  {
-    href: "/panel/ajustes",
-    label: "Ajustes",
-    key: "4",
-    detail: "Tope del rango de consulta.",
-    roles: "admin",
-  },
-  {
-    href: "/chat",
-    label: "Chat",
-    key: "5",
-    detail: "Consola de pruebas del widget, con sesión propia.",
-    roles: "clave del widget",
-  },
-  {
-    href: "/simulador",
-    label: "Simulador",
-    key: "6",
-    detail: "Maestros y cupos de prueba. Se apaga en producción.",
-    roles: "admin",
-  },
-  {
-    href: "/simulador/bandeja",
-    label: "Bandeja",
-    key: "7",
-    detail: "Aprobar o rechazar las solicitudes que originó el chat.",
-    roles: "admin",
-  },
-] as const;
+export type Platform = {
+  readonly href: string;
+  readonly label: string;
+  readonly key: string;
+  readonly detail: string;
+  readonly roles: string;
+};
+
+function platform(
+  href: string,
+  label: string,
+  key: string,
+  detail: string,
+  roles: string,
+): Platform {
+  return { href, label, key, detail, roles };
+}
+
+export const PLATFORMS: readonly Platform[] = [
+  platform(
+    "/panel",
+    "Panel",
+    "1",
+    "Agenda, cupos libres y expediente por documento.",
+    "operator · admin",
+  ),
+  platform(
+    "/panel/conocimiento",
+    "Conocimiento",
+    "2",
+    "Lo que el bot responde en las consultas generales.",
+    "operator · admin",
+  ),
+  platform(
+    "/panel/bot",
+    "Bot",
+    "3",
+    "Clave del widget, sitios permitidos, parámetros y textos.",
+    "operator · admin",
+  ),
+  platform("/panel/ajustes", "Ajustes", "4", "Tope del rango de consulta.", "admin"),
+  platform(
+    "/chat",
+    "Chat",
+    "5",
+    "Consola de pruebas del widget, con sesión propia.",
+    "clave del widget",
+  ),
+  platform(
+    "/simulador",
+    "Simulador",
+    "6",
+    "Maestros y cupos de prueba. Se apaga en producción.",
+    "admin",
+  ),
+  platform(
+    "/simulador/bandeja",
+    "Bandeja",
+    "7",
+    "Aprobar o rechazar las solicitudes que originó el chat.",
+    "admin",
+  ),
+];
 
 /** Tecla que abre o cierra la franja de sesión. */
 export const SESSION_SHORTCUT = "0";

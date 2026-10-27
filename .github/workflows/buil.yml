@@ -15,6 +15,27 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend
+        run: npm --prefix backend ci --no-audit --no-fund
+
+      - name: Install frontend
+        run: npm --prefix frontend ci --no-audit --no-fund
+
+      - name: Coverage backend
+        run: npm --prefix backend run test:coverage
+
+      - name: Coverage frontend
+        run: npm --prefix frontend run test:coverage
+
       - uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

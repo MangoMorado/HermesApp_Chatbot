@@ -18,7 +18,7 @@ type TokenOptions = {
   secret?: string;
 };
 
-export async function signToken(options: TokenOptions): Promise<string> {
+export function signToken(options: TokenOptions): Promise<string> {
   const claims: Record<string, string> = { tenant_id: options.tenantId, role: options.role };
   if (options.sessionId) {
     claims.session_id = options.sessionId;

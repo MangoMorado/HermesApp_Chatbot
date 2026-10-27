@@ -165,7 +165,7 @@ async function previousResult(
  * entera y la respuesta guardada se repite fuera de ella.
  */
 export async function runIdempotent(plan: IdempotencyPlan): Promise<IdempotentResult> {
-  const rebuild = plan.rebuild ?? (async (stored: IdempotentResult) => stored);
+  const rebuild = plan.rebuild ?? ((stored: IdempotentResult) => Promise.resolve(stored));
   const replay = await previousResult(plan.outside, plan.request);
   if (replay) {
     return rebuild(replay);

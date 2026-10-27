@@ -6,14 +6,14 @@ export const mainMenu: Step = {
   id: "main_menu",
   globals: "full",
   echo: "label",
-  async enter(context) {
+  enter(context) {
     return prompt(
       context,
       [line("menu_prompt")],
       [choice("menu:appointments", t("option_appointments")), choice("menu:kb", t("option_kb"))],
     );
   },
-  async handle(input, context) {
+  handle(input, context) {
     if (input.kind === "option" && input.value === "menu:appointments") {
       return go(context.patientId ? "appointments_menu" : "id_document_type", context);
     }
@@ -29,10 +29,10 @@ export const closed: Step = {
   id: "closed",
   globals: "full",
   echo: "label",
-  async enter(context) {
+  enter(context) {
     return prompt(context, [line("closed_prompt")], []);
   },
-  async handle(_input, context) {
+  handle(_input, context) {
     return retry("closed", context);
   },
 };
@@ -42,10 +42,10 @@ export const verificationBlocked: Step = {
   id: "verification_blocked",
   globals: "full",
   echo: "label",
-  async enter(context) {
+  enter(context) {
     return prompt(context, [line("menu_prompt")], []);
   },
-  async handle(_input, context) {
+  handle(_input, context) {
     return retry("verification_blocked", context);
   },
 };

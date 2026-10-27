@@ -3,9 +3,14 @@ import { idempotentRoute } from "@/http/idempotent-route";
 import { requireSimulatorEnabled } from "@/http/require-simulator";
 import { privateRoute } from "@/http/route";
 import { simServiceJson } from "@/http/serializers";
-import { ConflictError } from "@/modules/shared/domain/conflict-error";
+import {
+  assertSimDelete,
+  booleanOr,
+  recordSimAudit,
+  requireObjectBody,
+  stringOr,
+} from "@/http/sim-mutation";
 import { NotFoundError } from "@/modules/shared/domain/not-found-error";
-import { ValidationError } from "@/modules/shared/domain/validation-error";
 
 export const dynamic = "force-dynamic";
 
@@ -30,28 +35,23 @@ export const PATCH = (request: Request, context: RouteContext): Promise<Response
     if (!existing) {
       throw new NotFoundError();
     }
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      throw new ValidationError("Cuerpo invalido");
-    }
-    const data = body as Record<string, unknown>;
+    const data = requireObjectBody(body);
     const updated = await ports.simServices.update({
       ...existing,
-      name: typeof data.name === "string" ? data.name : existing.name,
-      active: typeof data.active === "boolean" ? data.active : existing.active,
+      name: stringOr(data.name, existing.name),
+      active: booleanOr(data.active, existing.active),
     });
     if (!updated) {
       throw new NotFoundError();
     }
-    await ports.auditLog.record({
-      tenantId: actor.tenantId,
-      actorSubject: actor.subject,
-      actorRole: actor.role,
-      action: "sim.healthcare_service.updated",
-      resourceType: "sim.healthcare_service",
-      resourceId: id,
+    await recordSimAudit(
+      ports,
+      actor,
       requestId,
-      occurredAt: ports.clock.now(),
-    });
+      "sim.healthcare_service.updated",
+      "sim.healthcare_service",
+      id,
+    );
     return { status: 200, body: simServiceJson(updated) };
   })(request);
 
@@ -59,22 +59,17 @@ export const DELETE = (request: Request, context: RouteContext): Promise<Respons
   idempotentRoute(["admin"], async ({ actor, requestId, ports }) => {
     requireSimulatorEnabled();
     const { id } = await context.params;
-    const result = await ports.simServices.delete(actor.tenantId, id);
-    if (result === "missing") {
-      throw new NotFoundError();
-    }
-    if (result === "has_dependents") {
-      throw new ConflictError("El servicio tiene agendas asociadas");
-    }
-    await ports.auditLog.record({
-      tenantId: actor.tenantId,
-      actorSubject: actor.subject,
-      actorRole: actor.role,
-      action: "sim.healthcare_service.deleted",
-      resourceType: "sim.healthcare_service",
-      resourceId: id,
+    assertSimDelete(
+      await ports.simServices.delete(actor.tenantId, id),
+      "El servicio tiene agendas asociadas",
+    );
+    await recordSimAudit(
+      ports,
+      actor,
       requestId,
-      occurredAt: ports.clock.now(),
-    });
+      "sim.healthcare_service.deleted",
+      "sim.healthcare_service",
+      id,
+    );
     return { status: 200, body: { deleted: true } };
   })(request);

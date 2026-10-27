@@ -33,6 +33,40 @@ export function mapRecord(row: {
   };
 }
 
+function toPersistData(record: MedicalRecord, status: MedicalRecordStatus) {
+  return {
+    id: record.id,
+    tenantId: record.tenantId,
+    identifierSystem: record.identifier.system,
+    identifierValue: record.identifier.value,
+    documentType: record.documentType,
+    documentNumber: record.documentNumber,
+    givenNames: record.givenNames,
+    familyNames: record.familyNames,
+    birthDate: new Date(`${record.birthDate}T00:00:00.000Z`),
+    phone: record.phone,
+    email: record.email,
+    status,
+  };
+}
+
+async function insertRecord(
+  db: PrismaExecutor,
+  record: MedicalRecord,
+  status: MedicalRecordStatus,
+  conflictMessage: string,
+  conflictDetails?: { readonly reason: string },
+): Promise<void> {
+  try {
+    await db.medicalRecord.create({ data: toPersistData(record, status) });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new ConflictError(conflictMessage, conflictDetails);
+    }
+    throw error;
+  }
+}
+
 export function createPrismaMedicalRecordRepository(db: PrismaExecutor): MedicalRecordRepository {
   return {
     async findByDocument(tenantId, documentType, documentNumber) {
@@ -63,72 +97,31 @@ export function createPrismaMedicalRecordRepository(db: PrismaExecutor): Medical
     },
 
     async insertPreRegistered(record) {
-      try {
-        await db.medicalRecord.create({
-          data: {
-            id: record.id,
-            tenantId: record.tenantId,
-            identifierSystem: record.identifier.system,
-            identifierValue: record.identifier.value,
-            documentType: record.documentType,
-            documentNumber: record.documentNumber,
-            givenNames: record.givenNames,
-            familyNames: record.familyNames,
-            birthDate: new Date(`${record.birthDate}T00:00:00.000Z`),
-            phone: record.phone,
-            email: record.email,
-            status: "pre_registered",
-          },
-        });
-      } catch (error) {
-        if (isUniqueViolation(error)) {
-          throw new ConflictError("El documento ya esta registrado", { reason: "document_taken" });
-        }
-        throw error;
-      }
+      await insertRecord(db, record, "pre_registered", "El documento ya esta registrado", {
+        reason: "document_taken",
+      });
     },
 
     async insertActive(record) {
-      try {
-        await db.medicalRecord.create({
-          data: {
-            id: record.id,
-            tenantId: record.tenantId,
-            identifierSystem: record.identifier.system,
-            identifierValue: record.identifier.value,
-            documentType: record.documentType,
-            documentNumber: record.documentNumber,
-            givenNames: record.givenNames,
-            familyNames: record.familyNames,
-            birthDate: new Date(`${record.birthDate}T00:00:00.000Z`),
-            phone: record.phone,
-            email: record.email,
-            status: "active",
-          },
-        });
-      } catch (error) {
-        if (isUniqueViolation(error)) {
-          throw new ConflictError("El identificador o documento ya esta registrado");
-        }
-        throw error;
-      }
+      await insertRecord(db, record, "active", "El identificador o documento ya esta registrado");
     },
 
     async updateFromHermes(record) {
       try {
+        const data = toPersistData(record, "active");
         const row = await db.medicalRecord.update({
           where: { tenantId_id: { tenantId: record.tenantId, id: record.id } },
           data: {
-            identifierSystem: record.identifier.system,
-            identifierValue: record.identifier.value,
-            documentType: record.documentType,
-            documentNumber: record.documentNumber,
-            givenNames: record.givenNames,
-            familyNames: record.familyNames,
-            birthDate: new Date(`${record.birthDate}T00:00:00.000Z`),
-            phone: record.phone,
-            email: record.email,
-            status: "active",
+            identifierSystem: data.identifierSystem,
+            identifierValue: data.identifierValue,
+            documentType: data.documentType,
+            documentNumber: data.documentNumber,
+            givenNames: data.givenNames,
+            familyNames: data.familyNames,
+            birthDate: data.birthDate,
+            phone: data.phone,
+            email: data.email,
+            status: data.status,
           },
         });
         return mapRecord(row);
