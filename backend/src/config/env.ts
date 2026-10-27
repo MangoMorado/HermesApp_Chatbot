@@ -221,11 +221,12 @@ function simServiceClients(enabled: boolean): ReadonlyMap<string, SimServiceClie
 }
 
 export function loadConfig(): AppConfig {
+  const hermesSimulatorEnabled = optional("HERMES_SIMULATOR_ENABLED", "false") === "true";
   const config: AppConfig = {
     nodeEnv: parseEnvironment(optional("NODE_ENV", "development")),
     databaseUrl: required("DATABASE_URL"),
     appTimezone: optional("APP_TIMEZONE", "America/Bogota"),
-    hermesSimulatorEnabled: optional("HERMES_SIMULATOR_ENABLED", "false") === "true",
+    hermesSimulatorEnabled,
     jwt: {
       secret: required("JWT_SECRET"),
       issuer: optional("JWT_ISSUER", "chatbot-ingenius-360"),
@@ -234,7 +235,7 @@ export function loadConfig(): AppConfig {
     platformSecret: platformSecret(),
     oidc: oidcConfig(),
     credentialsEncryptionKey: credentialsEncryptionKey(),
-    simServiceClients: simServiceClients(optional("HERMES_SIMULATOR_ENABLED", "false") === "true"),
+    simServiceClients: simServiceClients(hermesSimulatorEnabled),
     trustProxy: optional("TRUST_PROXY", "false") === "true",
     fhirBaseUrl: fhirBaseUrl(),
     fhirGateway: fhirGateway(),

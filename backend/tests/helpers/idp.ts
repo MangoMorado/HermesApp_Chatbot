@@ -175,9 +175,8 @@ function claimsForClient(clientId: string): { roles: string[]; tenant?: string }
 async function tokenResponse(request: Request): Promise<Response> {
   const form = new URLSearchParams(await request.text());
   const credentials = basicCredentials(request);
-  if (credentials) {
-    calls.push({ url: request.url, clientId: credentials.id });
-  }
+  // Cada peticion al endpoint de token se registra aqui, una sola vez.
+  calls.push(credentials ? { url: request.url, clientId: credentials.id } : { url: request.url });
   if (form.get("grant_type") !== "client_credentials") {
     return json({ error: "unsupported_grant_type" }, 400);
   }
@@ -215,6 +214,12 @@ async function handleIdp(request: Request): Promise<Response> {
   return json({ error: "not_found" }, 404);
 }
 
+function isTokenRequest(request: Request): boolean {
+  return (
+    request.method === "POST" && request.url === `${TEST_OIDC.issuer}/protocol/openid-connect/token`
+  );
+}
+
 export function installFakeIdp(): void {
   if (installed) {
     return;
@@ -226,7 +231,9 @@ export function installFakeIdp(): void {
     if (!request.url.startsWith(TEST_OIDC.issuer)) {
       return original(input, init);
     }
-    calls.push({ url: request.url });
+    if (!isTokenRequest(request)) {
+      calls.push({ url: request.url });
+    }
     if (down) {
       throw new TypeError("fetch failed: proveedor de identidad caido");
     }

@@ -1,6 +1,12 @@
 import { decodeJwt } from "jose";
 import { describe, expect, it } from "vitest";
-import { setFakeIdpDown, TEST_CLIENT_SECRET, TEST_OIDC } from "./helpers/idp";
+import {
+  fakeIdpCalls,
+  resetFakeIdp,
+  setFakeIdpDown,
+  TEST_CLIENT_SECRET,
+  TEST_OIDC,
+} from "./helpers/idp";
 
 function rawClientCredentials(clientId: string, secret: string): Promise<Response> {
   return fetch(`${TEST_OIDC.issuer}/protocol/openid-connect/token`, {
@@ -47,5 +53,15 @@ describe("sesion-widget: proveedor OIDC falso", () => {
     } finally {
       setFakeIdpDown(false);
     }
+  });
+
+  it("registra cada llamada una sola vez, la de token con su clientId", async () => {
+    resetFakeIdp();
+    await clientCredentials("service-tenant-a", TEST_CLIENT_SECRET);
+    const tokenCalls = fakeIdpCalls().filter((call) => call.url.endsWith("/token"));
+    expect(tokenCalls).toEqual([
+      { url: `${TEST_OIDC.issuer}/protocol/openid-connect/token`, clientId: "service-tenant-a" },
+    ]);
+    expect(fakeIdpCalls()).toHaveLength(1);
   });
 });
