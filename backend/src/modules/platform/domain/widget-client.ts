@@ -4,15 +4,20 @@ import { ValidationError } from "@/modules/shared/domain/validation-error";
 
 const MAX_LENGTH = 200;
 
-/** Ni el valor ni su longitud viajan en el error: el secreto no sale en ningun mensaje. */
+/**
+ * Recorta espacios (un copiar-pegar los arrastra y el proveedor los rechazaria) y exige un
+ * valor no vacio. Ni el valor ni su longitud viajan en el error: el secreto no sale en ningun
+ * mensaje.
+ */
 function credentialPart(value: unknown, field: string): string {
-  if (typeof value !== "string" || value === "" || value.length > MAX_LENGTH) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (trimmed === "" || trimmed.length > MAX_LENGTH) {
     throw new ValidationError(`${field} debe tener entre 1 y ${MAX_LENGTH} caracteres`, {
       field,
       max: MAX_LENGTH,
     });
   }
-  return value;
+  return trimmed;
 }
 
 /** Credenciales del cliente OIDC del widget de una clinica (`client_id` + `client_secret`). */

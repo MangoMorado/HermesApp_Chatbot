@@ -11,6 +11,13 @@ describe("alta-chatbot: credenciales de widget", () => {
     });
   });
 
+  it("recorta los espacios de client_id y client_secret", () => {
+    expect(parseWidgetClient({ client_id: "  widget-a\n", client_secret: "\ts3cr3t " })).toEqual({
+      clientId: "widget-a",
+      clientSecret: "s3cr3t",
+    });
+  });
+
   it("acepta el tope de 200 caracteres", () => {
     const max = "x".repeat(200);
     expect(parseWidgetClient({ client_id: max, client_secret: max }).clientSecret).toBe(max);
@@ -24,6 +31,8 @@ describe("alta-chatbot: credenciales de widget", () => {
     [{ client_id: "x".repeat(201), client_secret: "s" }, "client_id"],
     [{ client_id: "w" }, "client_secret"],
     [{ client_id: "w", client_secret: "" }, "client_secret"],
+    [{ client_id: "   ", client_secret: "s" }, "client_id"],
+    [{ client_id: "w", client_secret: " \t\n" }, "client_secret"],
     [{ client_id: "w", client_secret: "x".repeat(201) }, "client_secret"],
   ])("rechaza %j", (raw, field) => {
     try {
