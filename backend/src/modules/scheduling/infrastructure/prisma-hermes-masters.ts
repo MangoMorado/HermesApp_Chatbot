@@ -19,7 +19,11 @@ async function translateUniqueViolation(operation: () => Promise<unknown>): Prom
   }
 }
 
-function practitionerData(row: Practitioner) {
+function namedMasterData(row: {
+  readonly identifier: { readonly system: string; readonly value: string };
+  readonly name: string;
+  readonly active: boolean;
+}) {
   return {
     identifierSystem: row.identifier.system,
     identifierValue: row.identifier.value,
@@ -28,13 +32,12 @@ function practitionerData(row: Practitioner) {
   };
 }
 
+function practitionerData(row: Practitioner) {
+  return namedMasterData(row);
+}
+
 function serviceData(row: HealthcareService) {
-  return {
-    identifierSystem: row.identifier.system,
-    identifierValue: row.identifier.value,
-    name: row.name,
-    active: row.active,
-  };
+  return namedMasterData(row);
 }
 
 function scheduleData(row: Schedule) {

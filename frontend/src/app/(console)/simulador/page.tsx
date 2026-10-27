@@ -42,12 +42,7 @@ export default function SimuladorPage() {
           </p>
         </div>
       </div>
-      <div
-        className="tabs"
-        role="tablist"
-        aria-label="Maestros del simulador"
-        onKeyDown={onKeyDown}
-      >
+      <div className="tabs" role="tablist" aria-label="Maestros del simulador">
         {TABS.map((tab, index) => (
           <button
             key={tab.id}
@@ -62,6 +57,7 @@ export default function SimuladorPage() {
             aria-controls={`panel-${tab.id}`}
             tabIndex={active === index ? 0 : -1}
             onClick={() => setActive(index)}
+            onKeyDown={onKeyDown}
           >
             {tab.label}
           </button>

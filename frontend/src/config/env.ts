@@ -12,6 +12,14 @@ export function backendUrl(): string {
  * Distinta de `BACKEND_URL`, que puede ser una dirección interna de la red de contenedores.
  * También se lee en runtime: las páginas que la usan son dinámicas.
  */
+function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charAt(end - 1) === "/") {
+    end -= 1;
+  }
+  return value.slice(0, end);
+}
+
 export function publicBackendUrl(): string {
-  return (process.env.PUBLIC_BACKEND_URL || "http://localhost:3001").replace(/\/+$/, "");
+  return withoutTrailingSlashes(process.env.PUBLIC_BACKEND_URL || "http://localhost:3001");
 }

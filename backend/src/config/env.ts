@@ -64,7 +64,15 @@ function fhirBaseUrl(): string | null {
   if (!isAbsoluteHttpUrl(value)) {
     throw new Error("FHIR_BASE_URL debe ser una URL absoluta http(s), p. ej. https://host/fhir");
   }
-  return value.replace(/\/+$/, "");
+  return withoutTrailingSlashes(value);
+}
+
+function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charAt(end - 1) === "/") {
+    end -= 1;
+  }
+  return value.slice(0, end);
 }
 
 function fhirGateway(): AppConfig["fhirGateway"] {

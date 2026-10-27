@@ -22,18 +22,26 @@ export function parseLimit(raw: string | null | undefined): number {
   return value;
 }
 
+function stripTrailingEquals(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charAt(end - 1) === "=") {
+    end -= 1;
+  }
+  return value.slice(0, end);
+}
+
 function toBase64Url(text: string): string {
   let binary = "";
   for (const byte of new TextEncoder().encode(text)) {
-    binary += String.fromCharCode(byte);
+    binary += String.fromCodePoint(byte);
   }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return stripTrailingEquals(btoa(binary).replaceAll("+", "-").replaceAll("/", "_"));
 }
 
 function fromBase64Url(value: string): string {
-  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
   const binary = atob(base64 + "=".repeat((4 - (base64.length % 4)) % 4));
-  return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
+  return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.codePointAt(0) ?? 0));
 }
 
 export function encodeCursor(position: CursorPosition): string {

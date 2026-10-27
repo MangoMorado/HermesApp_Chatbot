@@ -1,7 +1,7 @@
 import { localDate } from "../format";
 import { nextField, parseField } from "../pre-registration-fields";
 import { choice, go, isOption, prompt, redirect, resetFlow, retry } from "../step-kit";
-import { type ConversationTextKey, line, t } from "../text";
+import { type ConversationTextKey, line, redactedLine, t } from "../text";
 import type {
   ConversationContext,
   EffectOutcome,
@@ -140,17 +140,13 @@ export const preregConfirm: Step = {
     if (!data) {
       return redirect("main_menu", resetFlow(context), [line("generic_error")]);
     }
-    const summary = line(
-      "prereg_confirm_prompt",
-      {
-        given_names: data.givenNames,
-        family_names: data.familyNames,
-        birth_date: data.birthDate,
-        phone: data.phone,
-        email: data.email ?? "—",
-      },
-      true,
-    );
+    const summary = redactedLine("prereg_confirm_prompt", {
+      given_names: data.givenNames,
+      family_names: data.familyNames,
+      birth_date: data.birthDate,
+      phone: data.phone,
+      email: data.email ?? "—",
+    });
     const options = [
       choice("prereg:confirm", t("option_confirm")),
       choice("prereg:restart", t("option_restart")),

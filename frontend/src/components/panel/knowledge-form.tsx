@@ -107,7 +107,7 @@ export function KnowledgeForm({ kb }: { readonly kb: Knowledge }) {
           type="checkbox"
           checked={draft.active}
           onChange={(event) => set({ active: event.target.checked })}
-        />
+        />{" "}
         Activa (el bot la ofrece)
       </label>
       <Actions kb={kb} />

@@ -91,8 +91,14 @@ export function createChatClient(deps: ChatDeps): ChatClient {
   /** El eco sale siempre de lo que el backend guardó (redactado o enmascarado), no de lo enviado. */
   async function echoOf(): Promise<Line[]> {
     try {
-      const last = (await history()).messages.filter((m) => m.author === "patient").at(-1);
-      return last ? [{ author: "patient", text: last.text }] : [];
+      const messages = (await history()).messages;
+      for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+        if (message?.author === "patient") {
+          return [{ author: "patient", text: message.text }];
+        }
+      }
+      return [];
     } catch {
       return [];
     }

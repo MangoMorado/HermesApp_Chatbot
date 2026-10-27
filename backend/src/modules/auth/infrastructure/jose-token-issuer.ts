@@ -9,7 +9,7 @@ export function createJoseTokenIssuer(settings: JwtSettings): TokenIssuer {
   const key = new TextEncoder().encode(settings.secret);
 
   return {
-    async issue(input) {
+    issue(input) {
       const claims: Record<string, string> = { tenant_id: input.tenantId, role: input.role };
       if (input.sessionId) {
         claims.session_id = input.sessionId;

@@ -13,6 +13,17 @@ type StoredSession = {
 /** Se renueva a la mitad de la vida del token o, como mínimo, con menos de un minuto restante. */
 export const REFRESH_MARGIN_MS = 60_000;
 
+function needsRefresh(current: StoredSession, now: number): boolean {
+  const remaining = current.expiresAt - now;
+  if (remaining < REFRESH_MARGIN_MS) {
+    return true;
+  }
+  return (
+    current.obtainedAt !== null &&
+    now - current.obtainedAt >= (current.expiresAt - current.obtainedAt) / 2
+  );
+}
+
 export function storageKey(widgetKey: string): string {
   return `ingenius.widget.${widgetKey}`;
 }
@@ -129,17 +140,6 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
       // Fallo pasajero: el token actual sigue sirviendo hasta que venza.
       return current.token;
     }
-  }
-
-  function needsRefresh(current: StoredSession, now: number): boolean {
-    const remaining = current.expiresAt - now;
-    if (remaining < REFRESH_MARGIN_MS) {
-      return true;
-    }
-    return (
-      current.obtainedAt !== null &&
-      now - current.obtainedAt >= (current.expiresAt - current.obtainedAt) / 2
-    );
   }
 
   function resolve(): Promise<string> {

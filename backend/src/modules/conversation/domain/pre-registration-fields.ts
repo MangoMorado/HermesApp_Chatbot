@@ -12,10 +12,23 @@ export const PREREG_FIELDS: readonly PreRegField[] = [
   "email",
 ];
 
-const NAME = /^[\p{L}][\p{L}' -]{0,99}$/u;
+const NAME = /^\p{L}[\p{L}' -]{0,99}$/u;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MOBILE = /^3\d{9}$/;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Misma forma que patients (refinamiento 14), sin regex con backtracking. */
+function isEmailShape(value: string): boolean {
+  const at = value.indexOf("@");
+  if (at < 1 || value.includes(" ") || value.includes("\t")) {
+    return false;
+  }
+  if (value.indexOf("@", at + 1) !== -1) {
+    return false;
+  }
+  const domain = value.slice(at + 1);
+  const dot = domain.lastIndexOf(".");
+  return dot > 0 && dot < domain.length - 1;
+}
 
 export function nextField(field: PreRegField): PreRegField | null {
   return PREREG_FIELDS[PREREG_FIELDS.indexOf(field) + 1] ?? null;
@@ -42,7 +55,7 @@ function parsePhone(raw: string): string | null {
 
 function parseEmail(raw: string): string | null {
   const value = raw.trim().toLowerCase();
-  return EMAIL.test(value) && value.length <= 254 ? value : null;
+  return isEmailShape(value) && value.length <= 254 ? value : null;
 }
 
 /** Valor normalizado del campo, o `null` si no es valido. */

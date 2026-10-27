@@ -22,7 +22,12 @@ export function pageJson<T>(page: Page<T>, mapItem: (item: T) => unknown) {
   };
 }
 
-export function practitionerJson(row: Practitioner) {
+function namedResourceJson(row: {
+  readonly id: string;
+  readonly identifier: { readonly system: string; readonly value: string };
+  readonly name: string;
+  readonly active: boolean;
+}) {
   return {
     id: row.id,
     identifier_system: row.identifier.system,
@@ -32,14 +37,12 @@ export function practitionerJson(row: Practitioner) {
   };
 }
 
+export function practitionerJson(row: Practitioner) {
+  return namedResourceJson(row);
+}
+
 export function healthcareServiceJson(row: HealthcareService) {
-  return {
-    id: row.id,
-    identifier_system: row.identifier.system,
-    identifier_value: row.identifier.value,
-    name: row.name,
-    active: row.active,
-  };
+  return namedResourceJson(row);
 }
 
 export function scheduleJson(row: Schedule) {
@@ -110,7 +113,13 @@ export function tenantSettingsJson(row: TenantSettings) {
   return { max_query_range_days: row.maxQueryRangeDays };
 }
 
-export function simPractitionerJson(row: SimPractitioner) {
+function simNamedJson(row: {
+  readonly id: string;
+  readonly identifierSystem: string;
+  readonly identifierValue: string;
+  readonly name: string;
+  readonly active: boolean;
+}) {
   return {
     id: row.id,
     identifier_system: row.identifierSystem,
@@ -120,14 +129,12 @@ export function simPractitionerJson(row: SimPractitioner) {
   };
 }
 
+export function simPractitionerJson(row: SimPractitioner) {
+  return simNamedJson(row);
+}
+
 export function simServiceJson(row: SimHealthcareService) {
-  return {
-    id: row.id,
-    identifier_system: row.identifierSystem,
-    identifier_value: row.identifierValue,
-    name: row.name,
-    active: row.active,
-  };
+  return simNamedJson(row);
 }
 
 export function simScheduleJson(row: SimSchedule) {

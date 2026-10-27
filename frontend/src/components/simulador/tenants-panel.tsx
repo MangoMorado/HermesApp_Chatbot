@@ -90,12 +90,12 @@ function TenantHead({
       </div>
       <ErrorBox error={error} />
       {created && adopted ? (
-        <div className="notice notice-ok" role="status">
+        <output className="notice notice-ok">
           <span className="flap" data-tone="ok">
             SESIÓN
           </span>
           <span>El panel usa ahora el token de admin de {created.tenant.slug}.</span>
-        </div>
+        </output>
       ) : null}
     </div>
   );

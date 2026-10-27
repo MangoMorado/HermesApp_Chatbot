@@ -15,10 +15,23 @@ export type PreRegistrationData = {
 };
 
 const DOCUMENT = /^[A-Z0-9]{3,20}$/;
-const NAME = /^[\p{L}][\p{L}' -]{0,99}$/u;
+const NAME = /^\p{L}[\p{L}' -]{0,99}$/u;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MOBILE = /^3\d{9}$/;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Forma mínima de correo sin regex (evita backtracking super-lineal). */
+function isEmailShape(value: string): boolean {
+  const at = value.indexOf("@");
+  if (at < 1 || value.includes(" ") || value.includes("\t")) {
+    return false;
+  }
+  if (value.indexOf("@", at + 1) !== -1) {
+    return false;
+  }
+  const domain = value.slice(at + 1);
+  const dot = domain.lastIndexOf(".");
+  return dot > 0 && dot < domain.length - 1;
+}
 
 function fail(field: string, message: string): never {
   throw new ValidationError(message, { field });
@@ -52,7 +65,7 @@ function email(raw: string | null): string | null {
     return null;
   }
   const value = raw.trim().toLowerCase();
-  return EMAIL.test(value) && value.length <= 254 ? value : fail("email", "email invalido");
+  return isEmailShape(value) && value.length <= 254 ? value : fail("email", "email invalido");
 }
 
 /** Validacion autoritativa del pre-registro (la del chat es solo UX, refinamiento 14). */

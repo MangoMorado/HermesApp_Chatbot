@@ -20,14 +20,14 @@ function useSettings() {
 
 function SavedNotice({ days }: { readonly days: number }) {
   return (
-    <div className="notice notice-ok" role="status">
+    <output className="notice notice-ok">
       <span className="flap" data-tone="ok">
         GUARDADO
       </span>
       <span>
         El backend aplicó un tope de <strong className="data">{days}</strong> días.
       </span>
-    </div>
+    </output>
   );
 }
 

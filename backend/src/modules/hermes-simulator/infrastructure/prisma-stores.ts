@@ -309,7 +309,7 @@ export function createPrismaSimSlotGenerator(
   };
 }
 
-function mapPractitioner(row: {
+function mapNamedMaster(row: {
   id: string;
   tenantId: string;
   identifierSystem: string;
@@ -327,22 +327,12 @@ function mapPractitioner(row: {
   };
 }
 
-function mapService(row: {
-  id: string;
-  tenantId: string;
-  identifierSystem: string;
-  identifierValue: string;
-  name: string;
-  active: boolean;
-}): SimHealthcareService {
-  return {
-    id: row.id,
-    tenantId: row.tenantId,
-    identifierSystem: row.identifierSystem,
-    identifierValue: row.identifierValue,
-    name: row.name,
-    active: row.active,
-  };
+function mapPractitioner(row: Parameters<typeof mapNamedMaster>[0]): SimPractitioner {
+  return mapNamedMaster(row);
+}
+
+function mapService(row: Parameters<typeof mapNamedMaster>[0]): SimHealthcareService {
+  return mapNamedMaster(row);
 }
 
 function mapSchedule(row: {
