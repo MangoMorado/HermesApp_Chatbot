@@ -8,10 +8,12 @@ const MINUTE = 60_000;
 const KEY = storageKey("wk_demo");
 const iso = (at: number) => new Date(at).toISOString();
 
+/** Respuestas del servidor, cuyo reloj marca `NOW` al responder. */
 function opened(token: string, expiresAt: number, secret = "secret-1"): WidgetSessionOpened {
   return {
     access_token: token,
     expires_at: iso(expiresAt),
+    expires_in: (expiresAt - NOW) / 1000,
     conversation_secret: secret,
     session_expires_at: iso(NOW + 30 * MINUTE),
   };
@@ -21,6 +23,7 @@ function refreshed(token: string, expiresAt: number): WidgetSessionRefreshed {
   return {
     access_token: token,
     expires_at: iso(expiresAt),
+    expires_in: (expiresAt - NOW) / 1000,
     session_expires_at: iso(NOW + 30 * MINUTE),
   };
 }
@@ -252,6 +255,78 @@ describe("sesión del widget", () => {
     expect(b.accessToken).toBe("opened");
     expect(api.openSession).toHaveBeenCalledTimes(1);
   });
+
+  it("reopen: si la apertura falla (503) la conversación guardada se conserva", async () => {
+    const saved = stored("saved", NOW + 4 * MINUTE);
+    const { data, storage } = memoryStorage(saved);
+    const openSession = vi.fn<WidgetApi["openSession"]>(async () => {
+      throw new WidgetApiError(503, null, "HTTP 503");
+    });
+    const { manager } = setup(storage, { openSession });
+    await expect(manager.reopen()).rejects.toMatchObject({ status: 503 });
+    expect(data.get(KEY)).toBe(saved[KEY]);
+    expect((await manager.credentials()).conversationSecret).toBe("saved-secret");
+  });
+
+  it("renew (tras un 401): renueva con el secreto y conserva la conversación", async () => {
+    const { data, storage } = memoryStorage(stored("saved", NOW + 4 * MINUTE));
+    const { api, manager } = setup(storage);
+    expect(await manager.renew()).toEqual({
+      accessToken: "refreshed",
+      conversationSecret: "saved-secret",
+    });
+    expect(api.refreshSession).toHaveBeenCalledWith("saved-secret", "key-1");
+    expect(api.openSession).not.toHaveBeenCalled();
+    expect(JSON.parse(data.get(KEY) ?? "{}")).toMatchObject({ access_token: "refreshed" });
+  });
+
+  it.each([401, 404])("renew: si la renovación responde %i abre otra", async (status) => {
+    const { storage } = memoryStorage(stored("saved", NOW + 4 * MINUTE));
+    const refreshSession = vi.fn<WidgetApi["refreshSession"]>(async () => {
+      throw new WidgetApiError(status, { error: { code: "x" } }, `HTTP ${status}`);
+    });
+    const { api, manager } = setup(storage, { refreshSession });
+    expect((await manager.renew()).conversationSecret).toBe("secret-1");
+    expect(api.openSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("renew: un fallo pasajero no devuelve el token ya rechazado ni abre otra", async () => {
+    const saved = stored("saved", NOW + 4 * MINUTE);
+    const { data, storage } = memoryStorage(saved);
+    const refreshSession = vi.fn<WidgetApi["refreshSession"]>(async () => {
+      throw new WidgetApiError(503, null, "HTTP 503");
+    });
+    const { api, manager } = setup(storage, { refreshSession });
+    await expect(manager.renew()).rejects.toMatchObject({ status: 503 });
+    expect(api.openSession).not.toHaveBeenCalled();
+    expect(data.get(KEY)).toBe(saved[KEY]);
+  });
+
+  it.each([
+    ["adelantado una hora", 60 * MINUTE],
+    ["atrasado una hora", -60 * MINUTE],
+  ])(
+    "con el reloj del dispositivo %s, la vida del token se mide desde la recepción",
+    async (_, skew) => {
+      let device = NOW + skew;
+      const { api, manager } = setup(memoryStorage().storage, {}, () => device);
+      expect(await token(manager)).toBe("opened");
+      // Recién recibido: ni vencido ni a renovar, aunque el reloj del dispositivo esté desfasado.
+      expect(manager.expired()).toBe(false);
+      expect(await token(manager)).toBe("opened");
+      expect(api.refreshSession).not.toHaveBeenCalled();
+      // Pasada la mitad de los 5 minutos de vida (en el reloj del dispositivo), renueva.
+      device += 3 * MINUTE;
+      expect(await token(manager)).toBe("refreshed");
+      expect(api.openSession).toHaveBeenCalledTimes(1);
+      // La renovación extiende la conversación 30 min (reloj del servidor, que también avanzó
+      // 3 min): vence a los 33 min del dispositivo, ni antes ni una hora después.
+      device += 29 * MINUTE;
+      expect(manager.expired()).toBe(false);
+      device += 2 * MINUTE;
+      expect(manager.expired()).toBe(true);
+    },
+  );
 
   it("reopen descarta la sesión guardada y abre otra", async () => {
     const { data, storage } = memoryStorage(stored("saved", NOW + 4 * MINUTE));

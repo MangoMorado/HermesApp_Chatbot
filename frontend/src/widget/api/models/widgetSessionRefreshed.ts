@@ -9,5 +9,10 @@
 export interface WidgetSessionRefreshed {
   access_token: string;
   expires_at: string;
+  /**
+     * Segundos de vida que le quedan al token segun el reloj del servidor. El cliente lo suma a su propio reloj al recibirlo, asi un reloj de dispositivo desfasado no adelanta ni retrasa la renovacion.
+     * @minimum 0
+     */
+  expires_in: number;
   session_expires_at: string;
 }

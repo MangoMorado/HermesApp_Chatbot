@@ -11,7 +11,13 @@ import { POST as openSession } from "@/app/api/v1/widget/sessions/route";
 import { resetContainer } from "@/composition-root";
 import { authedRequest, authorized, resetFakeIdp, setFakeIdpDown } from "../helpers/idp";
 import { getChat, sendChat, type WidgetChat } from "./chat-support";
-import { type ChatbotTenantSeed, insertChatbotTenant, testPrisma, truncateAll } from "./support";
+import {
+  type ChatbotTenantSeed,
+  insertChatbotTenant,
+  insertWidgetCredential,
+  testPrisma,
+  truncateAll,
+} from "./support";
 
 const prisma: PrismaClient = testPrisma();
 const ORIGIN = "https://clinica-a.test";
@@ -21,6 +27,7 @@ const REFRESH_URL = "http://localhost/api/v1/widget/sessions/refresh";
 type Opened = {
   access_token: string;
   expires_at: string;
+  expires_in: number;
   conversation_secret: string;
   session_expires_at: string;
 };
@@ -115,6 +122,9 @@ describe("sesion-widget: apertura", () => {
       before + 30 * 60_000,
     );
     expect(new Date(body.expires_at).getTime()).toBeGreaterThan(before);
+    // Vida restante segun el reloj del servidor: el widget no depende del suyo.
+    expect(body.expires_in).toBeGreaterThan(0);
+    expect(body.expires_in).toBeLessThanOrEqual(300);
     const row = await prisma.widgetSession.findFirstOrThrow();
     expect(row).toMatchObject({ tenantId: seed.tenantId, origin: ORIGIN });
     expect(row.secretHash).toBe(sha256hex(body.conversation_secret));
@@ -129,6 +139,24 @@ describe("sesion-widget: apertura", () => {
     const response = await open(bare.widgetKey);
     expect(response.status).toBe(409);
     expect((await response.json()).error.code).toBe("widget_not_configured");
+    expect(await prisma.widgetSession.count()).toBe(0);
+    expect(await prisma.idempotencyKey.count()).toBe(0);
+  });
+
+  it.each([
+    ["un cliente service", (tenantId: string) => `service-${tenantId}`],
+    ["el cliente widget de otra clinica", () => "widget-otra-clinica"],
+  ])("registrar como widget %s → 409 sin token ni sesion", async (_, clientIdFor) => {
+    const bare = await insertChatbotTenant(prisma, "m", {
+      allowedOrigins: [ORIGIN],
+      widgetClient: false,
+    });
+    await insertWidgetCredential(prisma, bare.tenantId, clientIdFor(bare.tenantId));
+    const response = await open(bare.widgetKey);
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error.code).toBe("widget_not_configured");
+    expect(body).not.toHaveProperty("access_token");
     expect(await prisma.widgetSession.count()).toBe(0);
     expect(await prisma.idempotencyKey.count()).toBe(0);
   });

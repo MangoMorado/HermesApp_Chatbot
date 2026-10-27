@@ -5,6 +5,7 @@ import type { ClientToken } from "@/modules/auth/domain/ports/client-token-sourc
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
+import { systemClock } from "@/modules/shared/infrastructure/system-clock";
 import type { StartedWidgetSession } from "@/modules/widget/application/widget-sessions";
 import type { WidgetAccess } from "@/modules/widget/domain/ports/ports";
 import {
@@ -20,10 +21,16 @@ export const CONVERSATION_SECRET_HEADER = "X-Conversation-Secret";
 
 const UNREACHABLE = "Conversacion vencida o inexistente";
 
+/**
+ * `expires_in` es la vida restante del token medida con el reloj del servidor: el widget la
+ * suma a su propio reloj y no depende de que el del dispositivo este en hora.
+ */
 function tokenJson(token: ClientToken, session: WidgetSession) {
+  const remainingMs = token.expiresAt.getTime() - systemClock.now().getTime();
   return {
     access_token: token.accessToken,
     expires_at: token.expiresAt.toISOString(),
+    expires_in: Math.max(0, Math.floor(remainingMs / 1000)),
     session_expires_at: session.expiresAt.toISOString(),
   };
 }

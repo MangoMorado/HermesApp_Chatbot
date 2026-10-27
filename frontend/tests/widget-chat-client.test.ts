@@ -7,6 +7,8 @@ import type { ConversationHistory, ConversationTurn, WidgetApi } from "@/widget/
 const AT = "2026-10-13T15:00:00.000Z";
 const T1 = { accessToken: "t1", conversationSecret: "s1" };
 const T2 = { accessToken: "t2", conversationSecret: "s2" };
+/** Token renovado de la misma conversación. */
+const T1_RENEWED = { accessToken: "t1-renovado", conversationSecret: "s1" };
 
 const WELCOME: ConversationHistory = {
   messages: [{ author: "bot", text: "Hola, soy el asistente.", redacted: false, created_at: AT }],
@@ -34,6 +36,7 @@ function setup(overrides: Partial<WidgetApi> = {}) {
   };
   const session = {
     credentials: vi.fn<SessionManager["credentials"]>(async () => T1),
+    renew: vi.fn<SessionManager["renew"]>(async () => T1_RENEWED),
     reopen: vi.fn<SessionManager["reopen"]>(async () => T2),
     clear: vi.fn<SessionManager["clear"]>(),
     expired: vi.fn<SessionManager["expired"]>(() => false),
@@ -71,14 +74,27 @@ describe("cliente del chat", () => {
     expect(client.view()).toBe(view);
   });
 
-  it.each([401, 404])("load reabre la sesión una vez si el backend responde %i", async (status) => {
+  it("load con 401 renueva el token y conserva la conversación", async () => {
     const getConversation = vi
       .fn<WidgetApi["getConversation"]>()
-      .mockRejectedValueOnce(apiError(status))
+      .mockRejectedValueOnce(apiError(401))
+      .mockResolvedValueOnce(WELCOME);
+    const { session, client } = setup({ getConversation });
+    await client.load();
+    expect(session.renew).toHaveBeenCalledTimes(1);
+    expect(session.reopen).not.toHaveBeenCalled();
+    expect(getConversation).toHaveBeenCalledTimes(2);
+  });
+
+  it("load reabre la sesión una vez si el backend responde 404", async () => {
+    const getConversation = vi
+      .fn<WidgetApi["getConversation"]>()
+      .mockRejectedValueOnce(apiError(404))
       .mockResolvedValueOnce(WELCOME);
     const { session, client } = setup({ getConversation });
     await client.load();
     expect(session.reopen).toHaveBeenCalledTimes(1);
+    expect(session.renew).not.toHaveBeenCalled();
     expect(getConversation).toHaveBeenCalledTimes(2);
     expect(getConversation).toHaveBeenLastCalledWith(T1);
   });
@@ -216,21 +232,69 @@ describe("cliente del chat", () => {
     expect(client.view().options).toEqual([{ id: "3.1", label: "Menú" }]);
   });
 
-  it.each([401, 404])(
-    "%i al enviar abre sesión nueva, recarga y no reenvía el turno",
-    async (status) => {
-      const sendMessage = vi.fn<WidgetApi["sendMessage"]>(async () => {
-        throw apiError(status);
-      });
-      const { api, session, client } = setup({ sendMessage });
-      await client.load();
-      const outcome = await client.send(AGENDAR);
-      expect(outcome.kind).toBe("reopened");
-      expect(session.reopen).toHaveBeenCalledTimes(1);
-      expect(sendMessage).toHaveBeenCalledTimes(1);
-      expect(api.getConversation).toHaveBeenCalledTimes(2);
-    },
-  );
+  it("404 al enviar abre sesión nueva, recarga y no reenvía el turno", async () => {
+    const sendMessage = vi.fn<WidgetApi["sendMessage"]>(async () => {
+      throw apiError(404);
+    });
+    const { api, session, client } = setup({ sendMessage });
+    await client.load();
+    const outcome = await client.send(AGENDAR);
+    expect(outcome.kind).toBe("reopened");
+    expect(session.reopen).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(api.getConversation).toHaveBeenCalledTimes(2);
+  });
+
+  it("401 al enviar renueva el token y reenvía el turno en la misma conversación", async () => {
+    const sendMessage = vi
+      .fn<WidgetApi["sendMessage"]>()
+      .mockRejectedValueOnce(apiError(401))
+      .mockResolvedValueOnce(ASK_DOCUMENT);
+    const { session, client } = setup({
+      sendMessage,
+      getConversation: historyThen(afterOption("Agendar una cita")),
+    });
+    // Como el gestor real: tras renovar, las credenciales vigentes son las nuevas.
+    session.renew.mockImplementation(async () => {
+      session.credentials.mockResolvedValue(T1_RENEWED);
+      return T1_RENEWED;
+    });
+    await client.load();
+    const outcome = await client.send(AGENDAR);
+    expect(outcome.kind).toBe("turn");
+    expect(session.renew).toHaveBeenCalledTimes(1);
+    expect(session.reopen).not.toHaveBeenCalled();
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+    expect(sendMessage.mock.calls[1]?.[0]).toEqual(T1_RENEWED);
+    // Mismo turno, misma clave: el backend no lo procesa dos veces.
+    expect(sendMessage.mock.calls[1]?.[2]).toBe(sendMessage.mock.calls[0]?.[2]);
+  });
+
+  it("401 al enviar con la renovación perdida (otra conversación): avisa y no reenvía", async () => {
+    const sendMessage = vi.fn<WidgetApi["sendMessage"]>(async () => {
+      throw apiError(401);
+    });
+    const { session, client } = setup({ sendMessage });
+    session.renew.mockResolvedValue(T2);
+    await client.load();
+    const outcome = await client.send(AGENDAR);
+    expect(outcome.kind).toBe("reopened");
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(session.reopen).not.toHaveBeenCalled();
+  });
+
+  it("un segundo 401 tras renovar abre otra conversación", async () => {
+    const sendMessage = vi.fn<WidgetApi["sendMessage"]>(async () => {
+      throw apiError(401);
+    });
+    const { session, client } = setup({ sendMessage });
+    await client.load();
+    const outcome = await client.send(AGENDAR);
+    expect(outcome.kind).toBe("reopened");
+    expect(session.renew).toHaveBeenCalledTimes(1);
+    expect(session.reopen).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+  });
 
   it("422 devuelve el mensaje del backend y deja el turno como estaba", async () => {
     const sendMessage = vi.fn<WidgetApi["sendMessage"]>(async () => {

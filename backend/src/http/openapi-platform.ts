@@ -20,6 +20,7 @@ const readErrors = errorResponses([
   "forbidden",
   "not_found",
   "validation_failed",
+  "identity_unavailable",
   "internal_error",
 ]);
 const writeErrors = errorResponses([
@@ -28,6 +29,7 @@ const writeErrors = errorResponses([
   "not_found",
   "validation_failed",
   "conflict",
+  "identity_unavailable",
   "internal_error",
 ]);
 

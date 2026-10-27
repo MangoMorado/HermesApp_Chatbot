@@ -1,8 +1,19 @@
 import { WidgetApiError } from "./fetcher";
-import type { WidgetApi, WidgetCredentials } from "./widget-api";
+import type {
+  WidgetApi,
+  WidgetCredentials,
+  WidgetSessionOpened,
+  WidgetSessionRefreshed,
+} from "./widget-api";
 
 export type SessionStorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
+/**
+ * Todos los instantes están en el reloj del dispositivo. El servidor dice cuánto le queda al
+ * token (`expires_in`) y esa duración se suma a `obtainedAt`: un reloj de dispositivo
+ * adelantado o atrasado no hace creer que el token (o la conversación) ya venció o que dura
+ * más. El vencimiento de la conversación se corrige con el mismo desfase.
+ */
 type StoredSession = {
   readonly accessToken: string;
   /** Vence el token del proveedor. */
@@ -12,6 +23,26 @@ type StoredSession = {
   readonly sessionExpiresAt: number;
   readonly obtainedAt: number;
 };
+
+type Grant = Pick<
+  WidgetSessionOpened & WidgetSessionRefreshed,
+  "access_token" | "expires_at" | "expires_in" | "session_expires_at"
+>;
+
+/** Convierte la respuesta del servidor a instantes del reloj del dispositivo. */
+function fromGrant(grant: Grant, conversationSecret: string, now: number): StoredSession {
+  const lifetimeMs = grant.expires_in * 1000;
+  // Reloj del servidor al responder; la diferencia con el nuestro es el desfase.
+  const serverNow = Date.parse(grant.expires_at) - lifetimeMs;
+  const skew = Number.isFinite(serverNow) ? now - serverNow : 0;
+  return {
+    accessToken: grant.access_token,
+    expiresAt: now + lifetimeMs,
+    conversationSecret,
+    sessionExpiresAt: Date.parse(grant.session_expires_at) + skew,
+    obtainedAt: now,
+  };
+}
 
 /** Se renueva a la mitad de la vida del token o, como mínimo, con menos de un minuto restante. */
 export const REFRESH_MARGIN_MS = 60_000;
@@ -108,7 +139,7 @@ function credentialsOf(session: StoredSession): WidgetCredentials {
   return { accessToken: session.accessToken, conversationSecret: session.conversationSecret };
 }
 
-/** Un `401` (clave) o `404` (conversación vencida o desconocida): hay que abrir otra. */
+/** En la renovación, un `401` (clave) o `404` (conversación vencida o desconocida): hay que abrir otra. */
 function conversationLost(error: unknown): boolean {
   return error instanceof WidgetApiError && (error.status === 401 || error.status === 404);
 }
@@ -124,7 +155,15 @@ export type SessionDeps = {
 export type SessionManager = {
   /** Credenciales vigentes: restaura, renueva el token o abre conversación según haga falta. */
   credentials(): Promise<WidgetCredentials>;
-  /** Descarta la sesión guardada y abre una nueva (tras un `401` o `404`). */
+  /**
+   * Tras un `401` de una llamada de conversación: renueva el token con el secreto guardado y
+   * conserva la conversación. Solo abre otra si la renovación responde `401`/`404`.
+   */
+  renew(): Promise<WidgetCredentials>;
+  /**
+   * Abre una conversación nueva (tras un `404`). La guardada se sustituye solo cuando la
+   * apertura tiene éxito: si falla, el secreto anterior se conserva.
+   */
   reopen(): Promise<WidgetCredentials>;
   /** `true` si hay conversación guardada y ya venció (se trata como un `404`). */
   expired(): boolean;
@@ -137,27 +176,16 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
 
   async function open(): Promise<WidgetCredentials> {
     const opened = await deps.api.openSession(deps.newKey());
-    const session: StoredSession = {
-      accessToken: opened.access_token,
-      expiresAt: Date.parse(opened.expires_at),
-      conversationSecret: opened.conversation_secret,
-      sessionExpiresAt: Date.parse(opened.session_expires_at),
-      obtainedAt: deps.now(),
-    };
+    const session = fromGrant(opened, opened.conversation_secret, deps.now());
     store.write(session);
     return credentialsOf(session);
   }
 
-  async function refresh(current: StoredSession): Promise<WidgetCredentials> {
+  /** `forced`: el token actual ya fue rechazado, así que un fallo pasajero no lo devuelve. */
+  async function refresh(current: StoredSession, forced = false): Promise<WidgetCredentials> {
     try {
       const renewed = await deps.api.refreshSession(current.conversationSecret, deps.newKey());
-      const session: StoredSession = {
-        ...current,
-        accessToken: renewed.access_token,
-        expiresAt: Date.parse(renewed.expires_at),
-        sessionExpiresAt: Date.parse(renewed.session_expires_at),
-        obtainedAt: deps.now(),
-      };
+      const session = fromGrant(renewed, current.conversationSecret, deps.now());
       store.write(session);
       return credentialsOf(session);
     } catch (error) {
@@ -165,7 +193,7 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
         return open();
       }
       // Fallo pasajero: el token actual sirve mientras no venza; vencido, se reintenta luego.
-      if (current.expiresAt - deps.now() > 0) {
+      if (!forced && current.expiresAt - deps.now() > 0) {
         return credentialsOf(current);
       }
       throw error;
@@ -188,6 +216,14 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
     return needsRefresh(current, now) ? refresh(current) : Promise.resolve(credentialsOf(current));
   }
 
+  function forceRefresh(): Promise<WidgetCredentials> {
+    const current = store.read();
+    if (!current || current.sessionExpiresAt - deps.now() <= 0) {
+      return open();
+    }
+    return refresh(current, true);
+  }
+
   /** Varias llamadas a la vez comparten una sola apertura o renovación. */
   function once(task: () => Promise<WidgetCredentials>): Promise<WidgetCredentials> {
     inFlight ??= task().finally(() => {
@@ -198,11 +234,8 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
 
   return {
     credentials: () => once(resolve),
-    reopen: () =>
-      once(() => {
-        store.clear();
-        return open();
-      }),
+    renew: () => once(forceRefresh),
+    reopen: () => once(open),
     expired() {
       const current = store.read();
       return current !== null && current.sessionExpiresAt - deps.now() <= 0;

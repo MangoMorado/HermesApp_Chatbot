@@ -87,7 +87,12 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           parameters: [REQUEST_ID_PARAMETER],
           responses: {
             ...okJson({ $ref: "#/components/schemas/Identity" }),
-            ...errorResponses(["unauthorized", "forbidden", "internal_error"]),
+            ...errorResponses([
+              "unauthorized",
+              "forbidden",
+              "identity_unavailable",
+              "internal_error",
+            ]),
           },
         },
       },
@@ -114,7 +119,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           },
           responses: {
             ...okJson({ type: "object" }),
-            ...errorResponses(["invalid_request", "internal_error"]),
+            ...errorResponses(["invalid_request", "identity_unavailable", "internal_error"]),
           },
         },
       },

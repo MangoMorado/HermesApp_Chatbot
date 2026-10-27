@@ -11,7 +11,12 @@ export interface WidgetSessionOpened {
   access_token: string;
   /** Vence el token. */
   expires_at: string;
-  /** Secreto de la conversacion; va en X-Conversation-Secret. No se repite. */
+  /**
+     * Segundos de vida que le quedan al token segun el reloj del servidor. El cliente lo suma a su propio reloj al recibirlo, asi un reloj de dispositivo desfasado no adelanta ni retrasa la renovacion.
+     * @minimum 0
+     */
+  expires_in: number;
+  /** Secreto de la conversacion; va en X-Conversation-Secret. Solo se devuelve en la apertura y en su repeticion idempotente. */
   conversation_secret: string;
   /** Vence la conversacion (TTL del tenant). */
   session_expires_at: string;

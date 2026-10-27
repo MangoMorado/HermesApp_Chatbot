@@ -95,13 +95,29 @@ export const CHATBOT_SCHEMAS = {
   },
   WidgetSessionOpened: {
     type: "object",
-    required: ["access_token", "expires_at", "conversation_secret", "session_expires_at"],
+    required: [
+      "access_token",
+      "expires_at",
+      "expires_in",
+      "conversation_secret",
+      "session_expires_at",
+    ],
     properties: {
       access_token: { type: "string", description: "Token del proveedor (rol widget)." },
       expires_at: { type: "string", format: "date-time", description: "Vence el token." },
+      expires_in: {
+        type: "integer",
+        minimum: 0,
+        description:
+          "Segundos de vida que le quedan al token segun el reloj del servidor. El cliente " +
+          "lo suma a su propio reloj al recibirlo, asi un reloj de dispositivo desfasado no " +
+          "adelanta ni retrasa la renovacion.",
+      },
       conversation_secret: {
         type: "string",
-        description: "Secreto de la conversacion; va en X-Conversation-Secret. No se repite.",
+        description:
+          "Secreto de la conversacion; va en X-Conversation-Secret. Solo se devuelve en la " +
+          "apertura y en su repeticion idempotente.",
       },
       session_expires_at: {
         type: "string",
@@ -112,10 +128,18 @@ export const CHATBOT_SCHEMAS = {
   },
   WidgetSessionRefreshed: {
     type: "object",
-    required: ["access_token", "expires_at", "session_expires_at"],
+    required: ["access_token", "expires_at", "expires_in", "session_expires_at"],
     properties: {
       access_token: { type: "string" },
       expires_at: { type: "string", format: "date-time" },
+      expires_in: {
+        type: "integer",
+        minimum: 0,
+        description:
+          "Segundos de vida que le quedan al token segun el reloj del servidor. El cliente " +
+          "lo suma a su propio reloj al recibirlo, asi un reloj de dispositivo desfasado no " +
+          "adelanta ni retrasa la renovacion.",
+      },
       session_expires_at: { type: "string", format: "date-time" },
     },
   },

@@ -356,6 +356,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -509,6 +527,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -687,6 +723,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
