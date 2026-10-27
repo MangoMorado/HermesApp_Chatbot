@@ -71,6 +71,7 @@ describe("alta-chatbot: esquema de configuracion del chatbot", () => {
       "id",
       "last_seen_at",
       "origin",
+      "secret_hash",
       "tenant_id",
     ]);
   });
