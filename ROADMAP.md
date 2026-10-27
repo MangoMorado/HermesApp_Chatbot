@@ -254,11 +254,11 @@ Esta fase queda fuera del Definition of Done del MVP (sección 3.6). Se abre sol
 
 1. Rate limits (sesiones nuevas por IP, etc.) en **store compartido** (válido con varias réplicas); `Retry-After` en `429`.
 2. `GET` / `PATCH /api/v1/handoff-tickets` (`operator` · `admin`) + página de panel.
-3. Barrido periódico de solicitudes vencidas (además del vencimiento al leer).
+3. Barrido periódico de solicitudes vencidas (además del vencimiento al leer) y purga de `idempotency_keys` y `platform_idempotency_keys` más viejas que la ventana de retención. Esa ventana tiene que ser más larga que un reintento razonable del cliente: borrar antes haría que la misma `Idempotency-Key` vuelva a crear el efecto. La clave de apertura de sesión del widget, que se guarda en `idempotency_keys`, sale con el resto. El mismo barrido borra las `widget_sessions` ya vencidas y, con ellas, sus `conversations` y `conversation_messages`, incluido el borrador de pre-registro que quedó en `conversations.context`. También purga los `audit_events` más viejos que su ventana de retención.
 4. Auditoría completa (campos y acciones definidos en gobernanza / política de producto).
 5. Secretos fuera de `docker-compose.yml` (incluida password de Postgres); despliegue documentado en `README.md`.
 6. Suite `carga-basica`: latencia y límites bajo concurrencia moderada.
-7. Revalidar higiene de Fase 1 (LF, CI).
+7. Revalidar higiene de Fase 1 (LF, CI) y el arranque con `docker compose up`: Postgres, backend y frontend sanos. El mismo compose corre el ciclo Hermes si se definen `HERMES_SIMULATOR_ENABLED=true` y un `FHIR_BASE_URL` absoluto. Sin esas variables el simulador sigue apagado, que es el arranque de producción.
 8. Pipelines de CI, uno por superficie. El workflow de la Fase 1 (Biome, typecheck, tests, React Doctor, `test:db`) se conserva y se reparte en jobs que fallan el PR por separado. Cada job corre las suites de su fila enteras, no un subconjunto de humo:
 
 | Pipeline | Superficie que prueba |
@@ -270,7 +270,7 @@ Esta fase queda fuera del Definition of Done del MVP (sección 3.6). Se abre sol
 | Contrato | suites `contrato-api` y `fhir-conformance`: rutas `/api/v1` alineadas con OpenAPI, `GET /fhir/metadata` igual a lo implementado, envoltura REST y `OperationOutcome` cada una en su superficie |
 | Persistencia | `test:db` contra Postgres: `dominio`, `simetria-seed`, `idempotencia`, `aislamiento-tenant` y `pre-agenda` |
 | HTTP | `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `hermes-simulador` y `cors`, con token de Keycloak en los roles que ya no firma el backend |
-| Runtime | health de los contenedores, la colección Postman de la Fase 5 y la suite `carga-basica` de esta fase |
+| Runtime | `docker compose up` de punta a punta con health de los contenedores; el ciclo Hermes con `HERMES_SIMULATOR_ENABLED` y `FHIR_BASE_URL` absoluto (en producción el simulador queda apagado); la colección Postman de la Fase 5 y la suite `carga-basica` |
 
 9. Suites completas y cobertura al 100%. Al cerrar la fase corren las dieciocho de `GOBERNANZA.md` §5.1: casos unitarios y, cuando la suite toca Postgres o HTTP, el proyecto Vitest `db`. No se apaga un caso para dejar el pipeline en verde. El Vitest del frontend (widget, proxy, idempotencia de cliente y panel) corre con el pipeline de Calidad.
 
@@ -290,7 +290,7 @@ Esta fase queda fuera del Definition of Done del MVP (sección 3.6). Se abre sol
 | `conocimiento-config` | HTTP | `bot-config`, rotación de clave, CRUD de la base de conocimiento, búsqueda por tokens y orígenes permitidos |
 | `alta-chatbot` | HTTP | Alta de tenant con predeterminados; emisión de tokens de plataforma solo para lo que Keycloak no administra |
 | `sesion-widget` | JWT, HTTP | Clave pública, `Origin`, límite por IP, renovación e idempotencia; token expirado o de sesión cerrada → `401` |
-| `idempotencia` | Persistencia, HTTP | Repetir `Idempotency-Key` no duplica efectos en escrituras REST ni FHIR |
+| `idempotencia` | Persistencia, HTTP | Repetir `Idempotency-Key` no duplica efectos en escrituras REST ni FHIR. Una clave dentro de la retención sigue devolviendo la respuesta guardada; una más vieja ya no está y el reintento es una escritura nueva |
 | `sin-ia` | Seguridad | Ninguna dependencia ni import de LLM, embeddings, RAG ni n8n |
 | `fhir-conformance` | Contrato | Mappers R4, `OperationOutcome`, `Bundle`, búsqueda y paginación; `CapabilityStatement` declara exactamente lo implementado, escrituras incluidas |
 | `hermes-simulador` | HTTP | El simulador cierra el ciclo (maestros, pre-agendas, aprobación o rechazo, pre-registro) solo por `/fhir` con token `service` de Keycloak |
@@ -310,6 +310,9 @@ Esta fase queda fuera del Definition of Done del MVP (sección 3.6). Se abre sol
 | 5 | Las dieciocho suites de la tabla anterior están en verde, con su parte unitaria y su parte `test:db` cuando la suite toca base o HTTP |
 | 6 | Cobertura de código al 100% en sentencias, ramas, funciones y líneas, en `backend/src` y en `frontend/src` (sin Prisma ni clientes orval) |
 | 7 | El quality gate de SonarQube queda en verde tras las oleadas de fixes, sin reglas apagadas ni archivos excluidos |
+| 8 | El barrido purga `idempotency_keys` y `platform_idempotency_keys` fuera de la retención, y una clave todavía vigente repite la respuesta guardada |
+| 9 | `docker compose up` levanta Postgres, backend y frontend con health. El ciclo Hermes corre en ese compose con el simulador encendido solo en esa corrida |
+| 10 | El barrido borra `widget_sessions` vencidas con sus `conversations` y `conversation_messages`, y purga `audit_events` fuera de su retención. Una sesión vigente y su borrador de pre-registro siguen en su sitio |
 
 **Verificación:** las dieciocho suites (`fronteras`, `contrato-api`, `roles`, `dominio`, `simetria-seed`, `aislamiento-tenant`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`), cobertura al 100%, el workflow con los ocho pipelines en verde y el quality gate de SonarQube sin issues abiertos.
 
@@ -355,7 +358,7 @@ Ese mínimo rige desde la Fase 1. La matriz completa (lint, calidad, seguridad, 
 - Un Dockerfile multi-stage por aplicación (`backend`, `frontend`).
 - Compose: Postgres + servicios; variables por entorno.
 - Fase 1: arranque reproducible y health.
-- Fase 6: cero secretos en el YAML versionado; procedimiento de deploy en README.
+- Fase 6: cero secretos en el YAML versionado; procedimiento de deploy en README; `docker compose up` en el pipeline de Runtime, con health. El ciclo Hermes usa `HERMES_SIMULATOR_ENABLED` y `FHIR_BASE_URL` absoluto; en producción el simulador sigue apagado.
 
 ### 3.5 SDD (Superpowers)
 
