@@ -93,7 +93,7 @@ function emailOptions(record: VerifiableRecord): QuestionOption[] {
     const domain = COMMON_DOMAINS[((seed >>> 8) + step) % COMMON_DOMAINS.length];
     hints.add(`${letter}•••@${domain}`);
   }
-  return [...hints].sort().map((hint) => ({ value: hint, label: hint }));
+  return [...hints].sort((a, b) => a.localeCompare(b)).map((hint) => ({ value: hint, label: hint }));
 }
 
 const always = () => true;
