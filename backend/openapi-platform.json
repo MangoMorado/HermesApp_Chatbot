@@ -3,7 +3,7 @@
   "info": {
     "title": "Chatbot Ingenius 360 — API de plataforma",
     "version": "0.1.0",
-    "description": "Alta de tenants y emision de tokens de panel y servicio. Autenticada con PLATFORM_SECRET; sin el, toda ruta responde 404."
+    "description": "Alta de tenants y credenciales del widget de cada clinica. Autenticada con un bearer JWT del proveedor de identidad con rol `platform`."
   },
   "servers": [
     {
@@ -12,9 +12,10 @@
   ],
   "components": {
     "securitySchemes": {
-      "platformSecret": {
+      "platformBearer": {
         "type": "http",
-        "scheme": "bearer"
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     },
     "schemas": {
@@ -42,6 +43,9 @@
                   "conflict",
                   "method_not_allowed",
                   "rate_limited",
+                  "widget_not_configured",
+                  "identity_unavailable",
+                  "invalid_request",
                   "internal_error"
                 ]
               },
@@ -99,50 +103,50 @@
           }
         }
       },
-      "TokenRequest": {
+      "WidgetClientRequest": {
         "type": "object",
         "required": [
-          "tenant_id",
-          "role",
-          "subject"
+          "client_id",
+          "client_secret"
         ],
         "properties": {
-          "tenant_id": {
-            "type": "string"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "operator",
-              "admin",
-              "service"
-            ]
-          },
-          "subject": {
+          "client_id": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 120
+            "maxLength": 200
           },
-          "ttl_minutes": {
-            "type": "integer",
-            "minimum": 1,
-            "description": "Defecto 480 (operator/admin) o 60 (service); tope 720 o 1440."
+          "client_secret": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Se guarda sellado; nunca se devuelve ni se audita."
           }
         }
       },
-      "IssuedToken": {
+      "WidgetClientSet": {
         "type": "object",
         "required": [
-          "token",
-          "expires_at"
+          "client_id",
+          "updated_at"
         ],
         "properties": {
-          "token": {
+          "client_id": {
             "type": "string"
           },
-          "expires_at": {
+          "updated_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "WidgetClientRef": {
+        "type": "object",
+        "required": [
+          "client_id"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
           }
         }
       },
@@ -168,6 +172,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "widget_client": {
+            "$ref": "#/components/schemas/WidgetClientRequest",
+            "description": "Credenciales del cliente OIDC del widget; se guardan en la misma transaccion."
           }
         }
       },
@@ -175,7 +183,8 @@
         "type": "object",
         "required": [
           "tenant",
-          "widget_key"
+          "widget_key",
+          "widget_client"
         ],
         "properties": {
           "tenant": {
@@ -184,6 +193,17 @@
           "widget_key": {
             "type": "string",
             "description": "Clave publica del widget (va en el HTML)."
+          },
+          "widget_client": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/WidgetClientRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Solo el `client_id`; el secreto nunca se devuelve."
           }
         }
       }
@@ -195,7 +215,7 @@
         "operationId": "listTenants",
         "security": [
           {
-            "platformSecret": []
+            "platformBearer": []
           }
         ],
         "parameters": [
@@ -249,6 +269,24 @@
           },
           "401": {
             "description": "unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -326,7 +364,7 @@
         "description": "Alta con predeterminados: bot-config, KB de ejemplo y primera clave del widget. Una repeticion con la misma Idempotency-Key devuelve la respuesta original, con la widget_key emitida en el alta aunque despues se haya rotado.",
         "security": [
           {
-            "platformSecret": []
+            "platformBearer": []
           }
         ],
         "parameters": [
@@ -381,6 +419,24 @@
           },
           "401": {
             "description": "unauthorized",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -472,13 +528,13 @@
         }
       }
     },
-    "/tokens": {
-      "post": {
-        "operationId": "issueToken",
-        "description": "No escribe dominio: sin Idempotency-Key. El token no se persiste.",
+    "/tenants/{id}/widget-client": {
+      "put": {
+        "operationId": "setWidgetClient",
+        "description": "Registra o rota las credenciales del cliente OIDC del widget de la clinica. Una repeticion con la misma Idempotency-Key y el mismo cuerpo repite la respuesta.",
         "security": [
           {
-            "platformSecret": []
+            "platformBearer": []
           }
         ],
         "parameters": [
@@ -491,6 +547,23 @@
               "type": "string",
               "maxLength": 128
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -498,7 +571,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TokenRequest"
+                "$ref": "#/components/schemas/WidgetClientRequest"
               }
             }
           }
@@ -517,7 +590,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IssuedToken"
+                  "$ref": "#/components/schemas/WidgetClientSet"
                 }
               }
             }
@@ -540,8 +613,44 @@
               }
             }
           },
+          "403": {
+            "description": "forbidden",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "not_found",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",

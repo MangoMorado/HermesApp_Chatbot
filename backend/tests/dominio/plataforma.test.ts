@@ -1,45 +1,47 @@
 import { describe, expect, it } from "vitest";
 import { parseTenantDraft } from "@/modules/platform/domain/tenant-registration";
-import { parseTokenRequest } from "@/modules/platform/domain/token-request";
+import { parseWidgetClient } from "@/modules/platform/domain/widget-client";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 
-describe("alta-chatbot: peticion de token de plataforma", () => {
-  it("aplica el TTL por defecto de cada rol", () => {
-    expect(parseTokenRequest({ tenant_id: "t", role: "admin", subject: "ana" })).toEqual({
-      tenantId: "t",
-      role: "admin",
-      subject: "ana",
-      ttlMinutes: 480,
+describe("alta-chatbot: credenciales de widget", () => {
+  it("acepta client_id y client_secret", () => {
+    expect(parseWidgetClient({ client_id: "widget-a", client_secret: "s3cr3t" })).toEqual({
+      clientId: "widget-a",
+      clientSecret: "s3cr3t",
     });
-    expect(
-      parseTokenRequest({ tenant_id: "t", role: "service", subject: "hermes" }).ttlMinutes,
-    ).toBe(60);
   });
 
-  it("acepta un TTL dentro del tope", () => {
-    expect(
-      parseTokenRequest({ tenant_id: "t", role: "service", subject: "h", ttl_minutes: 1440 })
-        .ttlMinutes,
-    ).toBe(1440);
+  it("acepta el tope de 200 caracteres", () => {
+    const max = "x".repeat(200);
+    expect(parseWidgetClient({ client_id: max, client_secret: max }).clientSecret).toBe(max);
   });
 
   it.each([
-    [{ tenant_id: "t", role: "widget", subject: "x" }, "role"],
-    [{ tenant_id: "t", role: "root", subject: "x" }, "role"],
-    [{ tenant_id: "", role: "admin", subject: "x" }, "tenant_id"],
-    [{ tenant_id: "t", role: "admin", subject: "" }, "subject"],
-    [{ tenant_id: "t", role: "admin", subject: "widget:abc" }, "subject"],
-    [{ tenant_id: "t", role: "admin", subject: "x".repeat(121) }, "subject"],
-    [{ tenant_id: "t", role: "operator", subject: "x", ttl_minutes: 721 }, "ttl_minutes"],
-    [{ tenant_id: "t", role: "operator", subject: "x", ttl_minutes: 0 }, "ttl_minutes"],
-    [{ tenant_id: "t", role: "operator", subject: "x", ttl_minutes: 1.5 }, "ttl_minutes"],
+    [null, "body"],
+    [{ client_secret: "s" }, "client_id"],
+    [{ client_id: "", client_secret: "s" }, "client_id"],
+    [{ client_id: 5, client_secret: "s" }, "client_id"],
+    [{ client_id: "x".repeat(201), client_secret: "s" }, "client_id"],
+    [{ client_id: "w" }, "client_secret"],
+    [{ client_id: "w", client_secret: "" }, "client_secret"],
+    [{ client_id: "w", client_secret: "x".repeat(201) }, "client_secret"],
   ])("rechaza %j", (raw, field) => {
     try {
-      parseTokenRequest(raw);
+      parseWidgetClient(raw);
       expect.unreachable("deberia fallar");
     } catch (error) {
       expect(error).toBeInstanceOf(ValidationError);
       expect((error as ValidationError).details).toMatchObject({ field });
+    }
+  });
+
+  it("no revela el secreto en el mensaje de error", () => {
+    try {
+      parseWidgetClient({ client_id: "w", client_secret: "x".repeat(201) });
+      expect.unreachable("deberia fallar");
+    } catch (error) {
+      expect(JSON.stringify(error)).not.toContain("xxxxxxxxxx");
+      expect((error as Error).message).not.toContain("xxxxxxxxxx");
     }
   });
 });
@@ -50,7 +52,24 @@ describe("alta-chatbot: borrador de tenant", () => {
       slug: "clinica-norte",
       name: "Clínica Norte",
       allowedOrigins: [],
+      widgetClient: null,
     });
+  });
+
+  it("incluye widget_client cuando viene", () => {
+    expect(
+      parseTenantDraft({
+        slug: "norte",
+        name: "N",
+        widget_client: { client_id: "widget-n", client_secret: "s" },
+      }).widgetClient,
+    ).toEqual({ clientId: "widget-n", clientSecret: "s" });
+  });
+
+  it("rechaza un widget_client incompleto", () => {
+    expect(() => parseTenantDraft({ slug: "norte", name: "N", widget_client: {} })).toThrow(
+      ValidationError,
+    );
   });
 
   it.each(["", "Clinica", "-norte", "norte-", "norte_1", "x".repeat(51)])(

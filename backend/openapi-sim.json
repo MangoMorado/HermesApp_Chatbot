@@ -43,6 +43,9 @@
                   "conflict",
                   "method_not_allowed",
                   "rate_limited",
+                  "widget_not_configured",
+                  "identity_unavailable",
+                  "invalid_request",
                   "internal_error"
                 ]
               },

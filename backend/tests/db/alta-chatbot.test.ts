@@ -1,32 +1,53 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { PrismaClient } from "@prisma/client";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { PUT as putWidgetClient } from "@/app/api/platform/v1/tenants/[id]/widget-client/route";
 import { POST as createTenant, GET as listTenants } from "@/app/api/platform/v1/tenants/route";
-import { POST as issueToken } from "@/app/api/platform/v1/tokens/route";
-import { GET as getBotConfig } from "@/app/api/v1/bot-config/route";
 import { POST as openWidgetSession } from "@/app/api/v1/widget/sessions/route";
 import { resetContainer } from "@/composition-root";
-import { authedRequest } from "../helpers/idp";
+import { authedRequest, platformToken, signToken, TEST_CLIENT_SECRET } from "../helpers/idp";
 import { insertChatbotTenant, testPrisma, truncateAll } from "./support";
 
 const prisma: PrismaClient = testPrisma();
-const PLATFORM_SECRET = "secreto-de-plataforma-de-pruebas-con-32-o-mas";
-const HOUR = 3_600_000;
+const TENANTS_URL = "http://localhost/api/platform/v1/tenants";
+let token = "";
 
-function platformPost(url: string, body: unknown, key?: string): Request {
-  const headers = new Headers({
-    Authorization: `Bearer ${PLATFORM_SECRET}`,
-    "Content-Type": "application/json",
-  });
+beforeAll(async () => {
+  token = await platformToken();
+});
+
+function platformPost(url: string, body: unknown, key?: string, bearer: string | null = token) {
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (bearer) {
+    headers.set("Authorization", `Bearer ${bearer}`);
+  }
   if (key) {
     headers.set("Idempotency-Key", key);
   }
   return new Request(url, { method: "POST", headers, body: JSON.stringify(body) });
 }
 
-const TOKENS_URL = "http://localhost/api/platform/v1/tokens";
+function widgetClientPut(tenantId: string, body: unknown, key?: string) {
+  const headers = new Headers({
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  });
+  if (key) {
+    headers.set("Idempotency-Key", key);
+  }
+  return putWidgetClient(
+    new Request(`${TENANTS_URL}/${tenantId}/widget-client`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(body),
+    }),
+    { params: Promise.resolve({ id: tenantId }) },
+  );
+}
 
-describe("alta-chatbot: tokens de plataforma", () => {
+describe("alta-chatbot: autenticacion de plataforma", () => {
   beforeEach(async () => {
     await truncateAll(prisma);
     resetContainer();
@@ -37,63 +58,20 @@ describe("alta-chatbot: tokens de plataforma", () => {
     await prisma.$disconnect();
   });
 
-  it("un token admin emitido abre /bot-config de su tenant", async () => {
-    const { tenantId } = await insertChatbotTenant(prisma, "a");
-    const before = Date.now();
-    const response = await issueToken(
-      platformPost(TOKENS_URL, { tenant_id: tenantId, role: "admin", subject: "ana@clinica" }),
-    );
-    const body = await response.json();
+  it("sin token responde 401; token admin de tenant responde 403", async () => {
+    const none = await listTenants(new Request(TENANTS_URL));
+    expect(none.status).toBe(401);
 
-    expect(response.status).toBe(200);
-    const expiresAt = new Date(body.expires_at).getTime();
-    expect(expiresAt).toBeGreaterThanOrEqual(before + 8 * HOUR - 1000);
-    expect(expiresAt).toBeLessThanOrEqual(Date.now() + 8 * HOUR);
-
-    const config = await getBotConfig(
-      authedRequest("http://localhost/api/v1/bot-config", body.token),
-    );
-    expect(config.status).toBe(200);
+    const admin = await signToken({ role: "admin", tenantId: "tenant-a" });
+    expect((await listTenants(authedRequest(TENANTS_URL, admin))).status).toBe(403);
+    const write = await createTenant(platformPost(TENANTS_URL, {}, "k-1", admin));
+    expect(write.status).toBe(403);
   });
 
-  it("audita el hecho sin guardar el token", async () => {
-    const { tenantId } = await insertChatbotTenant(prisma, "a");
-    const body = await (
-      await issueToken(
-        platformPost(TOKENS_URL, { tenant_id: tenantId, role: "service", subject: "hermes" }),
-      )
-    ).json();
-
-    const events = await prisma.auditEvent.findMany();
-    expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({
-      tenantId,
-      actorSubject: "platform",
-      actorRole: "platform",
-      action: "token.issued",
-      resourceType: "token.service",
-      resourceId: "hermes",
-    });
-    expect(JSON.stringify(events)).not.toContain(body.token);
-    expect(await prisma.idempotencyKey.count()).toBe(0);
-    expect(await prisma.platformIdempotencyKey.count()).toBe(0);
-  });
-
-  it("tenant inexistente responde 404", async () => {
-    const response = await issueToken(
-      platformPost(TOKENS_URL, { tenant_id: "tenant-x", role: "admin", subject: "ana" }),
-    );
-    expect(response.status).toBe(404);
-  });
-
-  it("GET /tenants lista paginado", async () => {
+  it("GET /tenants lista paginado con token platform", async () => {
     await insertChatbotTenant(prisma, "a");
     await insertChatbotTenant(prisma, "b");
-    const response = await listTenants(
-      new Request("http://localhost/api/platform/v1/tenants?limit=1", {
-        headers: { Authorization: `Bearer ${PLATFORM_SECRET}` },
-      }),
-    );
+    const response = await listTenants(authedRequest(`${TENANTS_URL}?limit=1`, token));
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body.data).toEqual([
@@ -101,14 +79,18 @@ describe("alta-chatbot: tokens de plataforma", () => {
     ]);
     expect(body.next_cursor).toEqual(expect.any(String));
   });
+
+  it("/api/platform/v1/tokens ya no existe", () => {
+    expect(existsSync(join("src/app/api/platform/v1/tokens/route.ts"))).toBe(false);
+  });
 });
 
-const TENANTS_URL = "http://localhost/api/platform/v1/tenants";
 const NEW_TENANT = {
   slug: "clinica-nueva",
   name: "Clínica Nueva",
   allowed_origins: ["https://Nueva.test"],
 };
+const WIDGET_CLIENT = { client_id: "widget-x", client_secret: TEST_CLIENT_SECRET };
 
 async function counts() {
   return {
@@ -125,13 +107,14 @@ describe("alta-chatbot: POST /tenants", () => {
     resetContainer();
   });
 
-  it("crea tenant, config, KB de ejemplo y una clave vigente", async () => {
+  it("alta con token platform crea tenant, config, KB de ejemplo y una clave vigente", async () => {
     const response = await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-1"));
     const body = await response.json();
 
     expect(response.status).toBe(201);
     expect(body.tenant).toMatchObject({ slug: "clinica-nueva", name: "Clínica Nueva" });
     expect(body.widget_key).toMatch(/^wk_[A-Za-z0-9_-]{43}$/);
+    expect(body.widget_client).toBeNull();
 
     const tenantId = body.tenant.id;
     expect(await prisma.botConfig.findUniqueOrThrow({ where: { tenantId } })).toMatchObject({
@@ -140,10 +123,41 @@ describe("alta-chatbot: POST /tenants", () => {
     expect(await prisma.knowledgeEntry.count({ where: { tenantId } })).toBe(3);
     expect(
       await prisma.widgetKey.findFirstOrThrow({ where: { tenantId, retiredAt: null } }),
-    ).toMatchObject({
-      key: body.widget_key,
-    });
+    ).toMatchObject({ key: body.widget_key });
     expect((await prisma.auditEvent.findMany()).map((e) => e.action)).toEqual(["tenant.created"]);
+  });
+
+  it("alta con widget_client guarda la credencial sellada y responde solo client_id", async () => {
+    const payload = { ...NEW_TENANT, widget_client: WIDGET_CLIENT };
+    const response = await createTenant(platformPost(TENANTS_URL, payload, "alta-wc"));
+    const text = await response.text();
+
+    expect(response.status).toBe(201);
+    expect(JSON.parse(text).widget_client).toEqual({ client_id: "widget-x" });
+    expect(text).not.toContain(TEST_CLIENT_SECRET);
+
+    const row = await prisma.machineCredential.findFirstOrThrow();
+    expect(row).toMatchObject({ kind: "widget", clientId: "widget-x" });
+    expect(row.secretSealed).not.toContain(TEST_CLIENT_SECRET);
+    expect(JSON.stringify(await prisma.platformIdempotencyKey.findMany())).not.toContain(
+      TEST_CLIENT_SECRET,
+    );
+  });
+
+  it("auditoria registra el sub del token platform y no el secreto", async () => {
+    const payload = { ...NEW_TENANT, widget_client: WIDGET_CLIENT };
+    await createTenant(platformPost(TENANTS_URL, payload, "alta-a"));
+    const events = await prisma.auditEvent.findMany();
+    expect(events.map((e) => e.actorSubject)).toContain("service-account-platform-client");
+    expect(events.every((e) => e.actorRole === "platform")).toBe(true);
+    expect(JSON.stringify(events)).not.toContain(TEST_CLIENT_SECRET);
+  });
+
+  it("widget_client invalido responde 422 sin filas", async () => {
+    const payload = { ...NEW_TENANT, widget_client: { client_id: "w" } };
+    const response = await createTenant(platformPost(TENANTS_URL, payload, "alta-bad"));
+    expect(response.status).toBe(422);
+    expect(await counts()).toEqual({ tenants: 0, configs: 0, keys: 0, entries: 0 });
   });
 
   it("idempotencia: repetir con la misma clave devuelve lo mismo sin duplicar", async () => {
@@ -180,20 +194,83 @@ describe("alta-chatbot: POST /tenants", () => {
     const response = await createTenant(platformPost(TENANTS_URL, NEW_TENANT));
     expect(response.status).toBe(422);
   });
+});
 
-  it("un token emitido para el tenant nuevo lee su configuracion", async () => {
-    const { tenant } = await (
-      await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-6"))
-    ).json();
-    const { token } = await (
-      await issueToken(
-        platformPost(TOKENS_URL, { tenant_id: tenant.id, role: "operator", subject: "op" }),
-      )
-    ).json();
-    const config = await (
-      await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", token))
-    ).json();
-    expect(config.allowed_origins).toEqual(["https://nueva.test"]);
+describe("alta-chatbot: PUT widget-client", () => {
+  beforeEach(async () => {
+    await truncateAll(prisma);
+    resetContainer();
+  });
+
+  it("reemplaza la credencial y es idempotente", async () => {
+    const { tenantId } = await insertChatbotTenant(prisma, "a");
+    const first = await widgetClientPut(
+      tenantId,
+      { client_id: "widget-a", client_secret: "s1" },
+      "wc-1",
+    );
+    const firstBody = await first.json();
+    expect(first.status).toBe(200);
+    expect(firstBody).toEqual({ client_id: "widget-a", updated_at: expect.any(String) });
+
+    const replay = await widgetClientPut(
+      tenantId,
+      { client_id: "widget-a", client_secret: "s1" },
+      "wc-1",
+    );
+    expect(replay.status).toBe(200);
+    expect(await replay.json()).toEqual(firstBody);
+
+    const rotated = await widgetClientPut(
+      tenantId,
+      { client_id: "widget-b", client_secret: "secreto-nuevo" },
+      "wc-2",
+    );
+    expect(rotated.status).toBe(200);
+    const rows = await prisma.machineCredential.findMany({ where: { tenantId } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ kind: "widget", clientId: "widget-b" });
+
+    const events = await prisma.auditEvent.findMany({
+      where: { action: "widget_client.set" },
+      orderBy: { occurredAt: "asc" },
+    });
+    expect(events.map((e) => e.resourceId)).toEqual(["widget-a", "widget-b"]);
+    expect(JSON.stringify(events)).not.toContain("secreto-nuevo");
+    expect(JSON.stringify(await prisma.platformIdempotencyKey.findMany())).not.toContain(
+      "secreto-nuevo",
+    );
+  });
+
+  it("misma clave con otro cuerpo responde 409", async () => {
+    const { tenantId } = await insertChatbotTenant(prisma, "a");
+    await widgetClientPut(tenantId, { client_id: "widget-a", client_secret: "s1" }, "wc-3");
+    const other = await widgetClientPut(
+      tenantId,
+      { client_id: "widget-a", client_secret: "s9" },
+      "wc-3",
+    );
+    expect(other.status).toBe(409);
+  });
+
+  it("tenant inexistente responde 404", async () => {
+    const response = await widgetClientPut("tenant-x", WIDGET_CLIENT, "wc-4");
+    expect(response.status).toBe(404);
+  });
+
+  it("sin Idempotency-Key responde 422", async () => {
+    const { tenantId } = await insertChatbotTenant(prisma, "a");
+    expect((await widgetClientPut(tenantId, WIDGET_CLIENT)).status).toBe(422);
+  });
+
+  it.each([
+    [{ client_id: "", client_secret: "s" }],
+    [{ client_id: "w", client_secret: "" }],
+    [{ client_id: "w", client_secret: "x".repeat(201) }],
+    [{ client_id: 5, client_secret: "s" }],
+  ])("cuerpo invalido %j responde 422", async (body) => {
+    const { tenantId } = await insertChatbotTenant(prisma, "a");
+    expect((await widgetClientPut(tenantId, body, "wc-5")).status).toBe(422);
   });
 });
 
@@ -204,8 +281,9 @@ describe("alta-chatbot: la primera clave abre sesion", () => {
   });
 
   it("la clave devuelta por el alta abre una sesion desde un origen permitido", async () => {
+    const payload = { ...NEW_TENANT, widget_client: WIDGET_CLIENT };
     const { widget_key } = await (
-      await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-w"))
+      await createTenant(platformPost(TENANTS_URL, payload, "alta-w"))
     ).json();
     const response = await openWidgetSession(
       new Request("http://localhost/api/v1/widget/sessions", {

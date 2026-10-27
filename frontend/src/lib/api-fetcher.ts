@@ -80,8 +80,8 @@ export async function apiFetcher<T>(url: string, options?: RequestInit): Promise
 }
 
 /**
- * Mutator de `/api/platform/v1`. No toca el JWT de la sesión: el secreto de
- * plataforma viaja solo en el `Authorization` que pase quien llama, y no se guarda.
+ * Mutator de `/api/platform/v1`. No toca el JWT de la sesión: el token
+ * `platform` del proveedor viaja solo en el `Authorization` que pase quien llama, y no se guarda.
  */
 export async function platformFetcher<T>(url: string, options?: RequestInit): Promise<T> {
   const headers = jsonHeaders(options);

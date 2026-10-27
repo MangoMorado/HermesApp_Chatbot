@@ -7,6 +7,9 @@ export const ERROR_CODES = [
   "conflict",
   "method_not_allowed",
   "rate_limited",
+  "widget_not_configured",
+  "identity_unavailable",
+  "invalid_request",
   "internal_error",
 ] as const;
 
@@ -20,5 +23,8 @@ export const STATUS_BY_CODE: Record<ErrorCode, number> = {
   conflict: 409,
   method_not_allowed: 405,
   rate_limited: 429,
+  widget_not_configured: 409,
+  identity_unavailable: 503,
+  invalid_request: 400,
   internal_error: 500,
 };

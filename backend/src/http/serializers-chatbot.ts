@@ -32,6 +32,10 @@ export function tenantJson(tenant: TenantSummary) {
   };
 }
 
+export function widgetClientJson(clientId: string | null) {
+  return clientId === null ? null : { client_id: clientId };
+}
+
 export function knowledgeEntryJson(entry: KnowledgeEntry) {
   return {
     id: entry.id,

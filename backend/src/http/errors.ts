@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { AuthError } from "@/modules/auth/domain/auth-error";
+import {
+  IdentityUnavailableError,
+  MachineCredentialMissingError,
+} from "@/modules/auth/domain/machine-credential-error";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
@@ -48,6 +52,12 @@ export function toApiError(error: unknown): ApiError {
     return new ApiError("rate_limited", error.message, {
       retry_after_seconds: error.retryAfterSeconds,
     });
+  }
+  if (error instanceof MachineCredentialMissingError) {
+    return new ApiError("widget_not_configured", "La clinica no tiene credenciales de widget");
+  }
+  if (error instanceof IdentityUnavailableError) {
+    return new ApiError("identity_unavailable", "Proveedor de identidad no disponible");
   }
   if (error instanceof AuthError) {
     return new ApiError(error.reason, error.message);

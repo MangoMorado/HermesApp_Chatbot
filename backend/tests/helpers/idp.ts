@@ -251,6 +251,20 @@ export function installFakeIdp(): void {
   }) as typeof fetch;
 }
 
+/** Token `platform` del proveedor falso: `client_credentials` con `platform-client`. */
+export async function platformToken(): Promise<string> {
+  const basic = Buffer.from(`platform-client:${TEST_CLIENT_SECRET}`).toString("base64");
+  const response = await fetch(`${TEST_OIDC.issuer}/protocol/openid-connect/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${basic}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+  return ((await response.json()) as { access_token: string }).access_token;
+}
+
 export function authorized(token: string): Request {
   return authedRequest("http://localhost/api/v1/me", token);
 }

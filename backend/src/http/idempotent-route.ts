@@ -1,4 +1,3 @@
-import { createHmac } from "node:crypto";
 import type { NextResponse } from "next/server";
 import { getContainer, type WritePorts } from "@/composition-root";
 import { requireTenantActor } from "@/modules/auth/application/authorize";
@@ -6,6 +5,7 @@ import type { Actor } from "@/modules/auth/domain/actor";
 import type { TenantRole } from "@/modules/auth/domain/role";
 import { errorResponse, toApiError } from "./errors";
 import {
+  hashKeyFor,
   type IdempotentOutcome,
   type IdempotentResult,
   idempotentJson,
@@ -33,11 +33,6 @@ type IdempotentRouteOptions = {
   /** Reconstruye la repeticion cuando lo persistido no es la respuesta (credenciales). */
   readonly rebuild?: (stored: IdempotentResult, actor: Actor) => Promise<IdempotentResult>;
 };
-
-/** Clave propia del hash de peticiones, derivada de la clave de cifrado para no reutilizarla. */
-function hashKeyFor(key: Uint8Array): string {
-  return createHmac("sha256", key).update("idempotency-request-hash").digest("hex");
-}
 
 /** Escritura autenticada con `Idempotency-Key` obligatoria, en el ambito del tenant del token. */
 export function idempotentRoute(

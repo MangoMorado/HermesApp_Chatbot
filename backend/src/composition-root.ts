@@ -155,7 +155,7 @@ export function getContainer(): Container {
       ...simReads(prisma),
       ...botConfigReads(prisma),
       ...knowledgeReads(prisma),
-      ...platformReads(prisma, config),
+      ...platformReads(prisma),
       ...widgetReads(prisma, config),
       ...fhirReads(prisma, config, preAgenda.expireDueRequests),
       withWriteTransaction: (fn) => {
