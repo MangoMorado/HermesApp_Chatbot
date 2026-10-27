@@ -14,7 +14,12 @@ function registry(overrides: Partial<TenantRegistry> = {}): TenantRegistry {
       data: [{ id: "t1", slug: "norte", name: "Norte", createdAt: NOW }],
       nextCursor: null,
     })),
-    create: vi.fn(async () => undefined),
+    create: vi.fn(async () => ({
+      id: "t1",
+      slug: "norte",
+      name: "Norte",
+      createdAt: NOW,
+    })),
     ...overrides,
   };
 }

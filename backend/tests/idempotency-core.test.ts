@@ -129,11 +129,17 @@ describe("idempotencia HTTP", () => {
 
   it("runIdempotent repite respuesta previa o ejecuta la escritura", async () => {
     const outside = {
-      find: vi.fn(async () => ({
-        requestHash: "same",
-        responseStatus: 201,
-        responseBody: { id: "1" },
-      })),
+      find: vi.fn(
+        async (): Promise<{
+          requestHash: string;
+          responseStatus: number;
+          responseBody: { id: string };
+        } | null> => ({
+          requestHash: "same",
+          responseStatus: 201,
+          responseBody: { id: "1" },
+        }),
+      ),
       reserve: vi.fn(),
       complete: vi.fn(),
     };

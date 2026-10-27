@@ -155,12 +155,12 @@ describe("http: serializers REST", () => {
         { text: "secreto", redacted: true },
       ],
       options: [],
-      input: null,
+      input: "none" as const,
     };
     expect(conversationTurnJson(turn)).toEqual({
       messages: ["hola", "secreto"],
       options: [],
-      input: null,
+      input: "none",
     });
     expect(storedTurnJson(turn, "sess-1").body.messages).toContain("[redactado]");
     expect(
@@ -183,7 +183,7 @@ describe("http: serializers REST", () => {
           },
         ],
         options: [],
-        input: null,
+        input: "none",
       }),
     ).toMatchObject({
       messages: [{ author: "bot", created_at: WHEN.startAt.toISOString() }],

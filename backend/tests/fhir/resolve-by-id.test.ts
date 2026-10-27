@@ -63,8 +63,7 @@ describe("fhir-conformance: resolve by id", () => {
         identifier: [BUSINESS],
       },
     });
-    expect(resource.resourceType).toBe("Appointment");
-    expect(resource.status).toBe("booked");
+    expect(resource).toMatchObject({ resourceType: "Appointment", status: "booked" });
     expect(ports.resolve).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: "agenda",

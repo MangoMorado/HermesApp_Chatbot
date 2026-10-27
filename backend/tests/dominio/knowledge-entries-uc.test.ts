@@ -21,7 +21,7 @@ const ACTOR = { actorSubject: "admin", actorRole: "admin" as const, requestId: "
 
 const entry = (overrides: Partial<KnowledgeEntry> = {}): KnowledgeEntry => ({
   id: "ke-1",
-  tenantId: "t1",
+  tenantId: TENANT,
   category: "Citas",
   question: "¿Cómo agendo?",
   answer: "Desde este chat.",
