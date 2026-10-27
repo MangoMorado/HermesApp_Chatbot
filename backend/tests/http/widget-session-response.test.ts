@@ -79,8 +79,8 @@ describe("http: respuesta de sesion widget", () => {
     expect(sessionIdOf({ subject: "w", tenantId: TENANT, role: "widget", sessionId: "s1" })).toBe(
       "s1",
     );
-    expect(() =>
-      sessionIdOf({ subject: "w", tenantId: TENANT, role: "widget" }),
-    ).toThrow(AuthError);
+    expect(() => sessionIdOf({ subject: "w", tenantId: TENANT, role: "widget" })).toThrow(
+      AuthError,
+    );
   });
 });

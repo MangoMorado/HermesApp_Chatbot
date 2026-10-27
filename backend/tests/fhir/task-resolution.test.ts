@@ -61,12 +61,10 @@ describe("fhir-conformance: parser Task resolution", () => {
   });
 
   it("rechaza status o intent invalidos", () => {
-    expect(() =>
-      parseTaskResolution({ resourceType: "Task", status: "requested" }),
-    ).toThrow(FhirError);
-    expect(() =>
-      parseTaskResolution({ ...completedBody, intent: "order" }),
-    ).toThrow(FhirError);
+    expect(() => parseTaskResolution({ resourceType: "Task", status: "requested" })).toThrow(
+      FhirError,
+    );
+    expect(() => parseTaskResolution({ ...completedBody, intent: "order" })).toThrow(FhirError);
   });
 
   it("rechaza identifier multiple o motivo invalido", () => {

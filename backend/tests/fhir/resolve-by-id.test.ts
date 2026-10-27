@@ -48,10 +48,7 @@ describe("fhir-conformance: resolve by id", () => {
   it("aprueba Appointment proposed y devuelve el recurso booked", async () => {
     const booked = appointment({ status: "booked", identifier: BUSINESS });
     const ports = resolver({
-      readAppointment: vi
-        .fn()
-        .mockResolvedValueOnce(appointment())
-        .mockResolvedValueOnce(booked),
+      readAppointment: vi.fn().mockResolvedValueOnce(appointment()).mockResolvedValueOnce(booked),
     });
     const resolve = createResolveById(ports);
     const resource = await resolve({

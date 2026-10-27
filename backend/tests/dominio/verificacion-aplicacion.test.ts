@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { NotFoundError } from "@/modules/shared/domain/not-found-error";
+import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import {
   createOpenChallenge,
   createReadChallenge,
@@ -6,8 +8,6 @@ import {
 } from "@/modules/verification/application/verification";
 import type { Challenge } from "@/modules/verification/domain/challenge";
 import type { ChallengeRepository } from "@/modules/verification/domain/ports";
-import { NotFoundError } from "@/modules/shared/domain/not-found-error";
-import { toTenantId } from "@/modules/shared/domain/tenant-id";
 
 const NOW = new Date("2026-06-15T08:00:00.000Z");
 const TENANT = toTenantId("t1");

@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 function stubFetch(result: Response) {
-  const mock = vi.fn(async () => result);
+  const mock = vi.fn(async (_url: string, _init?: RequestInit) => result);
   vi.stubGlobal("fetch", mock);
   return mock;
 }

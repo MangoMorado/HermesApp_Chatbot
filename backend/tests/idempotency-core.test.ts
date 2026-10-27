@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { IdempotencyKeyTakenError } from "@/modules/shared/domain/idempotency";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
+import { IdempotencyKeyTakenError } from "@/modules/shared/domain/idempotency";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { assertAppointmentEcho } from "@/modules/fhir/domain/echo-agenda";
 import { FhirError } from "@/modules/fhir/domain/fhir-error";
 import { parseAppointmentResolution } from "@/modules/fhir/domain/parsers/appointment-resolution";
-import { REPLACES_APPOINTMENT } from "@/modules/fhir/domain/profiles";
 import type { AppointmentRecord } from "@/modules/fhir/domain/ports/sources";
+import { REPLACES_APPOINTMENT } from "@/modules/fhir/domain/profiles";
 
 const BUSINESS = { system: "urn:hermes:appointment", value: "APT-1" };
 const REQUEST_ID = { system: "urn:ingenius:appointment-request", value: "req-1" };
@@ -116,9 +116,9 @@ describe("fhir-conformance: parser Appointment resolution", () => {
   });
 
   it("rechaza instants sin offset o invalidos", () => {
-    expect(() => parseAppointmentResolution({ ...bookedBody, start: "2026-06-15T14:00:00" })).toThrow(
-      FhirError,
-    );
+    expect(() =>
+      parseAppointmentResolution({ ...bookedBody, start: "2026-06-15T14:00:00" }),
+    ).toThrow(FhirError);
     expect(() => parseAppointmentResolution({ ...bookedBody, end: "no-es-fechaZ" })).toThrow(
       FhirError,
     );
@@ -154,9 +154,9 @@ describe("fhir-conformance: parser Appointment resolution", () => {
         ],
       }),
     ).toThrow(FhirError);
-    expect(() =>
-      parseAppointmentResolution({ ...bookedBody, participant: { actor: {} } }),
-    ).toThrow(FhirError);
+    expect(() => parseAppointmentResolution({ ...bookedBody, participant: { actor: {} } })).toThrow(
+      FhirError,
+    );
     expect(() =>
       parseAppointmentResolution({
         ...bookedBody,
@@ -196,9 +196,9 @@ describe("fhir-conformance: eco Appointment", () => {
 
   it("rechaza campos que no coinciden con el recurso", () => {
     const parsed = parseAppointmentResolution(bookedBody);
-    expect(() =>
-      assertAppointmentEcho(parsed, record({ slotId: "otro" })),
-    ).toThrow(expect.objectContaining({ code: "structure" }));
+    expect(() => assertAppointmentEcho(parsed, record({ slotId: "otro" }))).toThrow(
+      expect.objectContaining({ code: "structure" }),
+    );
     expect(() =>
       assertAppointmentEcho(
         parseAppointmentResolution({
@@ -219,8 +219,8 @@ describe("fhir-conformance: eco Appointment", () => {
       identifier: [REQUEST_ID],
     });
     expect(() => assertAppointmentEcho(parsed, record())).not.toThrow();
-    expect(() =>
-      assertAppointmentEcho(parsed, record({ identifier: BUSINESS })),
-    ).toThrow(FhirError);
+    expect(() => assertAppointmentEcho(parsed, record({ identifier: BUSINESS }))).toThrow(
+      FhirError,
+    );
   });
 });

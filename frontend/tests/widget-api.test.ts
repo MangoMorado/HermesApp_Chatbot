@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  ConversationHistory,
-  ConversationTurn,
-  WidgetSession,
-} from "@/widget/api/models";
+import type { ConversationHistory, ConversationTurn, WidgetSession } from "@/widget/api/models";
 import { createWidgetApi } from "@/widget/widget-api";
 
 const openWidgetSession = vi.fn();

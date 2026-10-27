@@ -1,12 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { botConfigJson, knowledgeEntryJson, tenantJson } from "@/http/serializers-chatbot";
-import {
-  conversationHistoryJson,
-  conversationTurnJson,
-  replayTurn,
-  storedTurnJson,
-} from "@/http/serializers-conversation";
-import { inboxRequestJson } from "@/http/serializers-sim-inbox";
 import {
   appointmentJson,
   historyAppointmentJson,
@@ -18,6 +10,14 @@ import {
   slotJson,
   tenantSettingsJson,
 } from "@/http/serializers";
+import { botConfigJson, knowledgeEntryJson, tenantJson } from "@/http/serializers-chatbot";
+import {
+  conversationHistoryJson,
+  conversationTurnJson,
+  replayTurn,
+  storedTurnJson,
+} from "@/http/serializers-conversation";
+import { inboxRequestJson } from "@/http/serializers-sim-inbox";
 import { EMPTY_OVERRIDES, effectiveConfig } from "@/modules/bot-config/domain/bot-config";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
@@ -163,7 +163,9 @@ describe("http: serializers REST", () => {
       input: null,
     });
     expect(storedTurnJson(turn, "sess-1").body.messages).toContain("[redactado]");
-    expect(replayTurn({ status: 200, body: { session_id: "sess-1", body: { ok: true } } }, "sess-1")).toEqual({
+    expect(
+      replayTurn({ status: 200, body: { session_id: "sess-1", body: { ok: true } } }, "sess-1"),
+    ).toEqual({
       status: 200,
       body: { ok: true },
     });

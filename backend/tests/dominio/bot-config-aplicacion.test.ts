@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { createAddAllowedOrigin, createRemoveAllowedOrigin } from "@/modules/bot-config/application/allowed-origins";
-import { createReadBotParams, createResolveWidgetKey } from "@/modules/bot-config/application/widget-access";
+import {
+  createAddAllowedOrigin,
+  createRemoveAllowedOrigin,
+} from "@/modules/bot-config/application/allowed-origins";
+import {
+  createReadBotParams,
+  createResolveWidgetKey,
+} from "@/modules/bot-config/application/widget-access";
 import { createRotateWidgetKey } from "@/modules/bot-config/application/widget-keys";
 import { EMPTY_OVERRIDES } from "@/modules/bot-config/domain/bot-config";
 import type {
@@ -85,9 +91,9 @@ describe("conocimiento-config: widget-access", () => {
   it("readBotParams exige bot-config", async () => {
     const read = createReadBotParams(configs());
     await expect(read(TENANT)).resolves.toMatchObject({ kb_max_results: 3 });
-    await expect(createReadBotParams(configs({ get: vi.fn(async () => null) }))(TENANT)).rejects.toBeInstanceOf(
-      NotFoundError,
-    );
+    await expect(
+      createReadBotParams(configs({ get: vi.fn(async () => null) }))(TENANT),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 
