@@ -131,6 +131,7 @@ type FakeCall = { url: string; clientId?: string };
 
 const calls: FakeCall[] = [];
 let down = false;
+let trailingSlash = false;
 let installed = false;
 
 export function fakeIdpCalls(): readonly FakeCall[] {
@@ -140,6 +141,12 @@ export function fakeIdpCalls(): readonly FakeCall[] {
 export function resetFakeIdp(): void {
   calls.length = 0;
   down = false;
+  trailingSlash = false;
+}
+
+/** El discovery anuncia el issuer con barra final (`TEST_OIDC.issuer + "/"`), como algunos IdP. */
+export function setFakeIdpTrailingSlash(value: boolean): void {
+  trailingSlash = value;
 }
 
 export function setFakeIdpDown(value: boolean): void {
@@ -210,7 +217,7 @@ async function handleIdp(request: Request): Promise<Response> {
   const path = new URL(request.url).pathname.slice(new URL(TEST_OIDC.issuer).pathname.length);
   if (path === "/.well-known/openid-configuration") {
     return json({
-      issuer: TEST_OIDC.issuer,
+      issuer: trailingSlash ? `${TEST_OIDC.issuer}/` : TEST_OIDC.issuer,
       jwks_uri: `${TEST_OIDC.issuer}/protocol/openid-connect/certs`,
       token_endpoint: `${TEST_OIDC.issuer}/protocol/openid-connect/token`,
     });

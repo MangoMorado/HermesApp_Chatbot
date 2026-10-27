@@ -83,5 +83,30 @@ describe("alta-chatbot: configuracion OIDC", () => {
       clockToleranceSeconds: 30,
       logoutAudiences: [],
       maxTokenLifetimeSeconds: 300,
+      httpTimeoutMs: 5000,
     }));
+
+  it("OIDC_ISSUER se guarda tal cual, con o sin barra final", () => {
+    expect(load({ OIDC_ISSUER: "https://idp.x/realms/r/" }).oidc.issuer).toBe(
+      "https://idp.x/realms/r/",
+    );
+    expect(load({ OIDC_ISSUER: "https://idp.x/realms/r" }).oidc.issuer).toBe(
+      "https://idp.x/realms/r",
+    );
+  });
+
+  it("OIDC_MAX_TOKEN_LIFETIME_SECONDS=0 no arranca", () =>
+    expect(() => load({ OIDC_MAX_TOKEN_LIFETIME_SECONDS: "0" })).toThrow(
+      /OIDC_MAX_TOKEN_LIFETIME_SECONDS/,
+    ));
+
+  it("OIDC_CLOCK_TOLERANCE_SECONDS=0 sigue siendo valido", () =>
+    expect(load({ OIDC_CLOCK_TOLERANCE_SECONDS: "0" }).oidc.clockToleranceSeconds).toBe(0));
+
+  it("OIDC_HTTP_TIMEOUT_MS acepta un entero >= 1", () =>
+    expect(load({ OIDC_HTTP_TIMEOUT_MS: "1500" }).oidc.httpTimeoutMs).toBe(1500));
+
+  it.each(["0", "-1", "1.5", "x"])("OIDC_HTTP_TIMEOUT_MS=%s no arranca", (value) =>
+    expect(() => load({ OIDC_HTTP_TIMEOUT_MS: value })).toThrow(/OIDC_HTTP_TIMEOUT_MS/),
+  );
 });

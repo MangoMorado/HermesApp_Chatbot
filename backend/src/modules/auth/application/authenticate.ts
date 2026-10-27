@@ -2,6 +2,7 @@ import type { Clock } from "@/modules/shared/domain/ports/clock";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import type { AuthenticatedActor } from "../domain/actor";
 import { unauthorized } from "../domain/auth-error";
+import { IdentityUnavailableError } from "../domain/machine-credential-error";
 import type { ClosedSessions } from "../domain/ports/closed-sessions";
 import type { TokenClaims, TokenVerifier } from "../domain/ports/token-verifier";
 
@@ -43,6 +44,8 @@ function toActor(claims: TokenClaims): AuthenticatedActor {
  * Lanza AuthError(`unauthorized`) ante cualquier fallo del token, sin distinguir la causa:
  * decir "token expirado" frente a "firma invalida" ya es informacion.
  * La consulta de sesiones cerradas queda fuera de esa conversion: una base caida es un 500.
+ * Un proveedor inalcanzable (`IdentityUnavailableError`) tampoco es culpa del token: sale tal
+ * cual y la ruta responde 503.
  */
 export function createAuthenticate(deps: AuthenticateDeps): Authenticate {
   return async (authorizationHeader) => {
@@ -53,7 +56,10 @@ export function createAuthenticate(deps: AuthenticateDeps): Authenticate {
     try {
       claims = await deps.verifier.verify(token);
       actor = toActor(claims);
-    } catch {
+    } catch (error) {
+      if (error instanceof IdentityUnavailableError) {
+        throw error;
+      }
       throw unauthorized();
     }
 

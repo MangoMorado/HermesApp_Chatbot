@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { GET as getSimInbox } from "@/app/api/sim/v1/inbox/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { GET as getPractitioners } from "@/app/api/v1/practitioners/route";
@@ -11,11 +11,12 @@ import {
 } from "@/modules/auth/application/authorize";
 import type { Actor, PlatformActor } from "@/modules/auth/domain/actor";
 import { AuthError } from "@/modules/auth/domain/auth-error";
+import { IdentityUnavailableError } from "@/modules/auth/domain/machine-credential-error";
 import type { ClosedSessions } from "@/modules/auth/domain/ports/closed-sessions";
 import type { TokenClaims } from "@/modules/auth/domain/ports/token-verifier";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { fhirGet, fhirPut, fhirSend, serviceToken } from "./helpers/fhir";
-import { authorized, signToken } from "./helpers/idp";
+import { authorized, resetFakeIdp, setFakeIdpDown, signToken } from "./helpers/idp";
 
 const operator: Actor = {
   subject: "u-1",
@@ -115,6 +116,42 @@ describe("roles: authenticate", () => {
       },
     );
     await expect(authenticate("Bearer x")).rejects.toBe(failure);
+  });
+
+  it("un proveedor inalcanzable no se disfraza de 401", async () => {
+    const unavailable = new IdentityUnavailableError();
+    const authenticate = createAuthenticate({
+      verifier: {
+        verify: async () => {
+          throw unavailable;
+        },
+      },
+      closedSessions: { close: async () => {}, isClosed: async () => false },
+      clock: { now: () => new Date() },
+    });
+    await expect(authenticate("Bearer x")).rejects.toBe(unavailable);
+  });
+});
+
+describe("roles: proveedor de identidad caido", () => {
+  afterEach(() => {
+    resetFakeIdp();
+    resetContainer();
+  });
+
+  it("discovery/JWKS inalcanzable → 503 identity_unavailable en una ruta privada", async () => {
+    const token = await signToken({ role: "admin", tenantId: "tenant-a" });
+    resetContainer();
+    setFakeIdpDown(true);
+    const response = await getIdentity(authorized(token));
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("identity_unavailable");
+  });
+
+  it("con el proveedor arriba, una firma ajena sigue siendo 401", async () => {
+    resetContainer();
+    const token = await signToken({ role: "admin", tenantId: "tenant-a", foreignKey: true });
+    expect((await getIdentity(authorized(token))).status).toBe(401);
   });
 });
 

@@ -57,10 +57,12 @@ export function toApiError(error: unknown): ApiError {
       retry_after_seconds: error.retryAfterSeconds,
     });
   }
-  if (error instanceof MachineCredentialMissingError) {
+  // Sin cliente widget la clinica no esta configurada (409); sin cliente service el fallo es
+  // de la integracion con el proveedor, no de quien llama: 503 con mensaje neutro.
+  if (error instanceof MachineCredentialMissingError && error.kind === "widget") {
     return new ApiError("widget_not_configured", "La clinica no tiene credenciales de widget");
   }
-  if (error instanceof IdentityUnavailableError) {
+  if (error instanceof MachineCredentialMissingError || error instanceof IdentityUnavailableError) {
     return new ApiError("identity_unavailable", "Proveedor de identidad no disponible");
   }
   if (error instanceof AuthError) {

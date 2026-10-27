@@ -22,6 +22,8 @@ export type OidcConfig = {
   readonly clockToleranceSeconds: number;
   readonly logoutAudiences: readonly string[];
   readonly maxTokenLifetimeSeconds: number;
+  /** Limite de cada llamada HTTP al proveedor (discovery, JWKS, token endpoint). */
+  readonly httpTimeoutMs: number;
 };
 
 export type SimServiceClient = { readonly clientId: string; readonly clientSecret: string };
@@ -126,24 +128,28 @@ function parseRoleMap(raw: string): ReadonlyMap<string, Role> {
   return map;
 }
 
-function positiveInt(name: string, fallback: string): number {
+function integerAtLeast(name: string, fallback: string, min: number): number {
   const value = Number(optional(name, fallback));
-  if (!Number.isInteger(value) || value < 0) {
-    throw new Error(`${name} debe ser un entero no negativo`);
+  if (!Number.isInteger(value) || value < min) {
+    throw new Error(`${name} debe ser un entero >= ${min}`);
   }
   return value;
 }
 
 function oidcConfig(): OidcConfig {
   return {
-    issuer: required("OIDC_ISSUER").replace(/\/+$/, ""),
+    // Se guarda tal cual: `iss` se compara contra este valor exacto. Solo la URL del
+    // discovery quita la barra final.
+    issuer: required("OIDC_ISSUER"),
     audience: required("OIDC_AUDIENCE"),
     tenantClaim: parseClaimPath("OIDC_TENANT_CLAIM", optional("OIDC_TENANT_CLAIM", "tenant_id")),
     rolesClaim: parseClaimPath("OIDC_ROLES_CLAIM", optional("OIDC_ROLES_CLAIM", "roles")).segments,
     roleMap: parseRoleMap(optional("OIDC_ROLE_MAP", "")),
-    clockToleranceSeconds: positiveInt("OIDC_CLOCK_TOLERANCE_SECONDS", "30"),
+    clockToleranceSeconds: integerAtLeast("OIDC_CLOCK_TOLERANCE_SECONDS", "30", 0),
     logoutAudiences: csv(optional("OIDC_LOGOUT_AUDIENCES", "")),
-    maxTokenLifetimeSeconds: positiveInt("OIDC_MAX_TOKEN_LIFETIME_SECONDS", "300"),
+    // Debe cubrir la vida de acceso del proveedor: con 0 un cierre de sesion no cerraria nada.
+    maxTokenLifetimeSeconds: integerAtLeast("OIDC_MAX_TOKEN_LIFETIME_SECONDS", "300", 1),
+    httpTimeoutMs: integerAtLeast("OIDC_HTTP_TIMEOUT_MS", "5000", 1),
   };
 }
 

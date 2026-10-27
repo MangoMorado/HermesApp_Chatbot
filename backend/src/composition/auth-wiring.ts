@@ -5,6 +5,7 @@ import {
   createCloseProviderSession,
 } from "../modules/auth/application/close-provider-session";
 import type { ClosedSessions } from "../modules/auth/domain/ports/closed-sessions";
+import type { TokenVerifier } from "../modules/auth/domain/ports/token-verifier";
 import {
   createOidcDiscovery,
   type OidcDiscovery,
@@ -20,6 +21,8 @@ export type AuthWiring = {
   readonly closeProviderSession: CloseProviderSession;
   /** Una sola instancia de discovery: la comparten el verificador y los clientes maquina. */
   readonly oidcDiscovery: () => Promise<OidcDiscovery>;
+  /** El mismo verificador de las rutas: comprueba tambien los tokens de clientes maquina. */
+  readonly tokenVerifier: TokenVerifier;
 };
 
 /**
@@ -27,7 +30,7 @@ export type AuthWiring = {
  * (RS256/ES256 por discovery y JWKS) y consulta las sesiones cerradas en Postgres.
  */
 export function authWiring(db: PrismaExecutor, config: AppConfig): AuthWiring {
-  const oidcDiscovery = createOidcDiscovery(config.oidc.issuer);
+  const oidcDiscovery = createOidcDiscovery(config.oidc);
   const closedSessions = createPrismaClosedSessions(db);
   const verifier = createOidcTokenVerifier(config.oidc, oidcDiscovery);
   return {
@@ -38,7 +41,9 @@ export function authWiring(db: PrismaExecutor, config: AppConfig): AuthWiring {
       closedSessions,
       clock: systemClock,
       maxTokenLifetimeSeconds: config.oidc.maxTokenLifetimeSeconds,
+      clockToleranceSeconds: config.oidc.clockToleranceSeconds,
     }),
     oidcDiscovery,
+    tokenVerifier: verifier,
   };
 }

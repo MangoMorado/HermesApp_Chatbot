@@ -1,9 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
 import type { AppConfig } from "../config/env";
+import { createMachineTokenCheck } from "../modules/auth/application/machine-token-check";
 import type { ClientToken } from "../modules/auth/domain/ports/client-token-source";
 import type { MachineCredentialResolver } from "../modules/auth/domain/ports/machine-credentials";
 import { createOidcClientCredentials } from "../modules/auth/infrastructure/oidc-client-credentials";
-import type { OidcDiscovery } from "../modules/auth/infrastructure/oidc-discovery";
 import { createPrismaMachineCredentialStore } from "../modules/auth/infrastructure/prisma-machine-credential-store";
 import {
   createReadBotParams,
@@ -31,6 +31,7 @@ import type { WidgetKeyResolver, WidgetSettingsReader } from "../modules/widget/
 import { cryptoConversationSecrets } from "../modules/widget/infrastructure/crypto-conversation-secrets";
 import { createInMemoryRateLimiter } from "../modules/widget/infrastructure/in-memory-rate-limiter";
 import { createPrismaWidgetSessionRepository } from "../modules/widget/infrastructure/prisma-widget-session-repository";
+import type { AuthWiring } from "./auth-wiring";
 import { botConfigStores } from "./bot-config-wiring";
 
 /**
@@ -90,16 +91,19 @@ function widgetCredentialResolver(db: PrismaExecutor, box: SecretBox): MachineCr
 export function widgetReads(
   prisma: PrismaClient,
   config: AppConfig,
-  discovery: () => Promise<OidcDiscovery>,
+  auth: Pick<AuthWiring, "oidcDiscovery" | "tokenVerifier">,
 ) {
   const { configs, keys } = botConfigStores(prisma);
   const sessions = createPrismaWidgetSessionRepository(prisma);
   const box = createAesGcmSecretBox(config.credentialsEncryptionKey);
   // Una sola fuente por contenedor: su cache se indexa por client_id + huella del secreto.
+  // Solo se entregan y cachean tokens que verifican como widget de la clinica pedida.
   const tokens = createOidcClientCredentials({
-    discovery,
+    discovery: auth.oidcDiscovery,
     resolve: widgetCredentialResolver(prisma, box),
     clock: systemClock,
+    httpTimeoutMs: config.oidc.httpTimeoutMs,
+    validate: createMachineTokenCheck(auth.tokenVerifier),
   });
   return {
     admitWidget: createAdmitWidget({

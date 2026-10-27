@@ -43,9 +43,10 @@ function cycle(db: PrismaClient) {
   const http = createHandlerFhirHttp();
   const config = loadConfig();
   const source = createOidcClientCredentials({
-    discovery: createOidcDiscovery(config.oidc.issuer),
+    discovery: createOidcDiscovery(config.oidc),
     resolve: configServiceResolver(config.simServiceClients),
     clock: systemClock,
+    httpTimeoutMs: config.oidc.httpTimeoutMs,
   });
   const tokens = createServiceTokens(source);
   const chatbot = createFhirChatbotClient({ http, tokens });

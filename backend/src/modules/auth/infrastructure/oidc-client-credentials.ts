@@ -22,10 +22,16 @@ type Deps = {
   discovery: () => Promise<OidcDiscovery>;
   resolve: MachineCredentialResolver;
   clock: Clock;
+  /** Limite de la llamada al token endpoint; vencido, el proveedor se da por no disponible. */
+  httpTimeoutMs: number;
+  /** Comprueba el token recibido antes de entregarlo o cachearlo; lanza si no sirve. */
+  validate?: (token: ClientToken, ref: MachineCredentialRef) => Promise<void>;
   fetchFn?: typeof fetch;
 };
 
-type RequestDeps = Pick<Deps, "discovery" | "clock"> & { fetchFn: typeof fetch };
+type RequestDeps = Pick<Deps, "discovery" | "clock" | "httpTimeoutMs"> & {
+  fetchFn: typeof fetch;
+};
 
 function cacheKey(credential: MachineCredential): string {
   const digest = createHash("sha256").update(credential.clientSecret).digest("hex");
@@ -47,6 +53,7 @@ async function postForToken(deps: RequestDeps, credential: MachineCredential): P
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: "grant_type=client_credentials",
+      signal: AbortSignal.timeout(deps.httpTimeoutMs),
     });
   } catch {
     throw new IdentityUnavailableError();
@@ -79,6 +86,7 @@ export function createOidcClientCredentials(deps: Deps): ClientTokenSource {
   const requestDeps: RequestDeps = {
     discovery: deps.discovery,
     clock: deps.clock,
+    httpTimeoutMs: deps.httpTimeoutMs,
     fetchFn: deps.fetchFn ?? ((...args) => fetch(...args)),
   };
   const cache = new Map<string, ClientToken>();
@@ -94,6 +102,7 @@ export function createOidcClientCredentials(deps: Deps): ClientTokenSource {
         return cached;
       }
       const token = await requestToken(requestDeps, credential);
+      await deps.validate?.(token, ref);
       cache.set(key, token);
       return token;
     },

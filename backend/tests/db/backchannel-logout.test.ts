@@ -51,12 +51,15 @@ describe("backchannel-logout", () => {
     expect(await meStatus("sid-3")).toBe(200);
   });
 
-  it("tras maxTokenLifetime el cierre caduca", async () => {
+  it("el cierre cubre maxTokenLifetime + tolerancia y luego caduca", async () => {
     await logout(await signLogoutToken({ sid: "sid-4" }));
-    const max = getContainer().config.oidc.maxTokenLifetimeSeconds;
+    const { maxTokenLifetimeSeconds, clockToleranceSeconds } = getContainer().config.oidc;
+    const window = maxTokenLifetimeSeconds + clockToleranceSeconds;
     const closed = getContainer().closedSessions;
-    expect(await closed.isClosed("sid-4", new Date(Date.now() + (max - 5) * 1000))).toBe(true);
-    expect(await closed.isClosed("sid-4", new Date(Date.now() + (max + 5) * 1000))).toBe(false);
+    const at = (seconds: number) => new Date(Date.now() + seconds * 1000);
+    expect(await closed.isClosed("sid-4", at(maxTokenLifetimeSeconds + 1))).toBe(true);
+    expect(await closed.isClosed("sid-4", at(window - 5))).toBe(true);
+    expect(await closed.isClosed("sid-4", at(window + 5))).toBe(false);
   });
 
   const invalid: Array<[string, () => Promise<string | undefined>]> = [

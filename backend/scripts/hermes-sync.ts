@@ -38,9 +38,10 @@ async function main(): Promise<void> {
     const http = createFetchFhirHttp(config.fhirBaseUrl);
     const tokens = createServiceTokens(
       createOidcClientCredentials({
-        discovery: createOidcDiscovery(config.oidc.issuer),
+        discovery: createOidcDiscovery(config.oidc),
         resolve: configServiceResolver(config.simServiceClients),
         clock: systemClock,
+        httpTimeoutMs: config.oidc.httpTimeoutMs,
       }),
     );
     const chatbot = createFhirChatbotClient({ http, tokens });

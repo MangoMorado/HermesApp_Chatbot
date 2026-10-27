@@ -36,13 +36,13 @@ function tokenCalls(): number {
 
 describe("client-credentials", () => {
   let clock: ReturnType<typeof mutableClock>;
-  const discovery = createOidcDiscovery(TEST_OIDC.issuer);
+  const discovery = createOidcDiscovery({ issuer: TEST_OIDC.issuer, httpTimeoutMs: 5000 });
   const good: MachineCredentialResolver = async (r) => ({
     clientId: `${r.kind}-${r.tenantId}`,
     clientSecret: TEST_CLIENT_SECRET,
   });
   const sourceWith = (resolve: MachineCredentialResolver) =>
-    createOidcClientCredentials({ discovery, resolve, clock });
+    createOidcClientCredentials({ discovery, resolve, clock, httpTimeoutMs: 5000 });
 
   beforeEach(() => {
     resetFakeIdp();
@@ -88,6 +88,37 @@ describe("client-credentials", () => {
     setFakeIdpDown(true);
     await expect(sourceWith(good).tokenFor(ref)).rejects.toBeInstanceOf(IdentityUnavailableError);
     setFakeIdpDown(false);
+  });
+
+  it("token endpoint que no responde -> IdentityUnavailableError por timeout", async () => {
+    const hanging: typeof fetch = (_input, init) =>
+      new Promise((_, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      });
+    const source = createOidcClientCredentials({
+      discovery: async () => ({ jwksUri: "https://idp.x/certs", tokenEndpoint: "https://idp.x/t" }),
+      resolve: good,
+      clock,
+      httpTimeoutMs: 20,
+      fetchFn: hanging,
+    });
+    await expect(source.tokenFor(ref)).rejects.toBeInstanceOf(IdentityUnavailableError);
+  });
+
+  it("un token que no pasa la validacion no se entrega ni se cachea", async () => {
+    const rejection = new Error("no sirve");
+    const source = createOidcClientCredentials({
+      discovery,
+      resolve: good,
+      clock,
+      httpTimeoutMs: 5000,
+      validate: async () => {
+        throw rejection;
+      },
+    });
+    await expect(source.tokenFor(ref)).rejects.toBe(rejection);
+    await expect(source.tokenFor(ref)).rejects.toBe(rejection);
+    expect(tokenCalls()).toBe(2);
   });
 
   const wildcard = new Map([["*", { clientId: "service-{tenant}", clientSecret: "s" }]]);

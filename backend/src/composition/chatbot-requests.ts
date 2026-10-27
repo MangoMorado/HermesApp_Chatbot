@@ -38,6 +38,7 @@ export function chatbotRequests(
         discovery,
         resolve: configServiceResolver(config.simServiceClients),
         clock: systemClock,
+        httpTimeoutMs: config.oidc.httpTimeoutMs,
       }),
     ),
   });
