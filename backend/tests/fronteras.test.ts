@@ -191,6 +191,10 @@ function listAllFiles(dir: string): string[] {
 describe("agnosticismo del proveedor de identidad", () => {
   it("ningun archivo de backend/src ni frontend/src menciona keycloak", () => {
     const roots = [join(process.cwd(), "src"), join(process.cwd(), "..", "frontend", "src")];
+    // Una raiz mal resuelta (cwd distinto) daria un falso verde: cada una debe tener archivos.
+    for (const root of roots) {
+      expect(listAllFiles(root).length).toBeGreaterThan(0);
+    }
     const offenders = roots
       .flatMap(listAllFiles)
       .filter((file) => /keycloak/i.test(readFileSync(file, "utf8")));
@@ -198,7 +202,9 @@ describe("agnosticismo del proveedor de identidad", () => {
   });
 
   it("no queda emisor de tokens en el backend", () => {
-    const offenders = listAllFiles(join(process.cwd(), "src")).filter((file) =>
+    const files = listAllFiles(join(process.cwd(), "src"));
+    expect(files.length).toBeGreaterThan(0);
+    const offenders = files.filter((file) =>
       /\bSignJWT\b|TokenIssuer\b|JWT_SECRET|PLATFORM_SECRET/.test(readFileSync(file, "utf8")),
     );
     expect(offenders).toEqual([]);
