@@ -1,5 +1,5 @@
 /**
- * Prepara una demo: siembra datos de prueba si faltan y firma un JWT admin.
+ * Prepara una demo: siembra datos de prueba si faltan y imprime el tenant_id para pedir un token al proveedor.
  *
  * Uso (contenedor / prod):
  *   cd /app/tools && npm run demo
@@ -10,7 +10,6 @@
  *   npm run demo -- --local --tenant clinica-sur --anchor 2026-09-25
  */
 import { existsSync } from "node:fs";
-import { SignJWT } from "jose";
 import { buildSeed, seedId } from "../prisma/seed/data";
 import { todayIn } from "../prisma/seed/time";
 import { writeChatbot } from "../prisma/seed/write-chatbot";
@@ -20,9 +19,6 @@ import { createPrismaClient } from "../src/modules/shared/infrastructure/prisma-
 
 const DEMO_SLUGS = ["clinica-norte", "clinica-sur"] as const;
 type DemoSlug = (typeof DEMO_SLUGS)[number];
-const DEMO_ROLES = ["admin", "operator"] as const;
-type DemoRole = (typeof DEMO_ROLES)[number];
-const TOKEN_TTL = "8h";
 
 function hasFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);
@@ -56,14 +52,6 @@ function parseSlug(raw: string | undefined): DemoSlug {
     throw new Error(`--tenant debe ser uno de: ${DEMO_SLUGS.join(", ")}`);
   }
   return slug;
-}
-
-function parseRole(raw: string | undefined): DemoRole {
-  const role = (raw ?? "admin") as DemoRole;
-  if (!DEMO_ROLES.includes(role)) {
-    throw new Error(`--role debe ser uno de: ${DEMO_ROLES.join(", ")}`);
-  }
-  return role;
 }
 
 function loadEnvIfNeeded(local: boolean): void {
@@ -103,35 +91,12 @@ async function ensureSeed(input: {
   }
 }
 
-async function issueDemoToken(input: {
-  readonly secret: string;
-  readonly issuer: string;
-  readonly audience: string;
-  readonly tenantId: string;
-  readonly role: DemoRole;
-  readonly subject: string;
-}): Promise<{ readonly token: string; readonly expiresAt: Date }> {
-  const issuedAt = new Date();
-  const expiresAt = new Date(issuedAt.getTime() + 8 * 60 * 60 * 1000);
-  const token = await new SignJWT({ tenant_id: input.tenantId, role: input.role })
-    .setProtectedHeader({ alg: "HS256" })
-    .setSubject(input.subject)
-    .setIssuer(input.issuer)
-    .setAudience(input.audience)
-    .setIssuedAt(issuedAt)
-    .setExpirationTime(TOKEN_TTL)
-    .sign(new TextEncoder().encode(input.secret));
-  return { token, expiresAt };
-}
-
 async function main(): Promise<void> {
   const local = hasFlag("local");
   loadEnvIfNeeded(local);
 
   const config = loadConfig();
   const slug = parseSlug(arg("tenant"));
-  const role = parseRole(arg("role"));
-  const subject = arg("subject") ?? "demo-user";
   const anchor = parseAnchor(arg("anchor"), config.appTimezone);
 
   process.stdout.write("Demo — comprobando datos de prueba…\n");
@@ -148,24 +113,13 @@ async function main(): Promise<void> {
     process.stdout.write(`Datos de seed ya presentes; no se resembro.\n`);
   }
 
-  const { token, expiresAt } = await issueDemoToken({
-    secret: config.jwt.secret,
-    issuer: config.jwt.issuer,
-    audience: config.jwt.audience,
-    tenantId,
-    role,
-    subject,
-  });
-
   process.stdout.write("\n");
   process.stdout.write(`tenant_slug  ${slug}\n`);
   process.stdout.write(`tenant_id    ${tenantId}\n`);
-  process.stdout.write(`role         ${role}\n`);
-  process.stdout.write(`subject      ${subject}\n`);
-  process.stdout.write(`expires_at   ${expiresAt.toISOString()}\n`);
   process.stdout.write("\n");
-  process.stdout.write("Pega este token en el panel (Authorization: Bearer):\n");
-  process.stdout.write(`${token}\n`);
+  process.stdout.write(
+    "Obtén un token del laboratorio (`npm run idp:lab` imprime usuarios y clientes).\n",
+  );
 }
 
 main().catch((error: unknown) => {

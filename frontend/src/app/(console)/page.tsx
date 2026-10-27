@@ -15,7 +15,7 @@ function SessionRow() {
     detail = `${identity.data.role} en el tenant ${identity.data.tenant_id}`;
   } else if (token && identity.isError) {
     status = "session_rejected";
-    detail = "El backend rechazó el token. Firma uno nuevo con token:dev.";
+    detail = "El backend rechazó el token. Pide uno nuevo al proveedor de identidad.";
   } else if (token) {
     detail = "Verificando el token con /me…";
   }

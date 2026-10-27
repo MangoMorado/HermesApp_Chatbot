@@ -31,12 +31,6 @@ export type AppConfig = {
   readonly databaseUrl: string;
   readonly appTimezone: string;
   readonly hermesSimulatorEnabled: boolean;
-  readonly jwt: {
-    readonly secret: string;
-    readonly issuer: string;
-    readonly audience: string;
-  };
-  readonly platformSecret: string | null;
   readonly oidc: OidcConfig;
   /** Clave AES de 32 bytes para sellar secretos en reposo. */
   readonly credentialsEncryptionKey: Uint8Array;
@@ -66,20 +60,6 @@ function parseEnvironment(value: string): Environment {
     return value;
   }
   throw new Error(`NODE_ENV invalido: ${value}`);
-}
-
-const MIN_PLATFORM_SECRET_LENGTH = 32;
-
-/** Sin secreto, la superficie de plataforma queda apagada (404). */
-function platformSecret(): string | null {
-  const value = process.env.PLATFORM_SECRET;
-  if (!value) {
-    return null;
-  }
-  if (value.length < MIN_PLATFORM_SECRET_LENGTH) {
-    throw new Error(`PLATFORM_SECRET debe tener al menos ${MIN_PLATFORM_SECRET_LENGTH} caracteres`);
-  }
-  return value;
 }
 
 function fhirBaseUrl(): string | null {
@@ -221,12 +201,6 @@ export function loadConfig(): AppConfig {
     databaseUrl: required("DATABASE_URL"),
     appTimezone: optional("APP_TIMEZONE", "America/Bogota"),
     hermesSimulatorEnabled,
-    jwt: {
-      secret: required("JWT_SECRET"),
-      issuer: optional("JWT_ISSUER", "chatbot-ingenius-360"),
-      audience: optional("JWT_AUDIENCE", "chatbot-ingenius-360"),
-    },
-    platformSecret: platformSecret(),
     oidc: oidcConfig(),
     credentialsEncryptionKey: credentialsEncryptionKey(),
     simServiceClients: simServiceClients(hermesSimulatorEnabled),

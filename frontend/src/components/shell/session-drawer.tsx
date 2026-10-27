@@ -78,7 +78,8 @@ export function SessionDrawer() {
         <h2>Sesión</h2>
         <TokenForm />
         <p className="hint">
-          Fírmalo con <code>npm --prefix backend run token:dev</code>. Vive en sessionStorage.
+          Pídelo al proveedor de identidad (el laboratorio lo imprime con{" "}
+          <code>npm run idp:lab</code>). Vive en sessionStorage.
         </p>
       </div>
       <div>
