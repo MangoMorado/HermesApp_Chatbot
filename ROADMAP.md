@@ -6,20 +6,20 @@ calidad y Docker listos en la primera versión.
 
 ## Estado
 
-> Revisión: 22 de octubre de 2026. El cálculo y la obligación de reescribir este
+> Revisión: 27 de octubre de 2026. El cálculo y la obligación de reescribir este
 > bloque al lanzar o cerrar una spec están en `GOBERNANZA.md` §7.1. Solo cuenta lo
 > cerrado en `main`.
 
 | Alcance | Avance |
 | --- | --- |
-| MVP (fases 1–5) | **80%** |
-| Roadmap completo (fases 1–6) | **66,7%** |
+| MVP (fases 1–5) | **86,7%** |
+| Roadmap completo (fases 1–6) | **72,2%** |
 
-Las fases 1, 2, 3 y 4 están cerradas. La Fase 4 se partió en cuatro sub-proyectos de igual peso, todos en `main`: la 4.1 (PR #9), la 4.2 (PR #10), la 4.3 (PR #11) y la 4.4 (PR #12). Las fases 5 y 6 no están abiertas.
+Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 está abierta y se partió en tres sub-proyectos de igual peso (spec `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, §3): la 5.1 queda cerrada con esta entrega (corte de identidad a OIDC); la 5.2 y la 5.3 siguen abiertas. La Fase 6 no está abierta.
 
-**En curso:** ninguna. La Fase 4 quedó cerrada con el simulador por FHIR (spec `docs/superpowers/specs/2026-10-14-fase-4-4-simulador-fhir-design.md`, PR #12): el cliente con token `service` sincroniza maestros, lee pre-agendas, aprueba o rechaza y confirma el pre-registro solo por `/fhir`.
+**En curso:** ninguna. La 5.1 cerró el corte total del emisor HS256: el backend verifica tokens de un proveedor OIDC (RS256/ES256, JWKS), con rol `platform`, credenciales de widget cifradas, sesión del widget emitida por el proveedor, `service` del simulador por `client_credentials` y back-channel logout. Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`.
 
-**Siguiente tarea:** Fase **5 — Keycloak, JWT, sesiones y contrato**. El panel y el cliente `service` dejan el secreto local y verifican tokens de Keycloak. Entran también la colección Postman, la prueba de rutas contra OpenAPI y Swagger UI sobre ese contrato generado. La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a que la 5 esté cerrada.
+**Siguiente tarea:** Fase **5.2 — Frontend de referencia**: login OIDC con PKCE en `/panel`, `/simulador` y `/chat`, y widget de referencia con `conversation_secret`. Después, la **5.3 — Contrato publicado** (Swagger UI, colección Postman y prueba de rutas contra OpenAPI). La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a que la 5 esté cerrada.
 
 ---
 
@@ -218,9 +218,9 @@ Las reglas de tenant y el alcance de los roles se mantienen. Cierra el MVP.
 2. El backend deja de firmar los JWT de panel y de plataforma con el secreto local. Verifica los tokens de Keycloak (JWKS) detrás del puerto de verificación; el núcleo no importa el proveedor.
 3. Alta, cambio de rol y baja de admins y operadores se hacen en Keycloak. No hay tabla local de usuarios de panel ni emisión propia para esos roles.
 4. Sesión de panel en Keycloak: login, renovación y logout. Un token expirado o de una sesión cerrada no autentica.
-5. El rol `widget` conserva su alcance (solo el chat de su sesión). Si su JWT también lo emite Keycloak, el `session_id` y el `tenant_id` siguen siendo claims; el widget no gana datos de dominio ni `/fhir`.
+5. El rol `widget` conserva su alcance (solo el chat de su sesión). Su JWT lo emite el proveedor con el cliente de widget de la clínica; el `tenant_id` sigue siendo claim y el `session_id` ya no: la conversación se prueba con el `conversation_secret`. El widget no gana datos de dominio ni `/fhir`.
 6. Los roles del producto (`widget` · `operator` · `admin` · `service`) se leen de los claims de Keycloak. El `tenant_id` sale solo del claim. Recurso de otro tenant → `404`.
-7. Secretos y clientes de Keycloak fuera del YAML versionado; arranque local y despliegue documentados en `README.md`. `token:dev` deja de ser camino de admins y operadores.
+7. Secretos y clientes de Keycloak fuera del YAML versionado; arranque local y despliegue documentados en `README.md`. `token:dev` se elimina.
 8. Colección Postman: widget E2E, panel (bandeja, KB, config, tickets) y ciclo Hermes por FHIR, con ambos tenants.
 9. Prueba de rutas `/api/v1` ↔ OpenAPI.
 10. Swagger UI publicado desde el OpenAPI generado (`openapi.json`, `openapi-platform.json` y `openapi-sim.json`). El JSON no se edita a mano.

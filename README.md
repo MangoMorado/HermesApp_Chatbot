@@ -68,35 +68,67 @@ JSON quedó desfasado o si hay una ruta de `/api/v1` sin declarar.
 
 ## Autenticación
 
-JWT HS256 en `Authorization: Bearer <token>`. Claims: `sub`, `tenant_id`, `role`
-(`widget` · `operator` · `admin` · `service`) y `session_id` para el widget.
+Las identidades las administra un proveedor OIDC externo (el backend no firma tokens). El
+backend verifica el JWT (RS256 o ES256, nunca `none` ni `HS*`) contra el JWKS del emisor
+`OIDC_ISSUER`, con audiencia `OIDC_AUDIENCE`, en `Authorization: Bearer <token>`. Roles del
+producto: `widget` · `operator` · `admin` · `service` · `platform`. Los nombres de los claims de
+tenant y de roles son configurables (ver Variables).
 
 El `tenant_id` sale **solo** del claim. Un recurso de otro tenant responde `404`, nunca
-`403`. Los tokens de panel (`operator`, `admin`) y de servicio los emite
-`POST /api/platform/v1/tokens` con `Authorization: Bearer <PLATFORM_SECRET>`; el alta de
-tenants es `POST /api/platform/v1/tenants`. El widget obtiene su token abriendo una sesión en
-`POST /api/v1/widget/sessions` con la clave pública del tenant. `token:dev` sigue disponible
-en desarrollo y aborta con `NODE_ENV=production`.
+`403`. El rol `platform` no lleva tenant y solo alcanza `/api/platform/v1`.
 
-### Token de panel en producción
+- **Panel (`operator`, `admin`) y Hermes (`service`):** tokens del proveedor. En 5.1 el
+  frontend de referencia usa tokens pegados a mano, obtenidos del laboratorio (ver abajo); el
+  login OIDC con PKCE llega en la 5.2. El panel lo comprueba con `GET /api/v1/me`.
+- **Plataforma (`platform`):** `POST /api/platform/v1/tenants` da de alta un tenant y acepta un
+  `widget_client` opcional (`client_id` y `client_secret`).
+  `PUT /api/platform/v1/tenants/{id}/widget-client` es idempotente y reemplaza las credenciales.
+  El secreto se sella con AES-256-GCM (`CREDENTIALS_ENCRYPTION_KEY`) y nunca se devuelve.
+  `POST /api/platform/v1/tokens` ya no existe: la plataforma no emite tokens.
+- **Widget:** `POST /api/v1/widget/sessions` (clave pública del tenant, `Origin` permitido)
+  devuelve `{ access_token, expires_at, conversation_secret, session_expires_at }`. El token lo
+  emite el proveedor con el cliente de widget de la clínica. Las llamadas de conversación
+  envían `Authorization` y `X-Conversation-Secret`; cualquier fallo de conversación es `404`.
+  `POST /api/v1/widget/sessions/refresh` es pública: toma `widget_key`, `X-Conversation-Secret`
+  y `Origin`. Errores propios: `409 widget_not_configured` (la clínica no tiene cliente de
+  widget) y `503 identity_unavailable` (el proveedor no responde o rechaza las credenciales).
+- **Cierre de sesión:** `POST /api/v1/auth/backchannel-logout` (formulario `logout_token`)
+  recibe el back-channel logout del proveedor. No lleva `Idempotency-Key`: es idempotente por
+  naturaleza.
 
-`JWT_SECRET` y `PLATFORM_SECRET` no se pegan en la franja de sesión. El primero firma los
-JWT; el segundo solo autoriza `/api/platform/v1`. El valor que acepta el panel es el campo
-`token` de la respuesta (empieza por `eyJ`).
-
-El id del tenant sale de `GET /api/platform/v1/tenants`. Con ese id:
+### Laboratorio del proveedor
 
 ```bash
-curl -X POST https://<backend>/api/platform/v1/tokens \
-  -H "Authorization: Bearer <PLATFORM_SECRET>" \
-  -H "Content-Type: application/json" \
-  -d '{"tenant_id":"<id>","role":"admin","subject":"operacion"}'
+npm --prefix backend run idp:lab
 ```
 
-`role` es `admin` u `operator` para el panel, o `service` para Hermes. `subject` identifica
-a quién se le emitió (hasta 120 caracteres; no puede empezar por `widget:`). `ttl_minutes`
-es opcional: 480 por defecto en el panel (tope 720) y 60 en servicio (tope 1440). Ese JWT
-se pega en la franja de sesión del frontend; el panel lo comprueba con `GET /api/v1/me`.
+Construye el realm `chatbot-lab` en un Keycloak y sus clientes: `chatbot-platform`,
+`widget-<tenant>`, `service-<tenant>`, `chatbot-reference-ui` (PKCE, back-channel logout) y
+`chatbot-swagger`, más los usuarios `admin-<slug>` y `operator-<slug>`. Imprime las líneas
+`OIDC_*` para pegar en `.env`. Variables del laboratorio: `IDP_ADMIN_URL`, `IDP_ADMIN_REALM`,
+`IDP_ADMIN_CLIENT_ID`, `IDP_ADMIN_CLIENT_SECRET` (conexión de administración), `LAB_API_URL`,
+`LAB_FRONTEND_URLS`, `LAB_USER_PASSWORD`, `LAB_SERVICE_SECRET` y `LAB_PUSH_WIDGET_CLIENTS`
+(entrega los clientes de widget por `PUT …/widget-client`; activo por defecto).
+
+> Pendiente de verificación: el laboratorio todavía no se ha ejecutado contra el servidor
+> Keycloak real; solo está probado por pruebas automáticas.
+
+`npm run demo` solo siembra datos: ya no firma tokens. El panel de tenants del simulador pide
+un token `platform`.
+
+### Integración con Hermes
+
+Para que Hermes sea el proveedor de identidad de este servicio:
+
+1. Emitir tokens con el contrato de claims (tenant en `tenant_id`, roles en `roles`), o
+   configurar `OIDC_TENANT_CLAIM`, `OIDC_ROLES_CLAIM` y `OIDC_ROLE_MAP` para mapear los suyos.
+2. Crear **un cliente de widget confidencial por clínica** y entregarlo con
+   `PUT /api/platform/v1/tenants/{id}/widget-client`.
+3. Registrar `<API>/api/v1/auth/backchannel-logout` como URL de back-channel logout de sus
+   clientes interactivos, con sesión requerida, y listar sus audiencias en
+   `OIDC_LOGOUT_AUDIENCES`.
+4. En producción, Hermes obtiene su propio token `service` de su proveedor; este servicio nunca
+   ve ese secreto.
 
 ## Widget del chat
 
@@ -168,9 +200,15 @@ provisionales hasta la Fase 6, donde salen del YAML versionado.
 | `DATABASE_URL` | backend | Conexión a Postgres (la lee `prisma.config.ts` y `src/config/env.ts`) |
 | `TEST_DATABASE_URL` | backend (pruebas) | Base que usa el proyecto Vitest `db`; la suite la borra y recrea en cada corrida |
 | `APP_TIMEZONE` | backend | Zona de referencia para agenda y búsquedas FHIR |
-| `JWT_SECRET` | backend | Secreto HS256 de verificación (obligatorio) |
-| `JWT_ISSUER` / `JWT_AUDIENCE` | backend | Emisor y audiencia esperados |
-| `PLATFORM_SECRET` | backend | Secreto de la superficie de plataforma (≥ 32 caracteres). Sin él, `/api/platform/v1` responde 404 |
+| `OIDC_ISSUER` / `OIDC_AUDIENCE` | backend | Emisor y audiencia esperados del proveedor OIDC (obligatorias) |
+| `OIDC_TENANT_CLAIM` | backend | Claim del tenant; por defecto `tenant_id`. Admite los sufijos `[]` y `{}` para listas y objetos |
+| `OIDC_ROLES_CLAIM` | backend | Claim de roles; por defecto `roles` |
+| `OIDC_ROLE_MAP` | backend | Mapa `externo=producto,…`; vacío significa identidad |
+| `OIDC_CLOCK_TOLERANCE_SECONDS` | backend | Tolerancia de reloj; por defecto 30 |
+| `OIDC_LOGOUT_AUDIENCES` | backend | Audiencias admitidas del `logout_token`, separadas por comas |
+| `OIDC_MAX_TOKEN_LIFETIME_SECONDS` | backend | Vida máxima aceptada de un token; por defecto 300 |
+| `CREDENTIALS_ENCRYPTION_KEY` | backend | 32 bytes en base64 (obligatoria): sella los secretos de widget. Genérala con `openssl rand -base64 32` |
+| `HERMES_SIM_SERVICE_CLIENTS` | backend | JSON de clientes `service` del simulador por tenant; obligatoria solo con `HERMES_SIMULATOR_ENABLED=true`. Acepta `"*"` con `{tenant}` en el `client_id` |
 | `TRUST_PROXY` | backend | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible |
 | `FHIR_BASE_URL` | backend | Base pública de `/fhir` para los enlaces y `fullUrl` de los `Bundle`, y destino del cliente del simulador. Debe ser una URL absoluta `http(s)` que **incluya** la ruta `/fhir` (p. ej. `https://api.clinica.com/fhir`); si no es una URL absoluta, el backend se niega a arrancar. Obligatoria cuando `HERMES_SIMULATOR_ENABLED=true` y `FHIR_GATEWAY=fetch`. Sin ella, y con el simulador apagado, los enlaces se construyen con el origen de la petición |
 | `FHIR_GATEWAY` | backend | `fetch` (el proceso y `hermes:sync`) o `handlers` (las pruebas invocan `/fhir` sin abrir un puerto). Por defecto `fetch` |
@@ -202,8 +240,7 @@ curl -X PUT "http://localhost:3001/fhir/Practitioner?identifier=urn:hermes:pract
   -d '{"resourceType":"Practitioner","identifier":[{"system":"urn:hermes:practitioner","value":"P-1"}],"active":true,"name":[{"text":"Dra. Ana Perez"}]}'
 ```
 
-El token `service` se emite por `/api/platform/v1/tokens` (o `npm --prefix backend run token:dev`
-en local). El `PUT` crea con `201` o actualiza con `200`; repetir la misma clave y petición
+El token `service` lo emite el proveedor (cliente `service-<tenant>` en el laboratorio). El `PUT` crea con `201` o actualiza con `200`; repetir la misma clave y petición
 devuelve la respuesta persistida. Los errores son `OperationOutcome` con
 `application/fhir+json`; un parámetro de búsqueda no declarado en `metadata` responde `400`.
 
@@ -259,14 +296,14 @@ con `-t "<nombre>"`.
 
 | Suite | Qué protege |
 | --- | --- |
-| `fronteras` | `domain` y `application` no importan framework, ORM ni `node:*` |
+| `fronteras` | `domain` y `application` no importan framework, ORM ni `node:*`; el código fuente no nombra al proveedor de identidad |
 | `contrato-api` | Envoltura de errores, `X-Request-Id` y OpenAPI sin desfase |
 | `roles` | 401 sin token, `404` por tenant ajeno, alcance del widget |
 | `dominio` | Reglas compartidas: tenant id, paginación por cursor, ajustes del tenant, datos del seed |
 | `aislamiento-tenant` | La base impide referencias entre tenants; ajustes del tenant aislados |
 | `simetria-seed` | El simulador y el chatbot parten de los mismos datos deterministas |
 | `conocimiento-config` | Esquema de `bot-config`, rotación de claves, KB y búsqueda por tokens |
-| `alta-chatbot` | Alta de tenant con predeterminados y emisión de tokens de plataforma |
+| `alta-chatbot` | Alta de tenant con predeterminados y credenciales de widget de plataforma |
 | `sesion-widget` | Clave pública, `Origin`, límite por IP, renovación e idempotencia sin JWT persistido |
 | `idempotencia` | Repetición sin efectos duplicados en todas las escrituras |
 | `sin-ia` | Ninguna dependencia ni import de IA o n8n |

@@ -36,7 +36,8 @@ vencimiento se evalúa al leer y al crear o resolver; nunca se resuelve una soli
 
 ### 1.3 Multitenancy por token
 
-El `tenant_id` se toma **solo** del claim del JWT. Nunca del body, del query string ni de
+El `tenant_id` se toma **solo** del claim del JWT, emitido por el proveedor de identidad
+externo (OIDC). Nunca del body, del query string ni de
 un header libre. Un recurso de otro tenant responde `404`, nunca `403`: un `403` confirma
 que el recurso existe.
 
@@ -44,19 +45,34 @@ Todo repositorio, caso de uso y consulta recibe el tenant como parámetro explí
 variables globales ni de contexto implícito para el tenant.
 
 **Superficie de plataforma.** `/api/platform/v1` es de un tercer actor, la plataforma, que
-no pertenece a ningún tenant: da de alta tenants y emite tokens de panel y de servicio. Se
-autentica con `PLATFORM_SECRET` (comparado en tiempo constante; sin él la superficie responde
-`404`) y es la **única** superficie donde el tenant viaja en el cuerpo. La regla de esta
-sección sigue intacta en `/api/v1` y `/fhir`. Se audita con `actor_subject = platform`.
+no pertenece a ningún tenant: da de alta tenants y rota las credenciales de widget de una
+clínica (`PUT /api/platform/v1/tenants/{id}/widget-client`). **No emite tokens**: se autentica
+con un token del proveedor con rol `platform`, que no lleva tenant y solo alcanza esta
+superficie (cualquier otra ruta lo rechaza). Es la **única** superficie donde el tenant viaja
+en el cuerpo. La regla de esta sección sigue intacta en `/api/v1` y `/fhir`. Se audita con
+`actor_subject` igual al `sub` del token.
+
+**Agnosticismo del proveedor.** El núcleo y el frontend no nombran al proveedor concreto: la
+configuración (`OIDC_*`) y los adaptadores bastan para cambiarlo. La suite `fronteras` falla
+si el texto `keycloak` (sin distinguir mayúsculas) aparece en `backend/src/**` o
+`frontend/src/**`. Se admite en `backend/scripts/idp-lab/**`, en los documentos y en
+`.env.example`.
 
 ### 1.4 Alcance del widget
 
 El rol `widget` alcanza únicamente el chat de su propia sesión. Nunca datos de dominio,
-nunca `/fhir`, nunca otra sesión. Los roles son `widget` · `operator` · `admin` · `service`.
+nunca `/fhir`, nunca otra sesión. Los roles son `widget` · `operator` · `admin` · `service` · `platform`.
 
 La clave del widget es **pública** (va en el HTML de la clínica): solo identifica al tenant y
 abre sesiones desde los `allowed_origins` del tenant. Se guarda en claro y se rota con gracia.
-El token del widget sale de una sesión (`POST /api/v1/widget/sessions`) y expira con ella.
+El token del widget lo emite el proveedor, con el cliente de widget cifrado de la clínica
+(`client_credentials`), al abrir una sesión (`POST /api/v1/widget/sessions`). La conversación
+se prueba además con el `conversation_secret` (cabecera `X-Conversation-Secret`), del que solo
+se guarda el hash: el `sub` del token es el mismo para toda la clínica y por sí solo no
+identifica una conversación. Una conversación inalcanzable (secreto ajeno, otra clínica,
+vencida) responde `404`. La sesión se renueva en `POST /api/v1/widget/sessions/refresh`, ruta
+pública que exige clave, secreto y `Origin`. El secreto del cliente de widget se sella con
+AES-256-GCM (`CREDENTIALS_ENCRYPTION_KEY`) y nunca sale en respuestas, auditoría ni logs.
 
 El widget alcanza `GET /widget/conversation` y `POST /widget/conversation/messages` de su
 propia sesión. Las rutas del widget responden CORS con el origen exacto si algún tenant lo
@@ -76,13 +92,9 @@ respuestas se comparan en memoria: nunca llegan a `conversation_messages`,
 `conversations.context`, `audit_events`, logs ni respuestas HTTP. Todo texto libre del
 paciente se guarda como `[redactado]` (también las consultas a la KB) salvo el documento,
 enmascarado (`CC ••••5678`); el resumen del pre-registro también se redacta. El hash de la
-petición del chat en `idempotency_keys` es un HMAC (clave derivada del secreto JWT).
+petición del chat en `idempotency_keys` es un HMAC (clave derivada de `CREDENTIALS_ENCRYPTION_KEY`).
 La pregunta de correo solo se ofrece si el dominio es de un proveedor común y sus señuelos nunca
 comparten en exclusiva el dominio real del paciente.
-
-El `subject` de un token emitido (p. ej. el correo de un operador) se guarda como
-`audit_events.resource_id` de `token.issued`: identifica a quién actúa, no es un dato de
-verificación ni clínico, así que no rompe la regla de registrar el hecho y no el contenido.
 
 ### 1.6 Idempotencia
 
@@ -90,10 +102,12 @@ Toda escritura acepta `Idempotency-Key` y la persiste en base de datos (no en me
 Repetir la misma petición con la misma clave produce el mismo resultado sin duplicar
 efectos.
 
-Excepciones y matices: emitir un token (`POST /api/platform/v1/tokens`) no escribe dominio y
-no lleva `Idempotency-Key`, así ningún JWT queda persistido. Cuando la respuesta de una
-escritura lleva una credencial (sesión del widget), se persiste solo la referencia
-(`session_id`) y la repetición vuelve a firmar el token. En la apertura anónima de sesión la
+Excepciones y matices: el back-channel logout (`POST /api/v1/auth/backchannel-logout`, formulario
+`logout_token`) no lleva `Idempotency-Key`: lo invoca el proveedor, no un cliente nuestro, y
+cerrar un `sid` es idempotente por naturaleza (upsert con `GREATEST`). Cuando la respuesta de
+una escritura lleva una credencial (sesión del widget), se persiste solo la referencia
+(`session_id` y el `conversation_secret` sellado con `SecretBox`); la repetición devuelve el
+mismo secreto con un token nuevo del proveedor. En la apertura anónima de sesión la
 `Idempotency-Key` actúa como secreto del cliente: mínimo 32 caracteres y nunca se registra en
 logs ni en auditoría.
 Por ser un secreto tiene que ser aleatoria y con al menos 128 bits de entropía (p. ej.
@@ -244,6 +258,8 @@ Se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronter
 `dominio`, `simetria-seed`, `aislamiento-tenant`, `flujo`, `verificacion`, `pre-agenda`,
 `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`,
 `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`.
+
+`fronteras` también hace cumplir el agnosticismo del proveedor (§1.3).
 
 `flujo` cubre el motor conversacional: el motor, los pasos, el recorrido completo y el chat
 por HTTP. `cors` cubre las respuestas CORS de las rutas del widget y el alta/baja de
