@@ -138,14 +138,15 @@ export function getContainer(): Container {
   if (!container) {
     const config = loadConfig();
     prisma = createPrismaClient(config.databaseUrl);
-    const chatbot = chatbotRequests(config);
+    const auth = authWiring(prisma, config);
+    const chatbot = chatbotRequests(config, auth.oidcDiscovery);
     const hermes = createPrismaHermesSession(prisma);
     const preAgenda = preAgendaReads(prisma, chatbot);
 
     container = {
       config,
       checkHealth: createCheckHealth(systemClock),
-      ...authWiring(prisma, config),
+      ...auth,
       idempotencyStore: createPrismaIdempotencyStore(prisma),
       platformIdempotencyStore: createPrismaPlatformIdempotencyStore(prisma),
       hermesSimulatorEnabled: config.hermesSimulatorEnabled,

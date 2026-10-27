@@ -4,7 +4,11 @@
  * Uso: npm run hermes:sync
  */
 import { loadConfig } from "../src/config/env";
-import { createJoseTokenIssuer } from "../src/modules/auth/infrastructure/jose-token-issuer";
+import {
+  configServiceResolver,
+  createOidcClientCredentials,
+} from "../src/modules/auth/infrastructure/oidc-client-credentials";
+import { createOidcDiscovery } from "../src/modules/auth/infrastructure/oidc-discovery";
 import { createFhirChatbotClient } from "../src/modules/hermes-simulator/application/fhir-client";
 import { createHermesSync } from "../src/modules/hermes-simulator/application/hermes-sync";
 import { createApproveInboxRequest } from "../src/modules/hermes-simulator/application/inbox";
@@ -13,6 +17,7 @@ import { createFetchFhirHttp } from "../src/modules/hermes-simulator/infrastruct
 import { createPrismaSimCatalog } from "../src/modules/hermes-simulator/infrastructure/prisma-catalog";
 import { createPrismaHermesSession } from "../src/modules/hermes-simulator/infrastructure/prisma-hermes-session";
 import { createPrismaClient } from "../src/modules/shared/infrastructure/prisma-client";
+import { systemClock } from "../src/modules/shared/infrastructure/system-clock";
 import { uuidV7Generator } from "../src/modules/shared/infrastructure/uuid-v7-generator";
 
 function refuse(message: string): never {
@@ -31,7 +36,13 @@ async function main(): Promise<void> {
   const prisma = createPrismaClient(config.databaseUrl);
   try {
     const http = createFetchFhirHttp(config.fhirBaseUrl);
-    const tokens = createServiceTokens(createJoseTokenIssuer(config.jwt));
+    const tokens = createServiceTokens(
+      createOidcClientCredentials({
+        discovery: createOidcDiscovery(config.oidc.issuer),
+        resolve: configServiceResolver(config.simServiceClients),
+        clock: systemClock,
+      }),
+    );
     const chatbot = createFhirChatbotClient({ http, tokens });
     const sync = createHermesSync({
       catalog: createPrismaSimCatalog(prisma),

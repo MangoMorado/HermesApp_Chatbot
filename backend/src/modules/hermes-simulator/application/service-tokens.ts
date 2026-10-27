@@ -1,20 +1,12 @@
-import type { TokenIssuer } from "@/modules/auth/domain/ports/token-issuer";
+import type { ClientTokenSource } from "@/modules/auth/domain/ports/client-token-source";
 import type { ServiceTokenIssuer } from "../domain/ports/fhir-http";
 
-const QUARTER_HOUR_MS = 15 * 60_000;
-
-/** Token `service` de un tenant. La Fase 5 cambia el emisor, no esta funcion. */
-export function createServiceTokens(issuer: TokenIssuer): ServiceTokenIssuer {
+/** Token `service` de un tenant: lo entrega el proveedor por client_credentials. */
+export function createServiceTokens(source: ClientTokenSource): ServiceTokenIssuer {
   return {
-    issue(tenantId) {
-      const issuedAt = new Date();
-      return issuer.issue({
-        subject: `hermes-${tenantId}`,
-        tenantId,
-        role: "service",
-        issuedAt,
-        expiresAt: new Date(issuedAt.getTime() + QUARTER_HOUR_MS),
-      });
+    async issue(tenantId) {
+      const token = await source.tokenFor({ kind: "service", tenantId });
+      return token.accessToken;
     },
   };
 }
