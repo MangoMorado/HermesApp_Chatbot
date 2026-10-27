@@ -3,7 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { GET as listInbox } from "@/app/api/sim/v1/inbox/route";
 import { resetContainer } from "@/composition-root";
-import { authedRequest, signToken } from "../helpers/token";
+import { authedRequest, signToken } from "../helpers/idp";
 import {
   type ChatBody,
   enableWidget,

@@ -7,7 +7,8 @@ import { POST as refreshSession } from "@/app/api/v1/widget/sessions/refresh/rou
 import { POST as openSession } from "@/app/api/v1/widget/sessions/route";
 import { resetContainer } from "@/composition-root";
 import { createJoseTokenVerifier } from "@/modules/auth/infrastructure/jose-token-verifier";
-import { authedRequest, signToken, TEST_JWT } from "../helpers/token";
+import { authedRequest, signToken } from "../helpers/idp";
+import { TEST_JWT } from "../helpers/token";
 import { type ChatbotTenantSeed, insertChatbotTenant, testPrisma, truncateAll } from "./support";
 
 const prisma: PrismaClient = testPrisma();

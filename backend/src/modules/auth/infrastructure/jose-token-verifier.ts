@@ -1,5 +1,5 @@
 import { jwtVerify } from "jose";
-import type { TokenClaims, TokenVerifier } from "../domain/ports/token-verifier";
+import type { TokenClaims } from "../domain/ports/token-verifier";
 import { isRole } from "../domain/role";
 
 export type JwtSettings = {
@@ -13,12 +13,20 @@ function readClaim(payload: Record<string, unknown>, name: string): string | und
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-/** Adaptador: verifica HS256 con `jose` y traduce el payload a claims del nucleo. */
-export function createJoseTokenVerifier(settings: JwtSettings): TokenVerifier {
+/** Claims HS256 heredados: la sesion de widget ya no forma parte del actor. */
+export type LegacyTokenClaims = TokenClaims & { readonly sessionId?: string };
+
+/**
+ * Adaptador HS256 heredado. Ya no se cablea en el composition root; sobrevive solo hasta
+ * que las suites de widget dejen de usarlo (tarea 10 lo borra).
+ */
+export function createJoseTokenVerifier(settings: JwtSettings): {
+  verify(token: string): Promise<LegacyTokenClaims>;
+} {
   const key = new TextEncoder().encode(settings.secret);
 
   return {
-    async verify(token: string): Promise<TokenClaims> {
+    async verify(token: string): Promise<LegacyTokenClaims> {
       const { payload } = await jwtVerify(token, key, {
         issuer: settings.issuer,
         audience: settings.audience,

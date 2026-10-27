@@ -3,7 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import { POST as postMessage } from "@/app/api/v1/widget/conversation/messages/route";
 import { GET as getConversation } from "@/app/api/v1/widget/conversation/route";
 import { POST as openSession } from "@/app/api/v1/widget/sessions/route";
-import { authedRequest } from "../helpers/token";
+import { authedRequest } from "../helpers/idp";
 
 export const CHAT_ORIGIN = "https://clinica-chat.test";
 const BASE = "http://localhost/api/v1/widget";

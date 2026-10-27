@@ -1,5 +1,5 @@
 import { DELETE, GET, PATCH, POST, PUT } from "@/app/fhir/[[...path]]/route";
-import { authedRequest, signToken } from "./token";
+import { authedRequest, signToken } from "./idp";
 
 const WRITERS = { POST, PUT, PATCH, DELETE };
 

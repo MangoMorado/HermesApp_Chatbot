@@ -11,7 +11,7 @@ import {
 } from "@/app/api/v1/knowledge-entries/[id]/route";
 import { POST as createEntry, GET as listEntries } from "@/app/api/v1/knowledge-entries/route";
 import { resetContainer } from "@/composition-root";
-import { authedRequest, signToken } from "../helpers/token";
+import { authedRequest, signToken } from "../helpers/idp";
 import { type ChatbotTenantSeed, insertChatbotTenant, testPrisma, truncateAll } from "./support";
 
 const prisma: PrismaClient = testPrisma();
@@ -127,7 +127,7 @@ describe("conocimiento-config: /bot-config", () => {
     const denied = await patchBotConfig(write(CONFIG_URL, operator, { texts: { welcome: "x" } }));
     expect(denied.status).toBe(403);
 
-    const widget = await signToken({ role: "widget", tenantId: seed.tenantId, sessionId: "s-1" });
+    const widget = await signToken({ role: "widget", tenantId: seed.tenantId });
     expect((await getBotConfig(authedRequest(CONFIG_URL, widget))).status).toBe(403);
   });
 
@@ -381,7 +381,7 @@ describe("conocimiento-config: /knowledge-entries", () => {
   it("operator lee pero no crea; widget no alcanza la KB", async () => {
     expect((await createEntry(write(KB_URL, operator, ENTRY, "op-1", "POST"))).status).toBe(403);
     expect((await listEntries(authedRequest(KB_URL, operator))).status).toBe(200);
-    const widget = await signToken({ role: "widget", tenantId: seed.tenantId, sessionId: "s-1" });
+    const widget = await signToken({ role: "widget", tenantId: seed.tenantId });
     expect((await listEntries(authedRequest(KB_URL, widget))).status).toBe(403);
   });
 });

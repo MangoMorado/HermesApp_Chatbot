@@ -11,7 +11,7 @@ import { buildSimOpenApiDocument } from "@/http/openapi-sim";
 import { REQUEST_ID_HEADER } from "@/http/request-id";
 import { createCheckHealth } from "@/modules/health/application/check-health";
 import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
-import { signToken } from "./helpers/token";
+import { signToken } from "./helpers/idp";
 
 const API_DIR = join(process.cwd(), "src", "app", "api", "v1");
 const SIM_DIR = join(process.cwd(), "src", "app", "api", "sim", "v1");

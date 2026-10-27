@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { type AuthWiring, authWiring } from "./composition/auth-wiring";
 import { botConfigReads, botConfigWritePorts } from "./composition/bot-config-wiring";
 import { chatbotRequests } from "./composition/chatbot-requests";
 import { conversationWritePorts } from "./composition/conversation-wiring";
@@ -20,8 +21,6 @@ import { schedulingReads } from "./composition/scheduling-wiring";
 import { simReads, simWritePorts } from "./composition/sim-wiring";
 import { widgetReads, widgetWritePorts } from "./composition/widget-wiring";
 import { type AppConfig, loadConfig } from "./config/env";
-import { type Authenticate, createAuthenticate } from "./modules/auth/application/authenticate";
-import { createJoseTokenVerifier } from "./modules/auth/infrastructure/jose-token-verifier";
 import { type CheckHealth, createCheckHealth } from "./modules/health/application/check-health";
 import type { ChatbotRequests, HermesSession } from "./modules/hermes-simulator/domain/ports/inbox";
 import { createPrismaHermesSession } from "./modules/hermes-simulator/infrastructure/prisma-hermes-session";
@@ -84,12 +83,12 @@ export type WritePorts = BaseWritePorts &
 export type Container = {
   readonly config: AppConfig;
   readonly checkHealth: CheckHealth;
-  readonly authenticate: Authenticate;
   readonly idempotencyStore: IdempotencyStore;
   readonly platformIdempotencyStore: PlatformIdempotencyStore;
   readonly hermesSimulatorEnabled: boolean;
   readonly withWriteTransaction: <T>(fn: (ports: WritePorts) => Promise<T>) => Promise<T>;
-} & PreAgendaReads &
+} & AuthWiring &
+  PreAgendaReads &
   SchedulingReads &
   PatientReads &
   SimReads &
@@ -146,7 +145,7 @@ export function getContainer(): Container {
     container = {
       config,
       checkHealth: createCheckHealth(systemClock),
-      authenticate: createAuthenticate(createJoseTokenVerifier(config.jwt)),
+      ...authWiring(prisma, config),
       idempotencyStore: createPrismaIdempotencyStore(prisma),
       platformIdempotencyStore: createPrismaPlatformIdempotencyStore(prisma),
       hermesSimulatorEnabled: config.hermesSimulatorEnabled,

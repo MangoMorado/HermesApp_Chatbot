@@ -21,7 +21,7 @@ import { GET as getScheduleSlots } from "@/app/api/v1/schedules/[id]/slots/route
 import { GET as getSchedules } from "@/app/api/v1/schedules/route";
 import { GET as getTenantSettings } from "@/app/api/v1/tenant-settings/route";
 import { resetContainer } from "@/composition-root";
-import { authedRequest, signToken } from "../helpers/token";
+import { authedRequest, signToken } from "../helpers/idp";
 import { enableWidget, getChat, openChat, sendChat } from "./chat-support";
 import {
   ACTOR,
@@ -496,7 +496,7 @@ describe("aislamiento-tenant: chat", () => {
     const forged = await signToken({
       role: "widget",
       tenantId: b.tenantId,
-      sessionId: session.sessionId,
+      extra: { session_id: session.sessionId },
       subject: `widget:${session.sessionId}`,
     });
     expect((await getChat(forged)).status).toBe(401);

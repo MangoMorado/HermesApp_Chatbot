@@ -33,6 +33,7 @@ export function createOidcTokenVerifier(
       const { payload } = await jwtVerify(token, await resolveKeys(), {
         ...common,
         audience: settings.audience,
+        requiredClaims: ["exp"],
         clockTolerance,
       });
       return mapClaims(payload, settings);

@@ -8,7 +8,7 @@ import {
 } from "@/modules/scheduling/application/appointment-request-queries";
 import { createPrismaAppointmentRequestReader } from "@/modules/scheduling/infrastructure/prisma-appointment-request-reader";
 import { createPrismaRequestExpirer } from "@/modules/scheduling/infrastructure/prisma-pre-agenda-store";
-import { authedRequest, signToken } from "../helpers/token";
+import { authedRequest, signToken } from "../helpers/idp";
 import {
   ACTOR,
   clockAt,

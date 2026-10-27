@@ -6,7 +6,7 @@ import { POST as issueToken } from "@/app/api/platform/v1/tokens/route";
 import { GET as getBotConfig } from "@/app/api/v1/bot-config/route";
 import { POST as openWidgetSession } from "@/app/api/v1/widget/sessions/route";
 import { resetContainer } from "@/composition-root";
-import { authedRequest } from "../helpers/token";
+import { authedRequest } from "../helpers/idp";
 import { insertChatbotTenant, testPrisma, truncateAll } from "./support";
 
 const prisma: PrismaClient = testPrisma();

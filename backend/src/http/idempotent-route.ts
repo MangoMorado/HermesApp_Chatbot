@@ -1,9 +1,9 @@
 import { createHmac } from "node:crypto";
 import type { NextResponse } from "next/server";
 import { getContainer, type WritePorts } from "@/composition-root";
-import { requireRole } from "@/modules/auth/application/authorize";
+import { requireTenantActor } from "@/modules/auth/application/authorize";
 import type { Actor } from "@/modules/auth/domain/actor";
-import type { Role } from "@/modules/auth/domain/role";
+import type { TenantRole } from "@/modules/auth/domain/role";
 import { errorResponse, toApiError } from "./errors";
 import {
   type IdempotentOutcome,
@@ -34,14 +34,14 @@ type IdempotentRouteOptions = {
   readonly rebuild?: (stored: IdempotentResult, actor: Actor) => Promise<IdempotentResult>;
 };
 
-/** Clave propia del hash de peticiones, derivada del secreto para no reutilizarlo directamente. */
-function hashKeyFor(secret: string): string {
-  return createHmac("sha256", secret).update("idempotency-request-hash").digest("hex");
+/** Clave propia del hash de peticiones, derivada de la clave de cifrado para no reutilizarla. */
+function hashKeyFor(key: Uint8Array): string {
+  return createHmac("sha256", key).update("idempotency-request-hash").digest("hex");
 }
 
 /** Escritura autenticada con `Idempotency-Key` obligatoria, en el ambito del tenant del token. */
 export function idempotentRoute(
-  allowedRoles: readonly Role[],
+  allowedRoles: readonly TenantRole[],
   handler: IdempotentHandler,
   options: IdempotentRouteOptions = {},
 ) {
@@ -49,14 +49,16 @@ export function idempotentRoute(
     const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
     try {
       const container = getContainer();
-      const actor = await container.authenticate(request.headers.get("Authorization"));
-      requireRole(actor, allowedRoles);
+      const actor = requireTenantActor(
+        await container.authenticate(request.headers.get("Authorization")),
+        allowedRoles,
+      );
       await options.guard?.({ actor, request });
       const idempotent = await readIdempotentRequest(
         request,
         actor.subject,
         1,
-        options.sensitiveBody ? hashKeyFor(container.config.jwt.secret) : undefined,
+        options.sensitiveBody ? hashKeyFor(container.config.credentialsEncryptionKey) : undefined,
       );
       const { rebuild } = options;
       const result = await runIdempotent({

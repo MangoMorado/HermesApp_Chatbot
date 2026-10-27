@@ -9,8 +9,6 @@ export type TokenClaims = {
   readonly role: Role;
   readonly tenantId: string | null;
   readonly providerSessionId?: string;
-  // Transitorio: se elimina en la tarea 5 junto con el verificador HS256.
-  readonly sessionId?: string;
 };
 
 /**

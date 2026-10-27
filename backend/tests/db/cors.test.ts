@@ -7,7 +7,7 @@ import {
 } from "@/app/api/v1/widget/sessions/refresh/route";
 import { POST as openSession, OPTIONS as preflightOpen } from "@/app/api/v1/widget/sessions/route";
 import { resetContainer } from "@/composition-root";
-import { authedRequest } from "../helpers/token";
+import { authedRequest } from "../helpers/idp";
 import { type ChatbotTenantSeed, insertChatbotTenant, testPrisma, truncateAll } from "./support";
 
 const prisma: PrismaClient = testPrisma();

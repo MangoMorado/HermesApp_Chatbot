@@ -24,6 +24,7 @@ describe("oidc-verificador: verify", () => {
     ["emisor ajeno", { issuer: "https://otro" }],
     ["audiencia ajena", { audience: "otra" }],
     ["expirado mas alla de la tolerancia", { expiresIn: "-31s" }],
+    ["sin exp", { withoutExp: true }],
   ])("rechaza %s", async (_, opts) => {
     const token = await signToken({ role: "admin", tenantId: "t", ...opts });
     await expect(verifier.verify(token)).rejects.toThrow();

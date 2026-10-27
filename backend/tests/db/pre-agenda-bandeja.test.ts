@@ -4,7 +4,7 @@ import { POST as approve } from "@/app/api/sim/v1/inbox/[id]/approve/route";
 import { POST as reject } from "@/app/api/sim/v1/inbox/[id]/reject/route";
 import { GET as listInbox } from "@/app/api/sim/v1/inbox/route";
 import { resetContainer } from "@/composition-root";
-import { authedRequest, signToken } from "../helpers/token";
+import { authedRequest, signToken } from "../helpers/idp";
 import {
   ACTOR,
   clockAt,

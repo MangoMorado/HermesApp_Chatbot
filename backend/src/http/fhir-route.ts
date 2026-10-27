@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getContainer } from "@/composition-root";
-import { requireRole } from "@/modules/auth/application/authorize";
+import { requireTenantActor } from "@/modules/auth/application/authorize";
 import type { Actor } from "@/modules/auth/domain/actor";
 import { AuthError } from "@/modules/auth/domain/auth-error";
 import {
@@ -100,8 +100,8 @@ export function serviceFhirRoute(
   handler: (actor: Actor) => Promise<unknown>,
 ): Promise<NextResponse> {
   return respond(request, async () => {
-    const actor = await getContainer().authenticate(request.headers.get("Authorization"));
-    requireRole(actor, ["service"]);
+    const authorization = request.headers.get("Authorization");
+    const actor = requireTenantActor(await getContainer().authenticate(authorization), ["service"]);
     return handler(actor);
   });
 }

@@ -33,6 +33,8 @@ export type SignOptions = {
   subject?: string;
   sid?: string;
   expiresIn?: string;
+  /** Omite `exp`: el verificador debe rechazar el token. */
+  withoutExp?: boolean;
   issuer?: string;
   audience?: string;
   alg?: Alg;
@@ -60,15 +62,23 @@ function signingMaterial(options: { alg?: Alg; foreignKey?: boolean }): {
 async function sign(
   claims: Record<string, unknown>,
   head: { alg?: Alg; foreignKey?: boolean },
-  fields: { subject?: string; issuer?: string; audience?: string; expiresIn?: string },
+  fields: {
+    subject?: string;
+    issuer?: string;
+    audience?: string;
+    expiresIn?: string;
+    withoutExp?: boolean;
+  },
 ): Promise<string> {
   const { alg, kid, key } = signingMaterial(head);
   const jwt = new SignJWT(claims)
     .setProtectedHeader(kid ? { alg, kid } : { alg })
     .setIssuer(fields.issuer ?? TEST_OIDC.issuer)
     .setAudience(fields.audience ?? TEST_OIDC.audience)
-    .setIssuedAt()
-    .setExpirationTime(fields.expiresIn ?? "5m");
+    .setIssuedAt();
+  if (!fields.withoutExp) {
+    jwt.setExpirationTime(fields.expiresIn ?? "5m");
+  }
   if (fields.subject) {
     jwt.setSubject(fields.subject);
   }

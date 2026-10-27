@@ -7,7 +7,7 @@ import { POST as postSimPractitioner } from "@/app/api/sim/v1/practitioners/rout
 import { PATCH as patchTenantSettings } from "@/app/api/v1/tenant-settings/route";
 import { resetContainer } from "@/composition-root";
 import { fhirPut } from "../helpers/fhir";
-import { authedRequest, signToken } from "../helpers/token";
+import { authedRequest, signToken } from "../helpers/idp";
 import {
   ACTOR,
   clockAt,

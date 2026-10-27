@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { resetContainer } from "@/composition-root";
 import { REPLACES_APPOINTMENT } from "@/modules/fhir/domain/profiles";
 import { fhirGet, fhirPut, fhirSend, serviceToken } from "../helpers/fhir";
-import { signToken } from "../helpers/token";
+import { signToken } from "../helpers/idp";
 import {
   ACTOR,
   clockAt,

@@ -14,7 +14,7 @@ import { type TenantId, toTenantId } from "@/modules/shared/domain/tenant-id";
 import { createPrismaAuditLog } from "@/modules/shared/infrastructure/prisma-audit-log";
 import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
 import { uuidV7Generator } from "@/modules/shared/infrastructure/uuid-v7-generator";
-import { authedRequest } from "../helpers/token";
+import { authedRequest } from "../helpers/idp";
 import { HERMES_SYSTEM, insertTenant } from "./support";
 
 export const HOUR_MS = 3_600_000;

@@ -49,10 +49,11 @@ export async function rebuildSessionResponse(
   };
 }
 
-/** Sesion del token de widget; sin ella el token no sirve para el chat. */
-export function sessionIdOf(actor: Actor): string {
-  if (!actor.sessionId) {
-    throw unauthorized();
-  }
-  return actor.sessionId;
+/**
+ * Provisional (tarea 5 -> tarea 8): el actor ya no lleva la sesion de chat, asi que
+ * ninguna ruta del widget la puede resolver todavia. La tarea 8 sustituye esta funcion
+ * por la busqueda de la conversacion por `X-Conversation-Secret` dentro del tenant.
+ */
+export function sessionIdOf(_actor: Actor): string {
+  throw unauthorized();
 }
