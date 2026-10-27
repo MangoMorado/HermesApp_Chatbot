@@ -26,6 +26,10 @@ export function createAuthenticate(verifier: TokenVerifier): Authenticate {
 
     try {
       const claims = await verifier.verify(token);
+      if (claims.tenantId === null) {
+        // Interino (tarea 5): aun no existe actor sin tenant.
+        throw unauthorized();
+      }
       return {
         subject: claims.subject,
         tenantId: toTenantId(claims.tenantId),

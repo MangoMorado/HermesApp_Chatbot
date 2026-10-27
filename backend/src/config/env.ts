@@ -3,6 +3,8 @@
  * Cualquier otra capa recibe la configuracion ya validada por inyeccion.
  */
 
+import { isRole, type Role } from "@/modules/auth/domain/role";
+
 type Environment = "development" | "test" | "production";
 
 /** Ruta de un claim: segmentos y como elegir el valor final. */
@@ -11,16 +13,12 @@ export type ClaimPath = {
   readonly pick: "value" | "single-element" | "single-key";
 };
 
-/** Roles del producto; la tarea 3 lo sustituye por `Role` del dominio. */
-const PRODUCT_ROLES = ["widget", "operator", "admin", "service", "platform"] as const;
-type ProductRole = (typeof PRODUCT_ROLES)[number];
-
 export type OidcConfig = {
   readonly issuer: string;
   readonly audience: string;
   readonly tenantClaim: ClaimPath;
   readonly rolesClaim: readonly string[];
-  readonly roleMap: ReadonlyMap<string, ProductRole>;
+  readonly roleMap: ReadonlyMap<string, Role>;
   readonly clockToleranceSeconds: number;
   readonly logoutAudiences: readonly string[];
   readonly maxTokenLifetimeSeconds: number;
@@ -136,15 +134,11 @@ function csv(value: string): string[] {
     .filter((item) => item !== "");
 }
 
-function isProductRole(value: string): value is ProductRole {
-  return (PRODUCT_ROLES as readonly string[]).includes(value);
-}
-
-function parseRoleMap(raw: string): ReadonlyMap<string, ProductRole> {
-  const map = new Map<string, ProductRole>();
+function parseRoleMap(raw: string): ReadonlyMap<string, Role> {
+  const map = new Map<string, Role>();
   for (const pair of csv(raw)) {
     const [external, product, ...rest] = pair.split("=").map((part) => part.trim());
-    if (!external || !product || rest.length > 0 || !isProductRole(product)) {
+    if (!external || !product || rest.length > 0 || !isRole(product)) {
       throw new Error(`OIDC_ROLE_MAP invalido: ${pair}`);
     }
     map.set(external, product);
