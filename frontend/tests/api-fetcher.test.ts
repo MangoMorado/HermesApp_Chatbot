@@ -98,6 +98,6 @@ describe("apiFetcher", () => {
   });
 
   it("settle con clave desconocida no rompe", () => {
-    settleIdempotencyKey("clave-que-no-existe");
+    expect(() => settleIdempotencyKey("clave-que-no-existe")).not.toThrow();
   });
 });

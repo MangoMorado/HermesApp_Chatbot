@@ -24,11 +24,11 @@ export const idDocumentType: Step = {
   id: "id_document_type",
   globals: "full",
   echo: "label",
-  async enter(context) {
+  enter(context) {
     const options = DOCUMENT_TYPES.map((type) => choice(`doc:${type}`, t(DOC_LABEL[type])));
     return prompt(context, [line("id_document_type_prompt")], options);
   },
-  async handle(input, context) {
+  handle(input, context) {
     const type = optionValue(input, "doc:");
     if (type === null || !isDocumentType(type)) {
       return retry("id_document_type", context);
@@ -41,7 +41,7 @@ export const idDocumentNumber: Step = {
   id: "id_document_number",
   globals: "full",
   echo: "document",
-  async enter(context) {
+  enter(context) {
     return prompt(context, [line("id_document_number_prompt")], [], "text");
   },
   async handle(input, context, env) {

@@ -7,7 +7,7 @@ export const kbQuery: Step = {
   id: "kb_query",
   globals: "full",
   echo: "redacted",
-  async enter(context) {
+  enter(context) {
     return prompt(context, [line("kb_prompt")], [], "text");
   },
   async handle(input, context, env) {
@@ -30,7 +30,7 @@ export const kbResults: Step = {
   id: "kb_results",
   globals: "full",
   echo: "label",
-  async enter(context) {
+  enter(context) {
     const details = (context.kbResults ?? []).map((result) =>
       choice(`kb:detail:${result.id}`, { key: "kb_see_more_label", append: result.question }),
     );

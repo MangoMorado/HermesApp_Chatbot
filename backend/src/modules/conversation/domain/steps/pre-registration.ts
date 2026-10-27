@@ -33,14 +33,14 @@ export const privacyNotice: Step = {
   id: "privacy_notice",
   globals: "full",
   echo: "label",
-  async enter(context) {
+  enter(context) {
     const options = [
       choice("privacy:accept", t("option_accept")),
       choice("privacy:decline", t("option_decline")),
     ];
     return prompt(context, [line("privacy_notice")], options);
   },
-  async handle(input, context) {
+  handle(input, context) {
     const draft = context.preRegistration;
     if (!draft) {
       return go("main_menu", resetFlow(context));
@@ -77,7 +77,7 @@ export const preregField: Step = {
   id: "prereg_field",
   globals: "full",
   echo: "redacted",
-  async enter(context) {
+  enter(context) {
     const draft = context.preRegistration;
     if (!draft) {
       return redirect("main_menu", resetFlow(context));
@@ -86,7 +86,7 @@ export const preregField: Step = {
     const input = draft.field === "birth_date" ? "date" : "text";
     return prompt(context, [line(PROMPT[draft.field])], options, input);
   },
-  async handle(input, context, env) {
+  handle(input, context, env) {
     const draft = context.preRegistration;
     if (!draft) {
       return go("main_menu", resetFlow(context));
@@ -135,7 +135,7 @@ export const preregConfirm: Step = {
   id: "prereg_confirm",
   globals: "full",
   echo: "label",
-  async enter(context) {
+  enter(context) {
     const data = completeDraft(context.preRegistration);
     if (!data) {
       return redirect("main_menu", resetFlow(context), [line("generic_error")]);
@@ -153,7 +153,7 @@ export const preregConfirm: Step = {
     ];
     return prompt(context, [summary], options);
   },
-  async handle(input, context) {
+  handle(input, context) {
     const draft = context.preRegistration;
     const data = completeDraft(draft);
     if (!draft || !data) {

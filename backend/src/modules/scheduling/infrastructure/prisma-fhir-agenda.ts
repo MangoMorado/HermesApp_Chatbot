@@ -1,6 +1,7 @@
 import type { OffsetPage } from "@/modules/shared/domain/pagination";
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
 import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
+import type { AppointmentRequestStatus } from "../domain/appointment-request";
 import type {
   AgendaAppointment,
   AgendaAppointmentSearch,
@@ -52,7 +53,7 @@ function fromFirm(row: FirmRow, replacesAppointmentId: string | null): AgendaApp
 type RequestRow = {
   id: string;
   kind: "book" | "reschedule" | "cancel";
-  status: "pending" | "approved" | "rejected" | "expired";
+  status: AppointmentRequestStatus;
   medicalRecordId: string;
   slotId: string | null;
   appointmentId: string | null;
@@ -130,7 +131,7 @@ function replacesOf(
   return links.find((link) => link.resultingAppointmentId === appointmentId)?.appointmentId ?? null;
 }
 
-function taskStatusOf(status: "pending" | "approved" | "rejected" | "expired"): AgendaTaskStatus {
+function taskStatusOf(status: AppointmentRequestStatus): AgendaTaskStatus {
   switch (status) {
     case "pending":
       return "requested";
@@ -143,9 +144,7 @@ function taskStatusOf(status: "pending" | "approved" | "rejected" | "expired"): 
   }
 }
 
-function storedTaskStatus(
-  status: AgendaTaskStatus,
-): "pending" | "approved" | "rejected" | "expired" {
+function storedTaskStatus(status: AgendaTaskStatus): AppointmentRequestStatus {
   switch (status) {
     case "requested":
       return "pending";
@@ -161,7 +160,7 @@ function storedTaskStatus(
 function fromCancel(
   row: {
     id: string;
-    status: "pending" | "approved" | "rejected" | "expired";
+    status: AppointmentRequestStatus;
     medicalRecordId: string;
     appointmentId: string | null;
     resolutionReason: "slot_unavailable" | "declined" | null;

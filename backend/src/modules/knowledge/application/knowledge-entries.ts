@@ -134,8 +134,10 @@ export function createDeleteKnowledgeEntry(deps: WriteDeps) {
 /** Siembra las entradas de ejemplo de un tenant recien dado de alta. */
 export function createSeedDefaultKnowledge(deps: { repo: KnowledgeRepository; ids: IdGenerator }) {
   return async (tenantId: TenantId): Promise<void> => {
-    for (const draft of DEFAULT_KNOWLEDGE_ENTRIES) {
-      await deps.repo.create({ ...draft, id: deps.ids.next(), tenantId });
-    }
+    await Promise.all(
+      DEFAULT_KNOWLEDGE_ENTRIES.map((draft) =>
+        deps.repo.create({ ...draft, id: deps.ids.next(), tenantId }),
+      ),
+    );
   };
 }

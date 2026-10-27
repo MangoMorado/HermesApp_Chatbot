@@ -1,6 +1,6 @@
 import { getContainer } from "@/composition-root";
 import { clientIp } from "@/http/client-ip";
-import { widgetPreflight, withWidgetCors } from "@/http/cors";
+import { withWidgetCors } from "@/http/cors";
 import { errorResponse, toApiError } from "@/http/errors";
 import {
   idempotentJson,
@@ -61,4 +61,4 @@ async function openSession(request: Request): Promise<Response> {
 }
 
 export const POST = withWidgetCors(openSession);
-export const OPTIONS = widgetPreflight;
+export { widgetPreflight as OPTIONS } from "@/http/cors";

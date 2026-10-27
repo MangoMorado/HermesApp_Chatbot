@@ -1,5 +1,5 @@
 import { getContainer } from "@/composition-root";
-import { assertSessionOrigin, widgetPreflight, withWidgetCors } from "@/http/cors";
+import { assertSessionOrigin, withWidgetCors } from "@/http/cors";
 import { idempotentRoute } from "@/http/idempotent-route";
 import { conversationTurnJson, replayTurn, storedTurnJson } from "@/http/serializers-conversation";
 import { sessionIdOf } from "@/http/widget-session-response";
@@ -38,4 +38,4 @@ const postMessage = idempotentRoute(
 );
 
 export const POST = withWidgetCors(postMessage);
-export const OPTIONS = widgetPreflight;
+export { widgetPreflight as OPTIONS } from "@/http/cors";

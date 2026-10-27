@@ -62,7 +62,7 @@ export const bookService: Step = {
     const options = services.map((s) => choice(`svc:${s.id}`, literal(s.name)));
     return prompt(context, [line("book_service_prompt")], options);
   },
-  async handle(input, context) {
+  handle(input, context) {
     const serviceId = optionValue(input, "svc:");
     if (serviceId === null || !context.booking) {
       return retry("book_service", context);
@@ -87,7 +87,7 @@ export const bookPractitioner: Step = {
     ];
     return prompt(context, [line("book_practitioner_prompt")], options);
   },
-  async handle(input, context) {
+  handle(input, context) {
     const id = optionValue(input, "prac:");
     if (id === null || !context.booking) {
       return retry("book_practitioner", context);
@@ -123,7 +123,7 @@ export const bookDay: Step = {
     const options = page.map((d) => choice(`day:${d}`, literal(formatLocalDay(d, env.timeZone))));
     return prompt(context, [line("book_day_prompt")], [...options, ...more]);
   },
-  async handle(input, context) {
+  handle(input, context) {
     const booking = context.booking;
     const day = optionValue(input, "day:");
     if (!booking || day === null) {
@@ -164,7 +164,7 @@ export const bookSlot: Step = {
     );
     return prompt(context, [line("book_slot_prompt")], [...options, ...more]);
   },
-  async handle(input, context) {
+  handle(input, context) {
     const booking = context.booking;
     const slotId = optionValue(input, "slot:");
     if (!booking || slotId === null) {
@@ -238,7 +238,7 @@ export const bookConfirm: Step = {
       [choice("book:confirm", t("option_confirm"))],
     );
   },
-  async handle(input, context, env) {
+  handle(input, context, env) {
     const command = commandOf(context.booking);
     if (!isOption(input, "book:confirm") || !command || !context.patientId) {
       return retry("book_confirm", context);

@@ -268,43 +268,57 @@ export function createPrismaSimSlotGenerator(
 ): SimSlotGenerator {
   return {
     async generate(input) {
-      const starts = enumerateSlotStarts(
+      const durationMs = input.durationMinutes * 60_000;
+      const candidates = enumerateSlotStarts(
         input.from,
         input.to,
         input.durationMinutes,
         input.windows,
         input.timeZone,
+      ).map((startAt) => ({ startAt, endAt: new Date(startAt.getTime() + durationMs) }));
+      const first = candidates[0];
+      if (!first) {
+        return 0;
+      }
+      const rangeStart = candidates.reduce(
+        (min, slot) => (slot.startAt < min ? slot.startAt : min),
+        first.startAt,
       );
-      let created = 0;
-      for (const startAt of starts) {
-        const endAt = new Date(startAt.getTime() + input.durationMinutes * 60_000);
-        const overlap = await db.simSlot.findFirst({
-          where: {
-            tenantId: input.tenantId,
-            scheduleId: input.scheduleId,
-            startAt: { lt: endAt },
-            endAt: { gt: startAt },
-          },
-        });
-        if (overlap) {
-          continue;
-        }
-        const id = ids.next();
-        await db.simSlot.create({
-          data: {
+      const rangeEnd = candidates.reduce(
+        (max, slot) => (slot.endAt > max ? slot.endAt : max),
+        first.endAt,
+      );
+      const existing = await db.simSlot.findMany({
+        where: {
+          tenantId: input.tenantId,
+          scheduleId: input.scheduleId,
+          startAt: { lt: rangeEnd },
+          endAt: { gt: rangeStart },
+        },
+        select: { startAt: true, endAt: true },
+      });
+      const free = candidates.filter(
+        (slot) => !existing.some((row) => row.startAt < slot.endAt && row.endAt > slot.startAt),
+      );
+      if (free.length === 0) {
+        return 0;
+      }
+      await db.simSlot.createMany({
+        data: free.map((slot) => {
+          const id = ids.next();
+          return {
             id,
             tenantId: input.tenantId,
             identifierSystem: IDENTIFIER_SYSTEM.slot,
             identifierValue: id,
             scheduleId: input.scheduleId,
-            startAt,
-            endAt,
-            status: "free",
-          },
-        });
-        created += 1;
-      }
-      return created;
+            startAt: slot.startAt,
+            endAt: slot.endAt,
+            status: "free" as const,
+          };
+        }),
+      });
+      return free.length;
     },
   };
 }

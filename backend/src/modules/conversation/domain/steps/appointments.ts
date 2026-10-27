@@ -29,7 +29,7 @@ export const appointmentsMenu: Step = {
   id: "appointments_menu",
   globals: "full",
   echo: "label",
-  async enter(context) {
+  enter(context) {
     if (!context.patientId) {
       return redirect("id_document_type", resetFlow(context));
     }
@@ -40,7 +40,7 @@ export const appointmentsMenu: Step = {
     ];
     return prompt(resetFlow(context), [line("appointments_menu_prompt")], options);
   },
-  async handle(input, context) {
+  handle(input, context) {
     if (isOption(input, "appt:book")) {
       return go("book_service", { ...context, booking: { kind: "book" } });
     }
@@ -122,7 +122,7 @@ export const cancelConfirm: Step = {
       [choice("cancel:confirm", t("option_confirm"))],
     );
   },
-  async handle(input, context) {
+  handle(input, context) {
     const appointmentId = context.booking?.appointmentId;
     if (!isOption(input, "cancel:confirm") || !appointmentId || !context.patientId) {
       return retry("cancel_confirm", context);

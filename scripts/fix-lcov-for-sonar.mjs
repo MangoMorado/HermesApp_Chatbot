@@ -22,12 +22,12 @@ const original = readFileSync(absolute, "utf8");
 const fixed = original.replaceAll("\\", "/").replace(/^SF:(?:\.\/)?src\//gm, `SF:${prefix}src/`);
 
 if (fixed === original) {
-  console.log(`LCOV sin cambios de ruta: ${absolute}`);
+  process.stdout.write(`LCOV sin cambios de ruta: ${absolute}\n`);
 } else {
   writeFileSync(absolute, fixed);
   const samples = [...fixed.matchAll(/^SF:.+$/gm)].slice(0, 3).map((m) => m[0]);
-  console.log(`LCOV reescrito con prefijo "${prefix}": ${absolute}`);
+  process.stdout.write(`LCOV reescrito con prefijo "${prefix}": ${absolute}\n`);
   for (const sample of samples) {
-    console.log(`  ${sample}`);
+    process.stdout.write(`  ${sample}\n`);
   }
 }

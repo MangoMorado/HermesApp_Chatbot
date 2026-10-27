@@ -181,13 +181,10 @@ export function createFhirChatbotClient(deps: {
     const load = loader(token);
     const appointments = await searchAll(token, "Appointment?status=proposed");
     const tasks = await searchAll(token, "Task?status=requested");
-    const rows: InboxRequest[] = [];
-    for (const resource of appointments) {
-      rows.push(await fromAppointment(load, asRecord(resource, "Appointment")));
-    }
-    for (const resource of tasks) {
-      rows.push(await fromTask(load, asRecord(resource, "Task")));
-    }
+    const rows = await Promise.all([
+      ...appointments.map((resource) => fromAppointment(load, asRecord(resource, "Appointment"))),
+      ...tasks.map((resource) => fromTask(load, asRecord(resource, "Task"))),
+    ]);
     return rows.sort(byStartThenId);
   }
 

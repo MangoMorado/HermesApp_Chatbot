@@ -1,5 +1,5 @@
 import { getContainer } from "@/composition-root";
-import { assertSessionOrigin, widgetPreflight, withWidgetCors } from "@/http/cors";
+import { assertSessionOrigin, withWidgetCors } from "@/http/cors";
 import { idempotentRoute } from "@/http/idempotent-route";
 import {
   rebuildSessionResponse,
@@ -35,4 +35,4 @@ const refresh = idempotentRoute(
 );
 
 export const POST = withWidgetCors(refresh);
-export const OPTIONS = widgetPreflight;
+export { widgetPreflight as OPTIONS } from "@/http/cors";

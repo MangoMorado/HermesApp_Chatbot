@@ -120,10 +120,10 @@ export async function undo(
   if (write.deleteAppointmentId) {
     await store.deleteAppointment(tenantId, write.deleteAppointmentId);
   }
-  for (const appointment of write.restoreAppointments) {
-    await store.setAppointmentStatus(tenantId, appointment.id, appointment.status);
-  }
-  for (const slot of write.restoreSlots) {
-    await store.setSlotStatus(tenantId, slot.id, slot.status);
-  }
+  await Promise.all([
+    ...write.restoreAppointments.map((appointment) =>
+      store.setAppointmentStatus(tenantId, appointment.id, appointment.status),
+    ),
+    ...write.restoreSlots.map((slot) => store.setSlotStatus(tenantId, slot.id, slot.status)),
+  ]);
 }
