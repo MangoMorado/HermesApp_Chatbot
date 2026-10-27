@@ -30,7 +30,7 @@ function ParamRow({ name, value, canWrite, onSaved }: RowProps) {
       <form
         className="controls"
         action={() => {
-          save();
+          void save();
         }}
       >
         <Field label={name} className="field-setting">

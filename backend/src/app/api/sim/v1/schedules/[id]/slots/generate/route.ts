@@ -40,8 +40,8 @@ export const POST = (request: Request, context: RouteContext): Promise<Response>
       const window = item as Record<string, unknown>;
       return {
         weekday: Number(window.weekday),
-        startTime: String(window.start_time ?? ""),
-        endTime: String(window.end_time ?? ""),
+        startTime: typeof window.start_time === "string" ? window.start_time : "",
+        endTime: typeof window.end_time === "string" ? window.end_time : "",
       };
     });
     const result = await ports.generateSimSlots({

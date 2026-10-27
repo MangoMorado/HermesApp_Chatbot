@@ -10,7 +10,7 @@
     "start": "next start --port 3000",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage && node ../scripts/fix-lcov-for-sonar.mjs coverage/lcov.info frontend/",
     "test:watch": "vitest",
     "lint": "biome check .",
     "lint:fix": "biome check . --write",

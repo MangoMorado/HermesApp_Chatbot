@@ -4,7 +4,7 @@ import { ValidationError } from "@/modules/shared/domain/validation-error";
 import type { DocumentType, MedicalRecord } from "../domain/entities";
 import type { MedicalRecordRepository } from "../domain/ports/repositories";
 
-const DOCUMENT_TYPES: readonly DocumentType[] = ["CC", "TI", "CE", "PA", "RC"];
+const DOCUMENT_TYPES = new Set<DocumentType>(["CC", "TI", "CE", "PA", "RC"]);
 
 export type FindMedicalRecordInput = {
   readonly tenantId: TenantId;
@@ -16,7 +16,7 @@ export type FindMedicalRecord = (input: FindMedicalRecordInput) => Promise<Medic
 
 export function createFindMedicalRecord(repo: MedicalRecordRepository): FindMedicalRecord {
   return async (input) => {
-    if (!input.documentTypeRaw || !DOCUMENT_TYPES.includes(input.documentTypeRaw as DocumentType)) {
+    if (!input.documentTypeRaw || !DOCUMENT_TYPES.has(input.documentTypeRaw as DocumentType)) {
       throw new ValidationError("document_type invalido", { field: "document_type" });
     }
     if (!input.documentNumberRaw?.trim()) {

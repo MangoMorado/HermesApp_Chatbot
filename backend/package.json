@@ -10,7 +10,7 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest",
     "test:unit": "vitest run --project unit",
-    "test:coverage": "vitest run --project unit --coverage",
+    "test:coverage": "vitest run --project unit --coverage && node ../scripts/fix-lcov-for-sonar.mjs coverage/lcov.info backend/",
     "test:db": "vitest run --project db",
     "test:db:coverage": "vitest run --project db --coverage --coverage.reportsDirectory=./coverage-db",
     "lint": "biome check .",

@@ -87,11 +87,8 @@ async function respond(request: Request, run: () => Promise<unknown>): Promise<N
 }
 
 /** Ruta sin token. Solo `GET /fhir/metadata`. */
-export function publicFhirRoute(
-  request: Request,
-  handler: () => Promise<unknown> | unknown,
-): Promise<NextResponse> {
-  return respond(request, async () => handler());
+export function publicFhirRoute(request: Request, handler: () => unknown): Promise<NextResponse> {
+  return respond(request, async () => await handler());
 }
 
 /** Autentica y exige `service` antes de tocar el handler: el enrutado va despues. */

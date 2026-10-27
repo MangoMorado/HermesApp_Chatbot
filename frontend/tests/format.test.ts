@@ -17,12 +17,14 @@ describe("formato del tablero", () => {
     expect(splitDateTime("no-es-fecha")).toBeNull();
   });
 
-  it("text convierte null/undefined en cadena vacía y el resto a String", () => {
-    const row = { name: "Ana", empty: null, missing: undefined, n: 7 };
+  it("text convierte null/undefined/objetos en cadena vacía y primitivos a String", () => {
+    const row = { name: "Ana", empty: null, missing: undefined, n: 7, flag: true, obj: { a: 1 } };
     expect(text(row, "name")).toBe("Ana");
     expect(text(row, "empty")).toBe("");
     expect(text(row, "missing")).toBe("");
     expect(text(row, "n")).toBe("7");
+    expect(text(row, "flag")).toBe("true");
+    expect(text(row, "obj")).toBe("");
     expect(text(row, "ausente")).toBe("");
   });
 

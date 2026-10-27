@@ -109,7 +109,7 @@ function replacesId(record: Record<string, unknown>): string | null {
     return null;
   }
   if (!Array.isArray(record.extension)) {
-    throw new Error("extension invalida");
+    throw new TypeError("extension invalida");
   }
   for (const item of record.extension) {
     const row = asRecord(item, "extension");

@@ -81,7 +81,7 @@ export function toPage<T>(
 ): Page<T> {
   const hasMore = rows.length > limit;
   const data = hasMore ? rows.slice(0, limit) : rows;
-  const last = data[data.length - 1];
+  const last = data.at(-1);
   return {
     data,
     nextCursor: hasMore && last !== undefined ? encodeCursor(positionOf(last)) : null,

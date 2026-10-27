@@ -147,7 +147,7 @@ function EditBlock({
     <form
       className="form-block"
       action={() => {
-        crud.patch();
+        void crud.patch();
       }}
     >
       <h3>
@@ -196,7 +196,7 @@ export function SimCrud({ spec }: { readonly spec: CrudSpec }) {
         <form
           className="form-block"
           action={() => {
-            crud.create();
+            void crud.create();
           }}
         >
           <h3>Crear {spec.noun}</h3>

@@ -10,14 +10,18 @@ const MOBILE = /^3\d{9}$/;
 
 /** Forma minima de correo sin regex (evita backtracking super-lineal). */
 export function isEmailShape(value: string): boolean {
-  const at = value.indexOf("@");
-  if (at < 1 || value.includes(" ") || value.includes("\t")) {
+  if (value.includes(" ") || value.includes("\t")) {
     return false;
   }
-  if (value.includes("@", at + 1)) {
+  const parts = value.split("@");
+  if (parts.length !== 2) {
     return false;
   }
-  const domain = value.slice(at + 1);
+  const local = parts[0];
+  const domain = parts[1];
+  if (!local || !domain) {
+    return false;
+  }
   const dot = domain.lastIndexOf(".");
   return dot > 0 && dot < domain.length - 1;
 }

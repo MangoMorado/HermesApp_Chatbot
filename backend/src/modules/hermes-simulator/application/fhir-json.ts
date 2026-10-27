@@ -17,7 +17,7 @@ export function requiredString(record: Record<string, unknown>, field: string): 
 
 export function readIdentifiers(value: unknown): FhirId[] {
   if (!Array.isArray(value)) {
-    throw new Error("identifier debe ser una lista");
+    throw new TypeError("identifier debe ser una lista");
   }
   return value.map((item) => {
     const row = asRecord(item, "identifier");
@@ -48,7 +48,7 @@ export function bundleEntries(body: unknown): unknown[] {
     return [];
   }
   if (!Array.isArray(entry)) {
-    throw new Error("Bundle.entry invalido");
+    throw new TypeError("Bundle.entry invalido");
   }
   return entry.map((item) => asRecord(item, "entry").resource);
 }
@@ -56,7 +56,7 @@ export function bundleEntries(body: unknown): unknown[] {
 export function bundleTotal(body: unknown): number {
   const total = asRecord(body, "Bundle").total;
   if (typeof total !== "number") {
-    throw new Error("Bundle.total es obligatorio");
+    throw new TypeError("Bundle.total es obligatorio");
   }
   return total;
 }

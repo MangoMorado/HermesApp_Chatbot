@@ -69,7 +69,7 @@ export default function AjustesPage() {
         <form
           className="board-body controls"
           action={() => {
-            if (Number.isFinite(days)) save();
+            if (Number.isFinite(days)) void save();
           }}
         >
           <Field

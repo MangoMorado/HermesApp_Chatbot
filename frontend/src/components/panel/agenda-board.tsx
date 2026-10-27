@@ -80,7 +80,7 @@ export function AgendaBoard({ schedules, scheduleId, onScheduleChange, maxDays }
         <form
           className="controls"
           action={() => {
-            if (rangeReady) searchFree();
+            if (rangeReady) void searchFree();
           }}
         >
           <Field label="Desde" apiKey="from" className="field-narrow">

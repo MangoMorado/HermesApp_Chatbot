@@ -62,7 +62,7 @@ export function inputOf(draft: KnowledgeDraft): KnowledgeEntryInput {
     category: draft.category.trim(),
     question: draft.question.trim(),
     answer: draft.answer.trim(),
-    detail: detail ? detail : null,
+    detail: detail || null,
     keywords: parseKeywords(draft.keywords),
     position: Number(draft.position),
     active: draft.active,

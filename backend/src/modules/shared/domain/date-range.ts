@@ -65,7 +65,7 @@ export function parseQueryRange(
 
   const from = parseBound(fromRaw, timeZone, "from");
   const to = parseBound(toRaw, timeZone, "to");
-  if (!(from.getTime() < to.getTime())) {
+  if (from.getTime() >= to.getTime()) {
     throw new ValidationError("from debe ser anterior a to", { fields: ["from", "to"] });
   }
 

@@ -8,5 +8,5 @@ export function clientIp(request: Request, trustProxy: boolean): string | null {
     return null;
   }
   const first = request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim();
-  return first ? first : null;
+  return first || null;
 }

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Chat" };
 
-type Props = { searchParams: Promise<{ key?: string | string[] }> };
+type Props = { readonly searchParams: Promise<{ key?: string | string[] }> };
 
 /** Página para incrustar por iframe: el widget a marco completo, sin cabecera de panel. */
 export default async function WidgetPage({ searchParams }: Props) {

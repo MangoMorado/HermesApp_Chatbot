@@ -59,8 +59,10 @@ function firmFilters(search: AgendaAppointmentSearch): Prisma.Sql[] {
     filters.push(Prisma.sql`a.status::text = ${search.status}`);
   }
   if (search.identifier !== null) {
-    filters.push(Prisma.sql`a.identifier_system = ${search.identifier.system}`);
-    filters.push(Prisma.sql`a.identifier_value = ${search.identifier.value}`);
+    filters.push(
+      Prisma.sql`a.identifier_system = ${search.identifier.system}`,
+      Prisma.sql`a.identifier_value = ${search.identifier.value}`,
+    );
   }
   if (search.medicalRecordId !== null) {
     filters.push(Prisma.sql`a.medical_record_id = ${search.medicalRecordId}`);

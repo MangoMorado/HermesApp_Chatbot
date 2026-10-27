@@ -27,7 +27,7 @@ export const POST = idempotentRoute(["admin"], async ({ actor, requestId, body, 
     throw new ValidationError("Cuerpo invalido");
   }
   const data = body as Record<string, unknown>;
-  const documentType = String(data.document_type ?? "");
+  const documentType = typeof data.document_type === "string" ? data.document_type : "";
   if (!DOC_TYPES.has(documentType)) {
     throw new ValidationError("document_type invalido", { field: "document_type" });
   }
