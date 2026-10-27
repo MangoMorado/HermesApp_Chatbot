@@ -10,14 +10,14 @@ calidad y Docker listos en la primera versión.
 > bloque al lanzar o cerrar una spec están en `GOBERNANZA.md` §7.1. Solo cuenta lo
 > cerrado en `main`.
 
-| Alcance | Avance |
+| Alcance | Avance al mergear la PR de la 5.1 |
 | --- | --- |
 | MVP (fases 1–5) | **86,7%** |
 | Roadmap completo (fases 1–6) | **72,2%** |
 
-Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 está abierta y se partió en tres sub-proyectos de igual peso (spec `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, §3): la 5.1 queda cerrada con esta entrega (corte de identidad a OIDC); la 5.2 y la 5.3 siguen abiertas. La Fase 6 no está abierta.
+Las cifras son las que quedan **al mergear a `main` la PR de la 5.1**; hasta entonces, lo cerrado en `main` sigue en 80% y 66,7%. Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 está abierta y se partió en tres sub-proyectos de igual peso (spec `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, §3): la 5.1 queda cerrada con esta entrega (corte de identidad a OIDC); la 5.2 y la 5.3 siguen abiertas. La Fase 6 no está abierta.
 
-**En curso:** ninguna. La 5.1 cerró el corte total del emisor HS256: el backend verifica tokens de un proveedor OIDC (RS256/ES256, JWKS), con rol `platform`, credenciales de widget cifradas, sesión del widget emitida por el proveedor, `service` del simulador por `client_credentials` y back-channel logout. Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`.
+**En curso:** Fase 5, con la 5.2 y la 5.3 pendientes. La 5.1 cerró el corte total del emisor HS256: el backend verifica tokens de un proveedor OIDC (RS256/ES256, JWKS), con rol `platform`, credenciales de widget cifradas, sesión del widget emitida por el proveedor, `service` del simulador por `client_credentials` y back-channel logout. Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`.
 
 **Siguiente tarea:** Fase **5.2 — Frontend de referencia**: login OIDC con PKCE en `/panel`, `/simulador` y `/chat`, y widget de referencia con `conversation_secret`. Después, la **5.3 — Contrato publicado** (Swagger UI, colección Postman y prueba de rutas contra OpenAPI). La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a que la 5 esté cerrada.
 

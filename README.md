@@ -86,7 +86,7 @@ El `tenant_id` sale **solo** del claim. Un recurso de otro tenant responde `404`
   El secreto se sella con AES-256-GCM (`CREDENTIALS_ENCRYPTION_KEY`) y nunca se devuelve.
   `POST /api/platform/v1/tokens` ya no existe: la plataforma no emite tokens.
 - **Widget:** `POST /api/v1/widget/sessions` (clave pública del tenant, `Origin` permitido)
-  devuelve `{ access_token, expires_at, conversation_secret, session_expires_at }`. El token lo
+  devuelve `{ access_token, expires_at, expires_in, conversation_secret, session_expires_at }`. El token lo
   emite el proveedor con el cliente de widget de la clínica. Las llamadas de conversación
   envían `Authorization` y `X-Conversation-Secret`; cualquier fallo de conversación es `404`.
   `POST /api/v1/widget/sessions/refresh` es pública: toma `widget_key`, `X-Conversation-Secret`
@@ -126,7 +126,9 @@ Para que Hermes sea el proveedor de identidad de este servicio:
    `PUT /api/platform/v1/tenants/{id}/widget-client`.
 3. Registrar `<API>/api/v1/auth/backchannel-logout` como URL de back-channel logout de sus
    clientes interactivos, con sesión requerida, y listar sus audiencias en
-   `OIDC_LOGOUT_AUDIENCES`.
+   `OIDC_LOGOUT_AUDIENCES`. `OIDC_MAX_TOKEN_LIFETIME_SECONDS` debe ser mayor o igual que la
+   vida de los tokens de acceso del proveedor; si no, un token emitido justo antes del cierre
+   sobreviviría al cierre de su sesión.
 4. En producción, Hermes obtiene su propio token `service` de su proveedor; este servicio nunca
    ve ese secreto.
 
@@ -206,7 +208,8 @@ provisionales hasta la Fase 6, donde salen del YAML versionado.
 | `OIDC_ROLE_MAP` | backend | Mapa `externo=producto,…`; vacío significa identidad |
 | `OIDC_CLOCK_TOLERANCE_SECONDS` | backend | Tolerancia de reloj; por defecto 30 |
 | `OIDC_LOGOUT_AUDIENCES` | backend | Audiencias admitidas del `logout_token`, separadas por comas |
-| `OIDC_MAX_TOKEN_LIFETIME_SECONDS` | backend | Vida máxima aceptada de un token; por defecto 300 |
+| `OIDC_MAX_TOKEN_LIFETIME_SECONDS` | backend | Vida máxima de un token de acceso del proveedor; por defecto 300. Entero ≥ 1 y **≥ la vida de acceso que configure el proveedor**: el back-channel logout cierra el `sid` durante este tiempo más `OIDC_CLOCK_TOLERANCE_SECONDS` |
+| `OIDC_HTTP_TIMEOUT_MS` | backend | Límite de cada llamada al proveedor (discovery, JWKS, token endpoint), en ms; por defecto 5000. Vencido, la API responde `503 identity_unavailable` |
 | `CREDENTIALS_ENCRYPTION_KEY` | backend | 32 bytes en base64 (obligatoria): sella los secretos de widget. Genérala con `openssl rand -base64 32` |
 | `HERMES_SIM_SERVICE_CLIENTS` | backend | JSON de clientes `service` del simulador por tenant; obligatoria solo con `HERMES_SIMULATOR_ENABLED=true`. Acepta `"*"` con `{tenant}` en el `client_id` |
 | `TRUST_PROXY` | backend | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible |
