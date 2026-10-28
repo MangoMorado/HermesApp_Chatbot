@@ -129,7 +129,7 @@ export function ChatConsole({ apiBase }: { readonly apiBase: string }) {
         ) : (
           <div className="empty">
             <strong>Sin clave de widget</strong>
-            <span>Pega una clave o abre sesión de panel para usar la vigente.</span>
+            <span>Pega una clave o inicia sesión de panel para usar la vigente.</span>
           </div>
         )}
       </section>

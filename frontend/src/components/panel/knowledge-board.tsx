@@ -84,7 +84,7 @@ export function KnowledgeBoard() {
           {...picking}
           idle={{
             title: "Sin sesión",
-            hint: "Pega un token en la franja de sesión para ver la base de conocimiento.",
+            hint: "Inicia sesión en la franja de sesión (tecla 0) para ver la base de conocimiento.",
           }}
           empty={{
             title: "Sin entradas",

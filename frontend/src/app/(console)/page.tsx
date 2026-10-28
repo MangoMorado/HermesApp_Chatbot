@@ -9,7 +9,7 @@ function SessionRow() {
   const token = useToken();
   const identity = useIdentity();
   let status = "session_off";
-  let detail = `Pega un JWT en la franja de sesión (tecla ${SESSION_SHORTCUT}).`;
+  let detail = `Inicia sesión en la franja de sesión (tecla ${SESSION_SHORTCUT}).`;
   if (token && identity.data) {
     status = "session_on";
     const me = identity.data;
@@ -17,9 +17,9 @@ function SessionRow() {
       me.kind === "tenant" ? `${me.role} en el tenant ${me.tenantId}` : "platform, sin clínica";
   } else if (token && identity.isError) {
     status = "session_rejected";
-    detail = "El backend rechazó el token. Pide uno nuevo al proveedor de identidad.";
+    detail = "El backend rechazó la sesión. Ciérrala y vuelve a iniciarla.";
   } else if (token) {
-    detail = "Verificando el token con /me…";
+    detail = "Verificando la sesión con /me…";
   }
   return (
     <div className="departure">

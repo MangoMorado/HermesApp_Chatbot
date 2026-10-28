@@ -17,7 +17,9 @@ export function BotConfigScreen({ apiBase }: { readonly apiBase: string }) {
     return (
       <div className="empty">
         <strong>Sin sesión</strong>
-        <span>Pega un token en la franja de sesión para ver la configuración del bot.</span>
+        <span>
+          Inicia sesión en la franja de sesión (tecla 0) para ver la configuración del bot.
+        </span>
       </div>
     );
   }

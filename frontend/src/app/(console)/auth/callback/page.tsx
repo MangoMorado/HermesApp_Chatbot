@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthActions } from "@/lib/auth/auth-provider";
 import { completeSignIn } from "@/lib/auth/bind";
@@ -14,7 +13,6 @@ function providerError(): string | null {
 /** Vuelta del proveedor tras el login: canjea el `code` (PKCE) y regresa a la pantalla de origen. */
 export default function AuthCallbackPage() {
   const { manager, signIn } = useAuthActions();
-  const router = useRouter();
   const [failure, setFailure] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,10 +25,11 @@ export default function AuthCallbackPage() {
       return;
     }
     completeSignIn(manager).then(
-      (target) => router.replace(target),
+      // Recarga completa: saca el `code` de la URL y del historial, y la consola lee la sesión guardada.
+      (target) => window.location.replace(target),
       (error: unknown) => setFailure(error instanceof Error ? error.message : "Error inesperado"),
     );
-  }, [manager, router]);
+  }, [manager]);
 
   return (
     <div className="page-head">

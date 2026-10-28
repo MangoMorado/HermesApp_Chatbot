@@ -93,7 +93,7 @@ function idleMessage(error: unknown, hasToken: boolean): { title: string; hint: 
   }
   return hasToken
     ? { title: "Cargando la bandeja…", hint: "Consultando las solicitudes pendientes." }
-    : { title: "Sin sesión", hint: "Pega un token admin en la franja de sesión." };
+    : { title: "Sin sesión", hint: "Inicia sesión como admin en la franja de sesión (tecla 0)." };
 }
 
 /** Solicitudes pendientes de pre-agenda: Hermes (simulado) las aprueba o las rechaza. */

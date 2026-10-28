@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Providers } from "@/components/providers";
 import { Marquee } from "@/components/shell/marquee";
+import { PlatformNotice } from "@/components/shell/platform-notice";
 import { oidcConfig } from "@/config/env";
 import { AuthProvider } from "@/lib/auth/auth-provider";
 
@@ -13,7 +14,10 @@ export default function ConsoleLayout({ children }: { readonly children: ReactNo
     <AuthProvider config={oidcConfig()}>
       <Providers>
         <Marquee />
-        <main className="page">{children}</main>
+        <main className="page">
+          <PlatformNotice />
+          {children}
+        </main>
       </Providers>
     </AuthProvider>
   );
