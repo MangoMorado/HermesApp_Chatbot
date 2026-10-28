@@ -82,6 +82,7 @@ async function pushWidgetClients(
     );
     const note = response.status === 404 ? "tenant aun no sembrado (omitido)" : "";
     console.log(`push widget-client ${tenant.slug}: ${response.status} ${note}`.trim());
+    if (!response.ok && response.status !== 404) process.exitCode = 1;
   }
 }
 

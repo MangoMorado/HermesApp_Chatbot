@@ -130,8 +130,10 @@ async function upsertClient(ctx: Ctx, plan: ClientPlan): Promise<string> {
   const found = asList(await ctx.admin.get(lookup))[0];
   const body = clientBody(plan, ctx.options.serviceSecret);
   if (found) {
+    // El GET puede traer el secreto enmascarado: no se reenvia salvo que sea el fijo del plan.
+    const { secret: _masked, ...current } = found;
     const attributes = { ...(found.attributes as Json), ...(body.attributes as Json) };
-    await ctx.admin.put(`/${ctx.realm}/clients/${found.id}`, { ...found, ...body, attributes });
+    await ctx.admin.put(`/${ctx.realm}/clients/${found.id}`, { ...current, ...body, attributes });
     return String(found.id);
   }
   await ctx.admin.post(`/${ctx.realm}/clients`, body);
@@ -185,7 +187,10 @@ async function createUser(ctx: Ctx, plan: UserPlan): Promise<void> {
 async function ensureUser(ctx: Ctx, plan: UserPlan): Promise<void> {
   const lookup = `/${ctx.realm}/users?username=${enc(plan.username)}&exact=true`;
   let user = asList(await ctx.admin.get(lookup))[0];
-  if (!user) {
+  if (user) {
+    const attributes = { ...(user.attributes as Json), tenant_id: [plan.tenantId] };
+    await ctx.admin.put(`/${ctx.realm}/users/${user.id}`, { ...user, enabled: true, attributes });
+  } else {
     await createUser(ctx, plan);
     user = asList(await ctx.admin.get(lookup))[0];
   }

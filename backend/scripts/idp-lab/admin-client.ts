@@ -36,25 +36,23 @@ export async function fetchClientToken(
   return ((await response.json()) as { access_token: string }).access_token;
 }
 
+/** Token de admin del realm `master`: dura poco (60 s por defecto), asi que se renueva ante un 401. */
+function requestToken(config: AdminConfig): Promise<string> {
+  return fetchClientToken(config.baseUrl, config.realm, config.clientId, config.clientSecret);
+}
+
 export class AdminClient {
   private constructor(
-    private readonly baseUrl: string,
-    private readonly token: string,
+    private readonly config: AdminConfig,
+    private token: string,
   ) {}
 
   static async connect(config: AdminConfig): Promise<AdminClient> {
-    const token = await fetchClientToken(
-      config.baseUrl,
-      config.realm,
-      config.clientId,
-      config.clientSecret,
-    );
-    return new AdminClient(config.baseUrl, token);
+    return new AdminClient(config, await requestToken(config));
   }
 
-  /** Devuelve el JSON, o null si la respuesta no trae cuerpo; 404 en GET devuelve null. */
-  async request(method: string, path: string, body?: unknown): Promise<unknown> {
-    const response = await fetch(`${this.baseUrl}/admin/realms${path}`, {
+  private send(method: string, path: string, body?: unknown): Promise<Response> {
+    return fetch(`${this.config.baseUrl}/admin/realms${path}`, {
       method,
       headers: {
         authorization: `Bearer ${this.token}`,
@@ -62,6 +60,15 @@ export class AdminClient {
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
+  }
+
+  /** Devuelve el JSON, o null si la respuesta no trae cuerpo; 404 en GET devuelve null. */
+  async request(method: string, path: string, body?: unknown): Promise<unknown> {
+    let response = await this.send(method, path, body);
+    if (response.status === 401) {
+      this.token = await requestToken(this.config);
+      response = await this.send(method, path, body);
+    }
     if (response.status === 404 && method === "GET") return null;
     if (!response.ok) {
       throw new AdminError(
