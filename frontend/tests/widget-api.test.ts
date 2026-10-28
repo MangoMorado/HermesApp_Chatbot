@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConversationHistory, ConversationTurn, WidgetSession } from "@/widget/api/models";
+import type {
+  ConversationHistory,
+  ConversationTurn,
+  WidgetSessionOpened,
+  WidgetSessionRefreshed,
+} from "@/widget/api/models";
 import { createWidgetApi } from "@/widget/widget-api";
 
 const openWidgetSession = vi.fn();
@@ -14,11 +19,16 @@ vi.mock("@/widget/api/endpoints", () => ({
   sendWidgetMessage: (...args: unknown[]) => sendWidgetMessage(...args),
 }));
 
-const SESSION: WidgetSession = {
-  session_id: "s1",
-  token: "tok",
+const REFRESHED: WidgetSessionRefreshed = {
+  access_token: "tok",
   expires_at: "2026-10-13T16:00:00.000Z",
+  expires_in: 300,
+  session_expires_at: "2026-10-13T16:30:00.000Z",
 };
+
+const SESSION: WidgetSessionOpened = { ...REFRESHED, conversation_secret: "cs" };
+
+const CREDENTIALS = { accessToken: "t1", conversationSecret: "cs" };
 
 const HISTORY: ConversationHistory = {
   messages: [],
@@ -34,7 +44,7 @@ const TURN: ConversationTurn = {
 
 beforeEach(() => {
   openWidgetSession.mockReset().mockResolvedValue(SESSION);
-  refreshWidgetSession.mockReset().mockResolvedValue(SESSION);
+  refreshWidgetSession.mockReset().mockResolvedValue(REFRESHED);
   getWidgetConversation.mockReset().mockResolvedValue(HISTORY);
   sendWidgetMessage.mockReset().mockResolvedValue(TURN);
 });
@@ -50,30 +60,33 @@ describe("createWidgetApi", () => {
     );
   });
 
-  it("refreshSession lleva token e Idempotency-Key", async () => {
-    await expect(api().refreshSession("t1", "idem-refresh")).resolves.toEqual(SESSION);
-    expect(refreshWidgetSession).toHaveBeenCalledWith({
-      apiBase: "https://api.test",
-      token: "t1",
-      headers: { "Idempotency-Key": "idem-refresh" },
-    });
+  it("refreshSession va sin bearer, con clave, secreto e Idempotency-Key", async () => {
+    await expect(api().refreshSession("cs", "idem-refresh")).resolves.toEqual(REFRESHED);
+    expect(refreshWidgetSession).toHaveBeenCalledWith(
+      { widget_key: "wk_demo" },
+      {
+        apiBase: "https://api.test",
+        headers: { "Idempotency-Key": "idem-refresh", "X-Conversation-Secret": "cs" },
+      },
+    );
   });
 
-  it("getConversation solo lleva token", async () => {
-    await expect(api().getConversation("t1")).resolves.toEqual(HISTORY);
+  it("getConversation lleva token y secreto de la conversacion", async () => {
+    await expect(api().getConversation(CREDENTIALS)).resolves.toEqual(HISTORY);
     expect(getWidgetConversation).toHaveBeenCalledWith({
       apiBase: "https://api.test",
       token: "t1",
+      headers: { "X-Conversation-Secret": "cs" },
     });
   });
 
-  it("sendMessage lleva input, token e Idempotency-Key", async () => {
+  it("sendMessage lleva input, token, secreto e Idempotency-Key", async () => {
     const input = { text: "hola" };
-    await expect(api().sendMessage("t1", input, "idem-send")).resolves.toEqual(TURN);
+    await expect(api().sendMessage(CREDENTIALS, input, "idem-send")).resolves.toEqual(TURN);
     expect(sendWidgetMessage).toHaveBeenCalledWith(input, {
       apiBase: "https://api.test",
       token: "t1",
-      headers: { "Idempotency-Key": "idem-send" },
+      headers: { "Idempotency-Key": "idem-send", "X-Conversation-Secret": "cs" },
     });
   });
 });

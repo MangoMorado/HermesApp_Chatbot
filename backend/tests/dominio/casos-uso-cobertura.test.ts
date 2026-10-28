@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import type { IssueTokenInput } from "@/modules/auth/domain/ports/token-issuer";
 import {
   createGetBotConfig,
   createUpdateBotConfig,
@@ -54,21 +53,26 @@ describe("cobertura: casos de uso application", () => {
       provisionBotConfig: vi.fn(async () => ({ widgetKey: "wk_x" })),
       seedKnowledge: vi.fn(async () => undefined),
     };
+    const credentials = { put: vi.fn(async () => undefined), get: vi.fn() };
     const register = createRegisterTenant({
       registry,
       provisioning,
+      credentials,
       ids,
       audit,
       clock,
     });
     const result = await register({
       raw: { slug: "norte", name: "Norte", allowed_origins: ["https://a.example"] },
+      actor: { subject: "ops", role: "platform" },
       requestId: "req-1",
     });
     expect(result).toEqual({
       tenant: { id: "t1", slug: "norte", name: "Norte", createdAt: NOW },
       widgetKey: "wk_x",
+      widgetClientId: null,
     });
+    expect(credentials.put).not.toHaveBeenCalled();
     expect(provisioning.provisionBotConfig).toHaveBeenCalledWith({
       tenantId: TENANT,
       allowedOrigins: ["https://a.example"],
@@ -237,28 +241,13 @@ describe("cobertura: casos de uso application", () => {
     expect(expirer.expireDue).toHaveBeenCalledWith(TENANT, NOW);
   });
 
-  it("service-tokens emite JWT service de 15 minutos", async () => {
-    let issued: IssueTokenInput | undefined;
-    const issuer = {
-      issue: vi.fn(async (input: IssueTokenInput) => {
-        issued = input;
-        return "jwt";
-      }),
+  it("service-tokens pide al proveedor el token service del tenant", async () => {
+    const source = {
+      tokenFor: vi.fn(async () => ({ accessToken: "jwt", expiresAt: NOW })),
     };
-    const tokens = createServiceTokens(issuer);
+    const tokens = createServiceTokens(source);
     await expect(tokens.issue(TENANT)).resolves.toBe("jwt");
-    expect(issuer.issue).toHaveBeenCalledWith(
-      expect.objectContaining({
-        subject: "hermes-t1",
-        tenantId: TENANT,
-        role: "service",
-      }),
-    );
-    expect(issued).toBeDefined();
-    if (!issued) {
-      throw new Error("service-tokens debió emitir input");
-    }
-    expect(issued.expiresAt.getTime() - issued.issuedAt.getTime()).toBe(15 * 60_000);
+    expect(source.tokenFor).toHaveBeenCalledWith({ kind: "service", tenantId: TENANT });
   });
 
   it("bot-config get/update con vista de claves", async () => {

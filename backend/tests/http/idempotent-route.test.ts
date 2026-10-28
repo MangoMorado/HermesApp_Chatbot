@@ -16,7 +16,7 @@ vi.mock("@/composition-root", () => ({
     authenticate,
     withWriteTransaction,
     idempotencyStore,
-    config: { jwt: { secret: "test-secret-at-least-32-chars-long!!" } },
+    config: { credentialsEncryptionKey: new Uint8Array(32).fill(7) },
   }),
 }));
 
