@@ -36,6 +36,14 @@ const writeErrors = errorResponses([
 const SCHEMAS = {
   Error: ERROR_SCHEMA,
   Page: PAGE_SCHEMA,
+  PlatformIdentity: {
+    type: "object",
+    required: ["subject", "role"],
+    properties: {
+      subject: { type: "string" },
+      role: { type: "string", enum: ["platform"] },
+    },
+  },
   Tenant: {
     type: "object",
     required: ["id", "slug", "name", "created_at"],
@@ -116,6 +124,18 @@ export function buildPlatformOpenApiDocument(): Record<string, unknown> {
       schemas: SCHEMAS,
     },
     paths: {
+      "/me": {
+        get: {
+          operationId: "getPlatformIdentity",
+          description: "Identidad que el backend resolvio del bearer `platform`.",
+          security: platformAuth,
+          parameters: [REQUEST_ID_PARAMETER],
+          responses: {
+            ...okJson({ $ref: "#/components/schemas/PlatformIdentity" }),
+            ...readErrors,
+          },
+        },
+      },
       "/tenants": {
         get: {
           operationId: "listTenants",

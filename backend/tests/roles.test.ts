@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { GET as getPlatformIdentity } from "@/app/api/platform/v1/me/route";
 import { GET as getSimInbox } from "@/app/api/sim/v1/inbox/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { GET as getPractitioners } from "@/app/api/v1/practitioners/route";
@@ -16,7 +17,13 @@ import type { ClosedSessions } from "@/modules/auth/domain/ports/closed-sessions
 import type { TokenClaims } from "@/modules/auth/domain/ports/token-verifier";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { fhirGet, fhirPut, fhirSend, serviceToken } from "./helpers/fhir";
-import { authorized, resetFakeIdp, setFakeIdpDown, signToken } from "./helpers/idp";
+import {
+  authedRequest,
+  authorized,
+  resetFakeIdp,
+  setFakeIdpDown,
+  signToken,
+} from "./helpers/idp";
 
 const operator: Actor = {
   subject: "u-1",
@@ -225,6 +232,24 @@ describe("roles: ruta autenticada", () => {
       }),
     );
     expect(response.status).toBe(403);
+  });
+
+  it("platform se identifica en /api/platform/v1/me", async () => {
+    const token = await signToken({ role: "platform" });
+    const response = await getPlatformIdentity(
+      authedRequest("http://localhost/api/platform/v1/me", token),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ subject: expect.any(String), role: "platform" });
+  });
+
+  it("un rol de clinica no alcanza /api/platform/v1/me", async () => {
+    const token = await signToken({ role: "admin", tenantId: "tenant-a" });
+    const response = await getPlatformIdentity(
+      authedRequest("http://localhost/api/platform/v1/me", token),
+    );
+    expect(response.status).toBe(403);
+    expect((await response.json()).error.code).toBe("forbidden");
   });
 
   it("platform no alcanza rutas de tenant", async () =>
