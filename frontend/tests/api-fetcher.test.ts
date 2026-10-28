@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiClientError, apiFetcher } from "@/lib/api-fetcher";
 import { IDEMPOTENCY_HEADER, idempotent, settleIdempotencyKey } from "@/lib/idempotency";
+import { setRenewer, setSession } from "@/lib/token";
 
 beforeEach(() => {
-  vi.stubGlobal("window", { sessionStorage });
+  setSession(null);
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  sessionStorage.clear();
+  setRenewer(null);
+  setSession(null);
 });
 
 function stubFetch(result: Response) {
@@ -29,8 +31,8 @@ async function failure(run: Promise<unknown>): Promise<ApiClientError> {
 }
 
 describe("apiFetcher", () => {
-  it("añade Bearer desde sessionStorage y Content-Type si hay body", async () => {
-    sessionStorage.setItem("hermes.jwt", "panel-jwt");
+  it("añade Bearer de la sesión y Content-Type si hay body", async () => {
+    setSession({ accessToken: "panel-jwt", sessionKey: "s" });
     const mock = stubFetch(Response.json({ ok: true }));
     await apiFetcher("/api/v1/me", { method: "POST", body: "{}" });
     const [, init] = mock.mock.calls[0] ?? [];
@@ -99,5 +101,58 @@ describe("apiFetcher", () => {
 
   it("settle con clave desconocida no rompe", () => {
     expect(() => settleIdempotencyKey("clave-que-no-existe")).not.toThrow();
+  });
+});
+
+describe("apiFetcher ante 401", () => {
+  function sequence(...responses: Response[]) {
+    const mock = vi.fn(async (_url: string, _init?: RequestInit) => {
+      const next = responses.shift();
+      if (!next) {
+        throw new Error("fetch de más");
+      }
+      return next;
+    });
+    vi.stubGlobal("fetch", mock);
+    return mock;
+  }
+
+  const unauthorized = () =>
+    Response.json(
+      { error: { code: "unauthorized", message: "no", request_id: "r" } },
+      { status: 401 },
+    );
+
+  it("un 401 renueva y reintenta una vez con el token nuevo", async () => {
+    setSession({ accessToken: "at-1", sessionKey: "s" });
+    setRenewer(async () => "at-2");
+    const mock = sequence(unauthorized(), Response.json({ ok: true }));
+    const init = idempotent("retry:1", { a: 1 });
+    await apiFetcher("/api/v1/x", { method: "POST", ...init });
+    expect(mock).toHaveBeenCalledTimes(2);
+    const first = new Headers(mock.mock.calls[0]?.[1]?.headers);
+    const second = new Headers(mock.mock.calls[1]?.[1]?.headers);
+    expect(second.get("Authorization")).toBe("Bearer at-2");
+    expect(second.get(IDEMPOTENCY_HEADER)).toBe(first.get(IDEMPOTENCY_HEADER));
+    expect(mock.mock.calls[1]?.[1]?.body).toBe(JSON.stringify({ a: 1 }));
+  });
+
+  it("si la renovación falla, lanza el 401 sin reintentar", async () => {
+    setSession({ accessToken: "at-1", sessionKey: "s" });
+    setRenewer(async () => null);
+    const mock = sequence(unauthorized());
+    const error = await failure(apiFetcher("/api/v1/x"));
+    expect(error.status).toBe(401);
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
+
+  it("un segundo 401 tras renovar no vuelve a renovar", async () => {
+    setSession({ accessToken: "at-1", sessionKey: "s" });
+    const renew = vi.fn(async () => "at-2");
+    setRenewer(renew);
+    sequence(unauthorized(), unauthorized());
+    const error = await failure(apiFetcher("/api/v1/x"));
+    expect(error.status).toBe(401);
+    expect(renew).toHaveBeenCalledTimes(1);
   });
 });

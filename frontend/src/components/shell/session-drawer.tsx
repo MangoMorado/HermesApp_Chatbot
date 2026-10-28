@@ -1,47 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { ErrorBox } from "@/components/error-box";
-import { Field } from "@/components/ui/field";
-import { clearToken, setToken } from "@/lib/token";
 import { useIdentity, useToken } from "@/lib/use-session";
-
-function TokenForm() {
-  const [draft, setDraft] = useState("");
-  const token = useToken();
-
-  return (
-    <form
-      className="session-form"
-      action={() => {
-        if (draft.trim()) {
-          setToken(draft.trim());
-          setDraft("");
-        }
-      }}
-    >
-      <Field label="Token JWT" apiKey="Authorization: Bearer" className="field-token">
-        <input
-          id="jwt"
-          className="input data"
-          type="password"
-          autoComplete="off"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={token ? "Pega otro token para cambiar de sesión" : "eyJhbGciOi…"}
-        />
-      </Field>
-      <button type="submit" className="btn btn-primary" disabled={!draft.trim()}>
-        {token ? "Cambiar" : "Guardar"}
-      </button>
-      {token ? (
-        <button type="button" className="btn" onClick={() => clearToken()}>
-          Cerrar sesión
-        </button>
-      ) : null}
-    </form>
-  );
-}
 
 function Claims() {
   const token = useToken();
@@ -76,7 +36,6 @@ export function SessionDrawer() {
     <section id="session" className="session-drawer" aria-label="Sesión">
       <div>
         <h2>Sesión</h2>
-        <TokenForm />
         <p className="hint">
           Pídelo al proveedor de identidad (el laboratorio lo imprime con{" "}
           <code>npm run idp:lab</code>). Vive en sessionStorage.

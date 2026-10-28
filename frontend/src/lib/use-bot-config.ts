@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getBotConfig } from "@/api/default/default";
 import type { BotConfig } from "@/api/models";
-import { useToken } from "./use-session";
+import { useSessionKey, useToken } from "./use-session";
 
 /** Lo que recibe cada tablero de la configuración del bot. */
 export type BotSectionProps = {
@@ -17,8 +17,9 @@ export type BotSectionProps = {
 /** Configuración efectiva del bot del tenant de la sesión del panel. */
 export function useBotConfig() {
   const token = useToken();
+  const sessionKey = useSessionKey();
   return useQuery({
-    queryKey: ["bot-config", token?.slice(-16) ?? null],
+    queryKey: ["bot-config", sessionKey],
     queryFn: () => getBotConfig(),
     enabled: Boolean(token),
     retry: false,
