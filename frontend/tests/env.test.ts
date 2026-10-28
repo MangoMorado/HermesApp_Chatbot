@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { backendUrl, publicBackendUrl } from "@/config/env";
+import { backendUrl, oidcConfig, publicBackendUrl } from "@/config/env";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -26,5 +26,22 @@ describe("configuración del frontend", () => {
     expect(backendUrl()).toBe("http://localhost:3001");
     vi.stubEnv("BACKEND_URL", "http://backend:3001");
     expect(backendUrl()).toBe("http://backend:3001");
+  });
+
+  it("oidcConfig lee issuer y client id en cada llamada", () => {
+    vi.stubEnv("PUBLIC_OIDC_ISSUER", "https://idp.x/realms/r/");
+    vi.stubEnv("PUBLIC_OIDC_CLIENT_ID", "ui");
+    expect(oidcConfig()).toEqual({ issuer: "https://idp.x/realms/r", clientId: "ui" });
+    vi.stubEnv("PUBLIC_OIDC_ISSUER", "https://otro.x/realms/r");
+    expect(oidcConfig()).toEqual({ issuer: "https://otro.x/realms/r", clientId: "ui" });
+  });
+
+  it("oidcConfig es null si falta issuer o client id", () => {
+    vi.stubEnv("PUBLIC_OIDC_ISSUER", "https://idp.x/realms/r");
+    vi.stubEnv("PUBLIC_OIDC_CLIENT_ID", "");
+    expect(oidcConfig()).toBeNull();
+    vi.stubEnv("PUBLIC_OIDC_ISSUER", undefined);
+    vi.stubEnv("PUBLIC_OIDC_CLIENT_ID", "ui");
+    expect(oidcConfig()).toBeNull();
   });
 });
