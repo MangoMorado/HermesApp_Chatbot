@@ -384,6 +384,7 @@ describe("sesion-widget: renovacion", () => {
     expect(Object.keys(refreshed).sort()).toEqual([
       "access_token",
       "expires_at",
+      "expires_in",
       "session_expires_at",
     ]);
     expect((await getIdentity(authorized(refreshed.access_token))).status).toBe(200);
