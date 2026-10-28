@@ -110,8 +110,14 @@ Construye el realm `chatbot-lab` en un Keycloak y sus clientes: `chatbot-platfor
 `LAB_FRONTEND_URLS`, `LAB_USER_PASSWORD`, `LAB_SERVICE_SECRET` y `LAB_PUSH_WIDGET_CLIENTS`
 (entrega los clientes de widget por `PUT …/widget-client`; activo por defecto).
 
-> Pendiente de verificación: el laboratorio todavía no se ha ejecutado contra el servidor
-> Keycloak real; solo está probado por pruebas automáticas.
+> Verificado el 28 de octubre de 2026 contra `keycloak.mangomorado.com` (Keycloak 26.8):
+> la primera ejecución crea el realm y la segunda no crea nada. El backend desplegado acepta
+> los tokens `platform`, `service` y `widget` del realm, y una sesión de widget funciona de
+> punta a punta (apertura, conversación con `X-Conversation-Secret` y `refresh`).
+
+En Easypanel, `HERMES_SIM_SERVICE_CLIENTS` debe ir entre comillas simples
+(`HERMES_SIM_SERVICE_CLIENTS='{"*":{…}}'`): sin ellas el JSON no llega intacto al contenedor y
+todo el backend responde 500.
 
 `npm run demo` solo siembra datos: ya no firma tokens. El panel de tenants del simulador pide
 un token `platform`.

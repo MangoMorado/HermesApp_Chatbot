@@ -24,7 +24,7 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 - **4.3 pre-agenda por FHIR — cerrada** y en `main` (PR #11). Spec en `docs/superpowers/specs/2026-10-14-fase-4-3-pre-agenda-fhir-design.md`: `Appointment` `proposed` y `Task` de cancelación, resueltos por `PUT` por id.
 - **4.4 simulador por FHIR — cerrada** y en `main` (PR #12). Spec en `docs/superpowers/specs/2026-10-14-fase-4-4-simulador-fhir-design.md`: el cliente con token `service` sustituye al gateway en proceso. `hermes:sync` y la bandeja cierran maestros, pre-agenda y pre-registro solo por `/fhir`.
 
-**Fase 5 abierta** (Keycloak/OIDC, sesiones y contrato; spec en `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, tres sub-proyectos). **5.1 corte de identidad — hecha en la rama `fase-5-1-corte-identidad`, aún sin mergear a `main`**: verificador OIDC (RS256/ES256), rol `platform`, credenciales de widget cifradas, sesión del widget por el proveedor con `conversation_secret`, `service` del simulador por `client_credentials`, back-channel logout y laboratorio (`npm --prefix backend run idp:lab`; el script aún no se ha verificado contra el Keycloak real). Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`. El texto `keycloak` no puede aparecer en `backend/src/**` ni `frontend/src/**` (suite `fronteras`). Quedan la 5.2 (frontend de referencia con login PKCE) y la 5.3 (contrato publicado). La Fase 6 es el endurecimiento y queda fuera del MVP.
+**Fase 5 abierta** (Keycloak/OIDC, sesiones y contrato; spec en `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, tres sub-proyectos). **5.1 corte de identidad — cerrada** y en `main` (PR #13): verificador OIDC (RS256/ES256), rol `platform`, credenciales de widget cifradas, sesión del widget por el proveedor con `conversation_secret`, `service` del simulador por `client_credentials`, back-channel logout y laboratorio (`npm --prefix backend run idp:lab`, verificado el 28 de octubre de 2026 contra el realm `chatbot-lab` de `keycloak.mangomorado.com` y el backend de Easypanel). Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`. El texto `keycloak` no puede aparecer en `backend/src/**` ni `frontend/src/**` (suite `fronteras`). Quedan la 5.2 (frontend de referencia con login PKCE) y la 5.3 (contrato publicado). La Fase 6 es el endurecimiento y queda fuera del MVP.
 
 Fuera del plan de fases, `main` incluye el rediseño del panel operativo (tablero oscuro; sistema visual en `DESIGN.md`).
 
@@ -81,7 +81,7 @@ npm run doctor        # React Doctor en frontend/
 docker compose up     # Postgres + backend (3001) + frontend (3000)
 ```
 
-Laboratorio del proveedor de identidad: `npm --prefix backend run idp:lab` (crea el realm `chatbot-lab` y sus clientes; imprime las líneas `OIDC_*`). Aún no se ha verificado contra el Keycloak real.
+Laboratorio del proveedor de identidad: `npm --prefix backend run idp:lab` (crea el realm `chatbot-lab` y sus clientes; imprime las líneas `OIDC_*`). Es idempotente; en Easypanel, `HERMES_SIM_SERVICE_CLIENTS` va entre comillas simples.
 
 Un solo test: `npm --prefix backend exec vitest run tests/fronteras.test.ts`, o `-t "<nombre>"`.
 Prisma: `npm --prefix backend run db:generate`. Requiere `backend/.env` con `DATABASE_URL`.
