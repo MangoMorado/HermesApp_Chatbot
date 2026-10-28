@@ -23,7 +23,7 @@ function Claims() {
       <dt>role</dt>
       <dd>{me.role}</dd>
       <dt>tenant_id</dt>
-      <dd>{me.tenant_id}</dd>
+      <dd>{me.kind === "tenant" ? me.tenantId : "(sin clínica)"}</dd>
       <dt>subject</dt>
       <dd>{me.subject}</dd>
     </dl>

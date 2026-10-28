@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { getIdentity } from "@/api/default/default";
+import { getPlatformIdentity } from "@/platform/default/default";
+import { resolveIdentity, type SessionIdentity } from "./identity";
 import { type AuthStatus, getSession, SERVER_SNAPSHOT, subscribeSession } from "./token";
 
 function useSessionSnapshot() {
@@ -24,15 +26,15 @@ export function useAuthStatus(): AuthStatus {
 }
 
 /**
- * Identidad que el backend resolvió del JWT (`/me`). El frontend no decodifica
- * el token: muestra lo que el backend confirma.
+ * Identidad que el backend resolvió del JWT (`/api/v1/me` o `/api/platform/v1/me`). El
+ * frontend no decodifica el token: muestra lo que el backend confirma.
  */
 export function useIdentity() {
   const token = useToken();
   const sessionKey = useSessionKey();
-  return useQuery({
+  return useQuery<SessionIdentity>({
     queryKey: ["identity", sessionKey],
-    queryFn: () => getIdentity(),
+    queryFn: () => resolveIdentity(getIdentity, getPlatformIdentity),
     enabled: Boolean(token),
     retry: false,
     staleTime: 60_000,
