@@ -6,15 +6,8 @@ import type { TenantRole } from "@/modules/auth/domain/role";
 import { errorResponse, toApiError } from "./errors";
 import { REQUEST_ID_HEADER, resolveRequestId } from "./request-id";
 
-type PublicHandler = (context: {
-  requestId: string;
-  request: Request;
-}) => Promise<unknown> | unknown;
-type PrivateHandler = (context: {
-  actor: Actor;
-  requestId: string;
-  request: Request;
-}) => Promise<unknown> | unknown;
+type PublicHandler = (context: { requestId: string; request: Request }) => unknown;
+type PrivateHandler = (context: { actor: Actor; requestId: string; request: Request }) => unknown;
 
 function ok(payload: unknown, requestId: string): NextResponse {
   return NextResponse.json(payload, {

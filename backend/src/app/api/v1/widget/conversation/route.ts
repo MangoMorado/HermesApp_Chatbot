@@ -1,5 +1,5 @@
 import { getContainer } from "@/composition-root";
-import { widgetPreflight, withWidgetCors } from "@/http/cors";
+import { withWidgetCors } from "@/http/cors";
 import { privateRoute } from "@/http/route";
 import { conversationHistoryJson } from "@/http/serializers-conversation";
 import { resolveWidgetConversation } from "@/http/widget-session-response";
@@ -22,4 +22,4 @@ const getConversation = privateRoute(["widget"], async ({ actor, requestId, requ
 });
 
 export const GET = withWidgetCors(getConversation);
-export const OPTIONS = widgetPreflight;
+export { widgetPreflight as OPTIONS } from "@/http/cors";

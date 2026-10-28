@@ -61,7 +61,7 @@ export function BotOrigins({ config, canWrite, onSaved }: BotSectionProps) {
           <form
             className="controls"
             action={() => {
-              add();
+              void add();
             }}
           >
             <Field label="Origen nuevo" apiKey="origin" className="field-wide">

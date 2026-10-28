@@ -93,7 +93,7 @@ export function RecordLookup() {
         <form
           className="controls"
           action={() => {
-            if (docNumber.trim()) search();
+            if (docNumber.trim()) void search();
           }}
         >
           <Field label="Tipo" apiKey="document_type">

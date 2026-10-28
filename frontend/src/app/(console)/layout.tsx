@@ -3,7 +3,7 @@ import { Providers } from "@/components/providers";
 import { Marquee } from "@/components/shell/marquee";
 
 /** Consola operativa: cabecera, sesión del panel y caché de consultas. */
-export default function ConsoleLayout({ children }: { children: ReactNode }) {
+export default function ConsoleLayout({ children }: { readonly children: ReactNode }) {
   return (
     <Providers>
       <Marquee />

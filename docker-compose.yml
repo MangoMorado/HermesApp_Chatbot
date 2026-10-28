@@ -3,7 +3,7 @@ services:
     image: postgres:18-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-ingenius}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ingenius}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en tu .env}
       POSTGRES_DB: ${POSTGRES_DB:-ingenius}
     ports:
       - "5432:5432"
@@ -20,7 +20,7 @@ services:
       context: ./backend
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-ingenius}:${POSTGRES_PASSWORD:-ingenius}@postgres:5432/${POSTGRES_DB:-ingenius}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ingenius}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ingenius}?schema=public
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
       OIDC_ISSUER: ${OIDC_ISSUER:?define OIDC_ISSUER en tu .env}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:?define OIDC_AUDIENCE en tu .env}

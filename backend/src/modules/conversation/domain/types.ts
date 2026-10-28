@@ -193,8 +193,12 @@ export type Step = {
   readonly globals: "full" | "cancel_only";
   /** Como se guarda la entrada del paciente: etiqueta de la opcion, redactada o documento enmascarado. */
   readonly echo: "label" | "redacted" | "document";
-  enter(context: ConversationContext, env: StepEnv): Promise<EnterResult>;
-  handle(input: PatientInput, context: ConversationContext, env: StepEnv): Promise<HandleResult>;
+  enter(context: ConversationContext, env: StepEnv): EnterResult | Promise<EnterResult>;
+  handle(
+    input: PatientInput,
+    context: ConversationContext,
+    env: StepEnv,
+  ): HandleResult | Promise<HandleResult>;
 };
 
 export type StepRegistry = Readonly<Record<StepId, Step>>;

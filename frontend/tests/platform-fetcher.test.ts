@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { platformFetcher } from "@/lib/api-fetcher";
+
+beforeEach(() => {
+  vi.stubGlobal("window", { sessionStorage });
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();

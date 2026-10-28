@@ -127,50 +127,58 @@ async function syncMasters(
   const practitioners = new Map<string, string>();
   const services = new Map<string, string>();
   const schedules = new Map<string, string>();
-  for (const row of await catalog.practitioners(tenantId)) {
-    remember(
-      practitioners,
-      row.id,
-      await writeMaster(http, token, "Practitioner", row, practitionerBody(row), counts),
-      "Practitioner",
-    );
-  }
-  for (const row of await catalog.services(tenantId)) {
-    remember(
-      services,
-      row.id,
-      await writeMaster(http, token, "HealthcareService", row, serviceBody(row), counts),
-      "HealthcareService",
-    );
-  }
-  for (const row of await catalog.patients(tenantId)) {
-    if (row.status === "active") {
-      await writeMaster(http, token, "Patient", row, patientBody(row), counts);
-    }
-  }
-  for (const row of await catalog.schedules(tenantId)) {
-    const body = scheduleBody(
-      row,
-      requiredMapped(practitioners, row.practitionerId),
-      requiredMapped(services, row.healthcareServiceId),
-    );
-    remember(
-      schedules,
-      row.id,
-      await writeMaster(http, token, "Schedule", row, body, counts),
-      "Schedule",
-    );
-  }
-  for (const row of await catalog.slots(tenantId)) {
-    await writeMaster(
-      http,
-      token,
-      "Slot",
-      row,
-      slotBody(row, requiredMapped(schedules, row.scheduleId)),
-      counts,
-    );
-  }
+  await Promise.all(
+    (await catalog.practitioners(tenantId)).map(async (row) => {
+      remember(
+        practitioners,
+        row.id,
+        await writeMaster(http, token, "Practitioner", row, practitionerBody(row), counts),
+        "Practitioner",
+      );
+    }),
+  );
+  await Promise.all(
+    (await catalog.services(tenantId)).map(async (row) => {
+      remember(
+        services,
+        row.id,
+        await writeMaster(http, token, "HealthcareService", row, serviceBody(row), counts),
+        "HealthcareService",
+      );
+    }),
+  );
+  await Promise.all(
+    (await catalog.patients(tenantId))
+      .filter((row) => row.status === "active")
+      .map((row) => writeMaster(http, token, "Patient", row, patientBody(row), counts)),
+  );
+  await Promise.all(
+    (await catalog.schedules(tenantId)).map(async (row) => {
+      const body = scheduleBody(
+        row,
+        requiredMapped(practitioners, row.practitionerId),
+        requiredMapped(services, row.healthcareServiceId),
+      );
+      remember(
+        schedules,
+        row.id,
+        await writeMaster(http, token, "Schedule", row, body, counts),
+        "Schedule",
+      );
+    }),
+  );
+  await Promise.all(
+    (await catalog.slots(tenantId)).map((row) =>
+      writeMaster(
+        http,
+        token,
+        "Slot",
+        row,
+        slotBody(row, requiredMapped(schedules, row.scheduleId)),
+        counts,
+      ),
+    ),
+  );
   return counts;
 }
 
@@ -257,18 +265,20 @@ async function confirmPatients(
   const tag = encodeURIComponent(`${PRE_REGISTERED_TAG.system}|${PRE_REGISTERED_TAG.code}`);
   const rows = await searchAll(http, token, `Patient?_tag=${tag}`);
   const patients = await catalog.patients(tenantId);
-  for (const record of rows) {
-    const business = businessFor(record, patients);
-    const body = confirmBody(record, business);
-    await writeMaster(
-      http,
-      token,
-      "Patient",
-      { identifierSystem: business.system, identifierValue: business.value },
-      body,
-      { written: 0, retryLater: 0 },
-    );
-  }
+  await Promise.all(
+    rows.map((record) => {
+      const business = businessFor(record, patients);
+      const body = confirmBody(record, business);
+      return writeMaster(
+        http,
+        token,
+        "Patient",
+        { identifierSystem: business.system, identifierValue: business.value },
+        body,
+        { written: 0, retryLater: 0 },
+      );
+    }),
+  );
   return rows.length;
 }
 

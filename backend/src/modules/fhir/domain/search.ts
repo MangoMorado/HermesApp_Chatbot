@@ -12,7 +12,7 @@ import type { FhirIdentifier } from "./resources/types";
 /** Parametros de busqueda tal como llegan: nombre -> valores en orden. */
 export type SearchParams = ReadonlyMap<string, readonly string[]>;
 
-const CONTROL_PARAMS: readonly string[] = ["_count", "_offset"];
+const CONTROL_PARAMS = new Set(["_count", "_offset"]);
 
 export function collectParams(entries: Iterable<readonly [string, string]>): SearchParams {
   const collected = new Map<string, string[]>();
@@ -25,7 +25,7 @@ export function collectParams(entries: Iterable<readonly [string, string]>): Sea
 /** Un parametro que el recurso no declara no se ignora: responde `not-supported`. */
 export function assertSupported(params: SearchParams, supported: readonly string[]): void {
   for (const name of params.keys()) {
-    if (!supported.includes(name) && !CONTROL_PARAMS.includes(name)) {
+    if (!supported.includes(name) && !CONTROL_PARAMS.has(name)) {
       throw fhirNotSupported(`Parametro de busqueda no soportado: ${name}`);
     }
   }
@@ -106,8 +106,25 @@ type Prefix = "eq" | "ge" | "gt" | "le" | "lt";
 
 const PREFIXED = /^(eq|ge|gt|le|lt)?(.*)$/;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-const INSTANT =
-  /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d(:[0-5]\d(\.\d+)?)?(Z|[+-]([01]\d|2[0-3]):[0-5]\d)$/;
+const INSTANT_TIME = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/;
+const INSTANT_OFFSET = /^(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
+
+function isInstant(value: string): boolean {
+  if (value.length < 12 || value.charAt(10) !== "T") {
+    return false;
+  }
+  if (!DATE_ONLY.test(value.slice(0, 10))) {
+    return false;
+  }
+  const rest = value.slice(11);
+  const offsetAt = rest.endsWith("Z")
+    ? rest.length - 1
+    : Math.max(rest.lastIndexOf("+"), rest.lastIndexOf("-"));
+  if (offsetAt < 1) {
+    return false;
+  }
+  return INSTANT_TIME.test(rest.slice(0, offsetAt)) && INSTANT_OFFSET.test(rest.slice(offsetAt));
+}
 
 /** Rango de anios aceptado: `Date.UTC` mapea 0-99 a 1900-1999 y fuera de el no hay citas reales. */
 const MIN_YEAR = 1900;
@@ -176,7 +193,7 @@ function boundsOf(name: string, raw: string, timeZone: string): DateBound[] {
   }
   // `new Date` desbordaria 2026-02-31 a marzo sin avisar: se valida el dia del instante.
   const day = value.slice(0, 10);
-  const at = INSTANT.test(value) && isSaneYear(day) && isRealDate(day) ? new Date(value) : null;
+  const at = isInstant(value) && isSaneYear(day) && isRealDate(day) ? new Date(value) : null;
   if (!at || Number.isNaN(at.getTime())) {
     throw invalid;
   }

@@ -96,23 +96,23 @@ export function useChat(config: WidgetConfig) {
   );
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   return {
     state,
     choose: (option: ConversationOption) => {
-      send({ kind: "option", option });
+      void send({ kind: "option", option });
     },
     submit: (text: string) => {
-      send({ kind: "text", text });
+      void send({ kind: "text", text });
     },
     /** Repite el envío que falló (misma `Idempotency-Key`) o, si falló la carga, recarga. */
     retry: () => {
       if (lastSend.current) {
-        send(lastSend.current);
+        void send(lastSend.current);
       } else {
-        load();
+        void load();
       }
     },
   };

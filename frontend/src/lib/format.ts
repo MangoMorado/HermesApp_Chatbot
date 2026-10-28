@@ -26,7 +26,13 @@ export function splitDateTime(iso: unknown): { day: string; time: string; iso: s
 
 export function text(row: Record<string, unknown>, key: string): string {
   const value = row[key];
-  return value === null || value === undefined ? "" : String(value);
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
 }
 
 /** Id abreviado para celdas estrechas; el id completo queda en `title`. */

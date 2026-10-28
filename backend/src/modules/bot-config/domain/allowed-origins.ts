@@ -7,8 +7,8 @@ export type OriginPolicy = { readonly allowLocalhost: boolean };
 export const MAX_ALLOWED_ORIGINS = 20;
 
 const LABEL = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?";
-const PORT = "(?::\\d{1,5})?";
-const HTTPS_ORIGIN = new RegExp(`^https://${LABEL}(?:\\.${LABEL})*${PORT}$`);
+const PORT = String.raw`(?::\d{1,5})?`;
+const HTTPS_ORIGIN = new RegExp(String.raw`^https://${LABEL}(?:\.${LABEL})*${PORT}$`);
 const LOCALHOST_ORIGIN = new RegExp(`^http://localhost${PORT}$`);
 
 /** Valida y normaliza (minusculas, sin duplicados) la lista de origenes del widget. */

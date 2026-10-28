@@ -3,9 +3,8 @@ import { idempotentRoute } from "@/http/idempotent-route";
 import { requireSimulatorEnabled } from "@/http/require-simulator";
 import { privateRoute } from "@/http/route";
 import { simScheduleJson } from "@/http/serializers";
-import { ConflictError } from "@/modules/shared/domain/conflict-error";
+import { assertSimDelete, booleanOr, recordSimAudit, requireObjectBody } from "@/http/sim-mutation";
 import { NotFoundError } from "@/modules/shared/domain/not-found-error";
-import { ValidationError } from "@/modules/shared/domain/validation-error";
 
 export const dynamic = "force-dynamic";
 
@@ -30,27 +29,15 @@ export const PATCH = (request: Request, context: RouteContext): Promise<Response
     if (!existing) {
       throw new NotFoundError();
     }
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
-      throw new ValidationError("Cuerpo invalido");
-    }
-    const data = body as Record<string, unknown>;
+    const data = requireObjectBody(body);
     const updated = await ports.simSchedules.update({
       ...existing,
-      active: typeof data.active === "boolean" ? data.active : existing.active,
+      active: booleanOr(data.active, existing.active),
     });
     if (!updated) {
       throw new NotFoundError();
     }
-    await ports.auditLog.record({
-      tenantId: actor.tenantId,
-      actorSubject: actor.subject,
-      actorRole: actor.role,
-      action: "sim.schedule.updated",
-      resourceType: "sim.schedule",
-      resourceId: id,
-      requestId,
-      occurredAt: ports.clock.now(),
-    });
+    await recordSimAudit(ports, actor, requestId, "sim.schedule.updated", "sim.schedule", id);
     return { status: 200, body: simScheduleJson(updated) };
   })(request);
 
@@ -58,22 +45,10 @@ export const DELETE = (request: Request, context: RouteContext): Promise<Respons
   idempotentRoute(["admin"], async ({ actor, requestId, ports }) => {
     requireSimulatorEnabled();
     const { id } = await context.params;
-    const result = await ports.simSchedules.delete(actor.tenantId, id);
-    if (result === "missing") {
-      throw new NotFoundError();
-    }
-    if (result === "has_dependents") {
-      throw new ConflictError("La agenda tiene cupos o citas asociadas");
-    }
-    await ports.auditLog.record({
-      tenantId: actor.tenantId,
-      actorSubject: actor.subject,
-      actorRole: actor.role,
-      action: "sim.schedule.deleted",
-      resourceType: "sim.schedule",
-      resourceId: id,
-      requestId,
-      occurredAt: ports.clock.now(),
-    });
+    assertSimDelete(
+      await ports.simSchedules.delete(actor.tenantId, id),
+      "La agenda tiene cupos o citas asociadas",
+    );
+    await recordSimAudit(ports, actor, requestId, "sim.schedule.deleted", "sim.schedule", id);
     return { status: 200, body: { deleted: true } };
   })(request);

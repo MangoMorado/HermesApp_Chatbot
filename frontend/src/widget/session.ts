@@ -47,6 +47,13 @@ function fromGrant(grant: Grant, conversationSecret: string, now: number): Store
 /** Se renueva a la mitad de la vida del token o, como mínimo, con menos de un minuto restante. */
 export const REFRESH_MARGIN_MS = 60_000;
 
+function needsRefresh(current: StoredSession, now: number): boolean {
+  if (current.expiresAt - now < REFRESH_MARGIN_MS) {
+    return true;
+  }
+  return now - current.obtainedAt >= (current.expiresAt - current.obtainedAt) / 2;
+}
+
 export function storageKey(widgetKey: string): string {
   return `ingenius.widget.${widgetKey}`;
 }
@@ -198,13 +205,6 @@ export function createSessionManager(deps: SessionDeps): SessionManager {
       }
       throw error;
     }
-  }
-
-  function needsRefresh(current: StoredSession, now: number): boolean {
-    if (current.expiresAt - now < REFRESH_MARGIN_MS) {
-      return true;
-    }
-    return now - current.obtainedAt >= (current.expiresAt - current.obtainedAt) / 2;
   }
 
   function resolve(): Promise<WidgetCredentials> {

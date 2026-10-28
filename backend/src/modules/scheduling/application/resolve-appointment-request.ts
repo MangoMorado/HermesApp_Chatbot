@@ -34,12 +34,12 @@ export type ResolveAppointmentRequest = (
 ) => Promise<AppointmentRequest>;
 
 async function applyEffects(store: PreAgendaStore, tenantId: TenantId, effects: ResolutionEffects) {
-  for (const change of effects.slots) {
-    await store.setSlotStatus(tenantId, change.slotId, change.status);
-  }
-  for (const change of effects.appointments) {
-    await store.setAppointmentStatus(tenantId, change.appointmentId, change.status);
-  }
+  await Promise.all([
+    ...effects.slots.map((change) => store.setSlotStatus(tenantId, change.slotId, change.status)),
+    ...effects.appointments.map((change) =>
+      store.setAppointmentStatus(tenantId, change.appointmentId, change.status),
+    ),
+  ]);
 }
 
 async function bookAppointment(

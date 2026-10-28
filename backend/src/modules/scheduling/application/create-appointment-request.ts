@@ -70,7 +70,7 @@ async function bookableSlot(
   if (!slot) {
     throw new NotFoundError();
   }
-  if (target && target.slotId === slot.id) {
+  if (target?.slotId === slot.id) {
     throw new ValidationError("El cupo nuevo es el de la cita actual", { field: "slot_id" });
   }
   const schedule = await store.getSchedule(tenantId, slot.scheduleId);

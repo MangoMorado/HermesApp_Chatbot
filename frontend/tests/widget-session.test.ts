@@ -1,6 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WidgetApiError } from "@/widget/fetcher";
-import { createSessionManager, type SessionStorageLike, storageKey } from "@/widget/session";
+import {
+  browserStorage,
+  clearStoredSession,
+  createSessionManager,
+  type SessionStorageLike,
+  storageKey,
+} from "@/widget/session";
 import type { WidgetApi, WidgetSessionOpened, WidgetSessionRefreshed } from "@/widget/widget-api";
 
 const NOW = Date.parse("2026-10-13T15:00:00.000Z");
@@ -334,5 +340,34 @@ describe("sesión del widget", () => {
     expect((await manager.reopen()).accessToken).toBe("opened");
     expect(api.openSession).toHaveBeenCalledTimes(1);
     expect(JSON.parse(data.get(KEY) ?? "{}")).toMatchObject({ access_token: "opened" });
+  });
+});
+
+describe("browserStorage y clearStoredSession", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("sin window devuelve null", () => {
+    vi.stubGlobal("window", undefined);
+    expect(browserStorage()).toBeNull();
+  });
+
+  it("con window expone sessionStorage", () => {
+    vi.stubGlobal("window", { sessionStorage });
+    expect(browserStorage()).toBe(sessionStorage);
+  });
+
+  it("si acceder a sessionStorage lanza, devuelve null", () => {
+    vi.stubGlobal("window", {
+      get sessionStorage(): Storage {
+        throw new DOMException("bloqueado", "SecurityError");
+      },
+    });
+    expect(browserStorage()).toBeNull();
+  });
+
+  it("clearStoredSession con storage null no rompe", () => {
+    expect(() => clearStoredSession("wk", null)).not.toThrow();
   });
 });

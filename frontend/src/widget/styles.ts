@@ -95,7 +95,7 @@ export const WIDGET_CSS = `
   color: #ffffff;
 }
 .iw-status { color: var(--iw-ink-2); }
-.iw-notice, .iw-failure { margin: 0; padding: 8px 16px; font-size: 14px; }
+.iw-notice, .iw-failure { display: block; margin: 0; padding: 8px 16px; font-size: 14px; }
 .iw-notice { background: var(--iw-soft); color: var(--iw-ink-2); }
 .iw-failure { display: grid; gap: 8px; justify-items: start; color: var(--iw-danger); }
 .iw-controls { display: grid; gap: 8px; padding: 12px 16px 16px; border-top: 1px solid var(--iw-rule); }

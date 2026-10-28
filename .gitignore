@@ -3,14 +3,25 @@ node_modules/
 out/
 dist/
 coverage/
+coverage-*/
 *.tsbuildinfo
+*.log
+*.pem
 
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!**/.env.example
 
 .DS_Store
 Thumbs.db
+.idea/
+.vercel/
+
+# SonarQube: caché del scanner y binding local del IDE (el shared es sonar-project.properties).
+.scannerwork/
+.sonar/
+.sonar-config.json
 
 # Bundle del widget del chat: lo genera `npm --prefix frontend run build:widget`.
 frontend/public/widget.js

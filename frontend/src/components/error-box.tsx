@@ -17,7 +17,7 @@ function describe(error: unknown): { code: string; message: string; requestId?: 
 }
 
 /** Fila de aviso: código del contrato, mensaje del backend y request_id para rastrear. */
-export function ErrorBox({ error }: { error: unknown }) {
+export function ErrorBox({ error }: { readonly error: unknown }) {
   if (!error) {
     return null;
   }

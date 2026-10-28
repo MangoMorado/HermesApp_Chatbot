@@ -41,7 +41,7 @@
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "skillPath": ".agents/skills/impeccable/SKILL.md",
-      "computedHash": "de0ad62df4a20451e6f9715b6861b068ac8f558b1829a5c7b947c58ae94f0c6f"
+      "computedHash": "08c1403e2daff28509af4ca7fc5915cb748b1a6b72181b6142ba35fb2c258d89"
     },
     "nielsen-usability-heuristics": {
       "source": "dembrandt/dembrandt-skills",

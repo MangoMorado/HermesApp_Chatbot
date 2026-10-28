@@ -1,4 +1,4 @@
-import { widgetPreflight, withWidgetCors } from "@/http/cors";
+import { withWidgetCors } from "@/http/cors";
 import { idempotentRoute } from "@/http/idempotent-route";
 import { conversationTurnJson, replayTurn, storedTurnJson } from "@/http/serializers-conversation";
 import { conversationSessionId, resolveWidgetConversation } from "@/http/widget-session-response";
@@ -31,9 +31,9 @@ const postMessage = idempotentRoute(
   {
     sensitiveBody: true,
     resolveActor: async (actor, request) => (await resolveWidgetConversation(actor, request)).actor,
-    rebuild: async (stored, actor) => replayTurn(stored, conversationSessionId(actor)),
+    rebuild: (stored, actor) => Promise.resolve(replayTurn(stored, conversationSessionId(actor))),
   },
 );
 
 export const POST = withWidgetCors(postMessage);
-export const OPTIONS = widgetPreflight;
+export { widgetPreflight as OPTIONS } from "@/http/cors";

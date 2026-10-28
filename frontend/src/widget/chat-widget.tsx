@@ -175,11 +175,7 @@ function ChatPanel({
         ) : null}
       </header>
       <MessageList messages={state.view.messages} loading={state.phase === "loading"} />
-      {state.notice ? (
-        <p className="iw-notice" role="status">
-          {state.notice}
-        </p>
-      ) : null}
+      {state.notice ? <output className="iw-notice">{state.notice}</output> : null}
       {state.failure ? (
         <FailureBox key={state.failure.text} failure={state.failure} onRetry={chat.retry} />
       ) : (

@@ -51,6 +51,9 @@ describe("pre-registro: validacion autoritativa", () => {
     expect(fieldOf(() => validatePreRegistration({ ...VALID, email: "sin-arroba" }, TODAY))).toBe(
       "email",
     );
+    expect(fieldOf(() => validatePreRegistration({ ...VALID, email: "a@b@c.com" }, TODAY))).toBe(
+      "email",
+    );
   });
 
   it("el correo es opcional", () => {

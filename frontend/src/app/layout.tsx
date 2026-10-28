@@ -22,7 +22,7 @@ export const viewport: Viewport = {
   themeColor: "#1e1450",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
     <html lang="es" className={`${ui.variable} ${data.variable}`}>
       <body>{children}</body>

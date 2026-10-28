@@ -32,9 +32,11 @@ export function createRotateWidgetKey(deps: RotateDeps): RotateWidgetKey {
     const now = deps.clock.now();
     const graceHours = effectiveConfig(overrides).params.widget_key_grace_hours;
     const accepted = await deps.keys.listAccepted(input.tenantId, now);
-    for (const retirement of planRotation(accepted, now, graceHours)) {
-      await deps.keys.retire(input.tenantId, retirement);
-    }
+    await Promise.all(
+      planRotation(accepted, now, graceHours).map((retirement) =>
+        deps.keys.retire(input.tenantId, retirement),
+      ),
+    );
     const id = deps.ids.next();
     const key = deps.generator.next();
     await deps.keys.insert({

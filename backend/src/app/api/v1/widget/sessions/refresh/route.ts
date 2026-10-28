@@ -1,5 +1,5 @@
 import { getContainer } from "@/composition-root";
-import { widgetPreflight, withWidgetCors } from "@/http/cors";
+import { withWidgetCors } from "@/http/cors";
 import { errorResponse, toApiError } from "@/http/errors";
 import {
   idempotentJson,
@@ -52,4 +52,4 @@ async function refreshSession(request: Request): Promise<Response> {
 }
 
 export const POST = withWidgetCors(refreshSession);
-export const OPTIONS = widgetPreflight;
+export { widgetPreflight as OPTIONS } from "@/http/cors";

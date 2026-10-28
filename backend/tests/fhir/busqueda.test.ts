@@ -207,6 +207,8 @@ describe("fhir-conformance: fechas", () => {
       "ge2026-04-31T10:00:00-05:00",
       "2026-06-15T24:00:00Z",
       "2026-06-15T23:60:00Z",
+      // Instant con 'T' en pos 10 pero prefijo que no es AAAA-MM-DD.
+      "ABCDEFGHIJT12:00:00Z",
     ]) {
       expect(failure(() => parseDateBounds("start", [raw], ZONE))).toEqual(INVALID);
     }

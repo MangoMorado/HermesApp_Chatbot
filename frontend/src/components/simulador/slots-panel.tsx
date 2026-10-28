@@ -113,12 +113,12 @@ function SlotsForm({
         </div>
         <ErrorBox error={error} />
         {created !== null ? (
-          <div className="notice notice-ok" role="status">
+          <output className="notice notice-ok">
             <span className="flap" data-tone="ok">
               {created} CREADOS
             </span>
             <span>Consúltalos en el panel con «Ver agenda».</span>
-          </div>
+          </output>
         ) : null}
       </div>
       <form

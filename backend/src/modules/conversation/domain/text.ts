@@ -103,10 +103,14 @@ export function literal(text: string): BotText {
   return { literal: text };
 }
 
-export function line(
+export function line(key: ConversationTextKey, params?: Readonly<Record<string, string>>): BotLine {
+  return { text: t(key, params) };
+}
+
+/** Variante que el repositorio guarda como `[redactado]` (lleva datos personales). */
+export function redactedLine(
   key: ConversationTextKey,
   params?: Readonly<Record<string, string>>,
-  redacted = false,
 ): BotLine {
-  return redacted ? { text: t(key, params), redacted } : { text: t(key, params) };
+  return { text: t(key, params), redacted: true };
 }

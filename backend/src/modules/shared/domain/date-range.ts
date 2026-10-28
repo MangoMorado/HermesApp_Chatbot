@@ -28,10 +28,22 @@ function zoneOffsetMs(instant: Date, timeZone: string): number {
   return asUtc - instant.getTime();
 }
 
+/** Instante UTC correspondiente a una hora local (`HH:mm`) en la zona dada. */
+export function zonedInstant(date: string, time: string, timeZone: string): Date {
+  const naive = new Date(`${date}T${time}:00.000Z`);
+  return new Date(naive.getTime() - zoneOffsetMs(naive, timeZone));
+}
+
 /** Instante UTC del inicio del dia local (`YYYY-MM-DD`) en la zona dada. */
 export function startOfDayInZone(date: string, timeZone: string): Date {
-  const naive = new Date(`${date}T00:00:00.000Z`);
-  return new Date(naive.getTime() - zoneOffsetMs(naive, timeZone));
+  return zonedInstant(date, "00:00", timeZone);
+}
+
+/** Suma dias de calendario a una fecha `YYYY-MM-DD` (aritmetica UTC). */
+export function addDays(date: string, days: number): string {
+  const value = new Date(`${date}T00:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
 }
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -53,7 +65,7 @@ export function parseQueryRange(
 
   const from = parseBound(fromRaw, timeZone, "from");
   const to = parseBound(toRaw, timeZone, "to");
-  if (!(from.getTime() < to.getTime())) {
+  if (from.getTime() >= to.getTime()) {
     throw new ValidationError("from debe ser anterior a to", { fields: ["from", "to"] });
   }
 
