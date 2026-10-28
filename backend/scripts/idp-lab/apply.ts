@@ -171,6 +171,15 @@ async function ensureClient(
   if (!plan.public) out.clientSecrets[plan.clientId] = await readSecret(ctx, plan, uuid);
 }
 
+/** Atributos del usuario: con tenant fija `tenant_id`; sin él (plataforma) lo quita. */
+export function userAttributes(
+  existing: Record<string, unknown> | undefined,
+  plan: UserPlan,
+): Record<string, unknown> {
+  const { tenant_id: _previous, ...rest } = existing ?? {};
+  return plan.tenantId ? { ...rest, tenant_id: [plan.tenantId] } : rest;
+}
+
 async function createUser(ctx: Ctx, plan: UserPlan): Promise<void> {
   await ctx.admin.post(`/${ctx.realm}/users`, {
     username: plan.username,
@@ -179,7 +188,7 @@ async function createUser(ctx: Ctx, plan: UserPlan): Promise<void> {
     lastName: plan.username,
     enabled: true,
     emailVerified: true,
-    attributes: { tenant_id: [plan.tenantId] },
+    attributes: userAttributes(undefined, plan),
   });
   ctx.created.push(`user:${plan.username}`);
 }
@@ -188,7 +197,7 @@ async function ensureUser(ctx: Ctx, plan: UserPlan): Promise<void> {
   const lookup = `/${ctx.realm}/users?username=${enc(plan.username)}&exact=true`;
   let user = asList(await ctx.admin.get(lookup))[0];
   if (user) {
-    const attributes = { ...(user.attributes as Json), tenant_id: [plan.tenantId] };
+    const attributes = userAttributes(user.attributes as Json | undefined, plan);
     await ctx.admin.put(`/${ctx.realm}/users/${user.id}`, { ...user, enabled: true, attributes });
   } else {
     await createUser(ctx, plan);

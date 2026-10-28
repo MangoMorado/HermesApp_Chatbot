@@ -95,7 +95,8 @@ function printEnv(env: LabEnv, plan: LabPlan, secrets: Record<string, string>): 
   console.log(`\nPLATFORM_CLIENT_ID=chatbot-platform`);
   console.log(`PLATFORM_CLIENT_SECRET=${secrets["chatbot-platform"]}`);
   console.log("\nUsuarios (password = LAB_USER_PASSWORD):");
-  for (const user of plan.users) console.log(`  ${user.username} tenant_id=${user.tenantId}`);
+  for (const user of plan.users)
+    console.log(`  ${user.username} tenant_id=${user.tenantId ?? "(sin clínica)"}`);
 }
 
 async function main(): Promise<void> {
