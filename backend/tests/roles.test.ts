@@ -17,13 +17,7 @@ import type { ClosedSessions } from "@/modules/auth/domain/ports/closed-sessions
 import type { TokenClaims } from "@/modules/auth/domain/ports/token-verifier";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { fhirGet, fhirPut, fhirSend, serviceToken } from "./helpers/fhir";
-import {
-  authedRequest,
-  authorized,
-  resetFakeIdp,
-  setFakeIdpDown,
-  signToken,
-} from "./helpers/idp";
+import { authedRequest, authorized, resetFakeIdp, setFakeIdpDown, signToken } from "./helpers/idp";
 
 const operator: Actor = {
   subject: "u-1",
