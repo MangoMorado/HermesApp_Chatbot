@@ -11,6 +11,7 @@ import {
   authedRequest,
   fakeIdpCalls,
   platformToken,
+  registerFakeClient,
   resetFakeIdp,
   signToken,
   TEST_CLIENT_SECRET,
@@ -289,9 +290,15 @@ describe("alta-chatbot: la primera clave abre sesion", () => {
 
   it("la clave devuelta por el alta abre una sesion desde un origen permitido", async () => {
     const payload = { ...NEW_TENANT, widget_client: WIDGET_CLIENT };
-    const { widget_key } = await (
-      await createTenant(platformPost(TENANTS_URL, payload, "alta-w"))
-    ).json();
+    const created = await (await createTenant(platformPost(TENANTS_URL, payload, "alta-w"))).json();
+    const { widget_key } = created;
+    // El cliente widget debe emitir tokens de la propia clinica para que la apertura valide.
+    const own = await widgetClientPut(
+      created.tenant.id,
+      { client_id: `widget-${created.tenant.id}`, client_secret: TEST_CLIENT_SECRET },
+      "alta-w-own",
+    );
+    expect(own.status).toBe(200);
     const response = await openWidgetSession(
       new Request("http://localhost/api/v1/widget/sessions", {
         method: "POST",
@@ -331,6 +338,7 @@ describe("alta-chatbot: la primera clave abre sesion", () => {
     );
     expect(rotated.status).toBe(200);
     resetFakeIdp();
+    registerFakeClient(rotatedId, { roles: ["widget"], tenant: tenantId });
     expect((await openOnce()).status).toBe(201);
     const requested = fakeIdpCalls().flatMap((call) => (call.clientId ? [call.clientId] : []));
     expect(requested).toEqual([rotatedId]);

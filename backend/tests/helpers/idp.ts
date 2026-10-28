@@ -133,6 +133,15 @@ const calls: FakeCall[] = [];
 let down = false;
 let trailingSlash = false;
 let installed = false;
+const fakeClients = new Map<string, { roles: string[]; tenant?: string }>();
+
+/** Sobrescribe la convencion de nombres para un client_id; se limpia con `resetFakeIdp()`. */
+export function registerFakeClient(
+  clientId: string,
+  claims: { roles: string[]; tenant?: string },
+): void {
+  fakeClients.set(clientId, claims);
+}
 
 export function fakeIdpCalls(): readonly FakeCall[] {
   return calls;
@@ -140,6 +149,7 @@ export function fakeIdpCalls(): readonly FakeCall[] {
 
 export function resetFakeIdp(): void {
   calls.length = 0;
+  fakeClients.clear();
   down = false;
   trailingSlash = false;
 }
@@ -177,6 +187,10 @@ function basicCredentials(request: Request): { id: string; secret: string } | nu
 }
 
 function claimsForClient(clientId: string): { roles: string[]; tenant?: string } {
+  const registered = fakeClients.get(clientId);
+  if (registered) {
+    return registered;
+  }
   if (clientId === "platform-client") {
     return { roles: ["platform"] };
   }
