@@ -1,37 +1,51 @@
-import { describe, expect, it } from "vitest";
-import { POST as issuePlatformToken } from "@/app/api/platform/v1/tokens/route";
+import { afterEach, describe, expect, it } from "vitest";
 import { GET as getSimInbox } from "@/app/api/sim/v1/inbox/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { GET as getPractitioners } from "@/app/api/v1/practitioners/route";
 import { resetContainer } from "@/composition-root";
-import { requireRole, requireSession, requireTenant } from "@/modules/auth/application/authorize";
-import type { Actor } from "@/modules/auth/domain/actor";
+import { createAuthenticate } from "@/modules/auth/application/authenticate";
+import {
+  requirePlatformActor,
+  requireTenant,
+  requireTenantActor,
+} from "@/modules/auth/application/authorize";
+import type { Actor, PlatformActor } from "@/modules/auth/domain/actor";
 import { AuthError } from "@/modules/auth/domain/auth-error";
-import { createJoseTokenIssuer } from "@/modules/auth/infrastructure/jose-token-issuer";
-import { createJoseTokenVerifier } from "@/modules/auth/infrastructure/jose-token-verifier";
+import { IdentityUnavailableError } from "@/modules/auth/domain/machine-credential-error";
+import type { ClosedSessions } from "@/modules/auth/domain/ports/closed-sessions";
+import type { TokenClaims } from "@/modules/auth/domain/ports/token-verifier";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { fhirGet, fhirPut, fhirSend, serviceToken } from "./helpers/fhir";
-import { authorized, signToken, TEST_JWT } from "./helpers/token";
+import { authorized, resetFakeIdp, setFakeIdpDown, signToken } from "./helpers/idp";
 
 const operator: Actor = {
   subject: "u-1",
   tenantId: toTenantId("tenant-a"),
   role: "operator",
 };
-const widget: Actor = {
-  subject: "s-1",
-  tenantId: toTenantId("tenant-a"),
-  role: "widget",
-  sessionId: "chat-1",
-};
+const widget: Actor = { subject: "s-1", tenantId: toTenantId("tenant-a"), role: "widget" };
+const platform: PlatformActor = { subject: "p-1", role: "platform" };
 
 describe("roles: autorizacion en el nucleo", () => {
   it("admite el rol declarado por la ruta", () => {
-    expect(() => requireRole(operator, ["operator", "admin"])).not.toThrow();
+    expect(requireTenantActor(operator, ["operator", "admin"])).toBe(operator);
   });
 
   it("rechaza con forbidden un rol fuera de la lista", () => {
-    expect(() => requireRole(widget, ["operator", "admin"])).toThrowError(
+    expect(() => requireTenantActor(widget, ["operator", "admin"])).toThrowError(
+      expect.objectContaining({ reason: "forbidden" }),
+    );
+  });
+
+  it("platform no es un actor de tenant", () => {
+    expect(() => requireTenantActor(platform, ["operator", "admin", "service"])).toThrowError(
+      expect.objectContaining({ reason: "forbidden" }),
+    );
+  });
+
+  it("solo platform alcanza la superficie de plataforma", () => {
+    expect(requirePlatformActor(platform)).toBe(platform);
+    expect(() => requirePlatformActor(operator)).toThrowError(
       expect.objectContaining({ reason: "forbidden" }),
     );
   });
@@ -45,16 +59,99 @@ describe("roles: autorizacion en el nucleo", () => {
       expect((error as AuthError).reason).toBe("not_found");
     }
   });
+});
 
-  it("el widget no alcanza una sesion ajena", () => {
-    expect(() => requireSession(widget, "chat-1")).not.toThrow();
-    expect(() => requireSession(widget, "chat-2")).toThrowError(
-      expect.objectContaining({ reason: "not_found" }),
+function authenticateWith(claims: TokenClaims, closedSessions: ClosedSessions) {
+  return createAuthenticate({
+    verifier: { verify: async () => claims },
+    closedSessions,
+    clock: { now: () => new Date("2026-10-27T10:00:00Z") },
+  });
+}
+
+const neverClosed: ClosedSessions = { close: async () => {}, isClosed: async () => false };
+
+describe("roles: authenticate", () => {
+  it("claims sin tenant y rol platform producen un actor platform", async () => {
+    const authenticate = authenticateWith(
+      { subject: "p", role: "platform", tenantId: null },
+      neverClosed,
     );
+    expect(await authenticate("Bearer x")).toEqual({ subject: "p", role: "platform" });
   });
 
-  it("los roles no widget no quedan atados a una sesion", () => {
-    expect(() => requireSession(operator, "chat-9")).not.toThrow();
+  it("claims de tenant producen un actor con tenant", async () => {
+    const authenticate = authenticateWith(
+      { subject: "a", role: "admin", tenantId: "t", providerSessionId: "sid-1" },
+      neverClosed,
+    );
+    expect(await authenticate("Bearer x")).toEqual({ subject: "a", role: "admin", tenantId: "t" });
+  });
+
+  it("claims de tenant sin tenant son unauthorized", async () => {
+    const authenticate = authenticateWith(
+      { subject: "a", role: "admin", tenantId: null },
+      neverClosed,
+    );
+    await expect(authenticate("Bearer x")).rejects.toMatchObject({ reason: "unauthorized" });
+  });
+
+  it("una sesion del proveedor cerrada es unauthorized", async () => {
+    const authenticate = authenticateWith(
+      { subject: "a", role: "admin", tenantId: "t", providerSessionId: "sid-1" },
+      { close: async () => {}, isClosed: async (sid) => sid === "sid-1" },
+    );
+    await expect(authenticate("Bearer x")).rejects.toMatchObject({ reason: "unauthorized" });
+  });
+
+  it("si la base de sesiones cerradas falla el error no se disfraza de 401", async () => {
+    const failure = new Error("base caida");
+    const authenticate = authenticateWith(
+      { subject: "a", role: "admin", tenantId: "t", providerSessionId: "sid-1" },
+      {
+        close: async () => {},
+        isClosed: async () => {
+          throw failure;
+        },
+      },
+    );
+    await expect(authenticate("Bearer x")).rejects.toBe(failure);
+  });
+
+  it("un proveedor inalcanzable no se disfraza de 401", async () => {
+    const unavailable = new IdentityUnavailableError();
+    const authenticate = createAuthenticate({
+      verifier: {
+        verify: async () => {
+          throw unavailable;
+        },
+      },
+      closedSessions: { close: async () => {}, isClosed: async () => false },
+      clock: { now: () => new Date() },
+    });
+    await expect(authenticate("Bearer x")).rejects.toBe(unavailable);
+  });
+});
+
+describe("roles: proveedor de identidad caido", () => {
+  afterEach(() => {
+    resetFakeIdp();
+    resetContainer();
+  });
+
+  it("discovery/JWKS inalcanzable → 503 identity_unavailable en una ruta privada", async () => {
+    const token = await signToken({ role: "admin", tenantId: "tenant-a" });
+    resetContainer();
+    setFakeIdpDown(true);
+    const response = await getIdentity(authorized(token));
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("identity_unavailable");
+  });
+
+  it("con el proveedor arriba, una firma ajena sigue siendo 401", async () => {
+    resetContainer();
+    const token = await signToken({ role: "admin", tenantId: "tenant-a", foreignKey: true });
+    expect((await getIdentity(authorized(token))).status).toBe(401);
   });
 });
 
@@ -69,7 +166,7 @@ describe("roles: ruta autenticada", () => {
   });
 
   it("con token invalido responde 401 sin revelar la causa", async () => {
-    const token = await signToken({ role: "admin", tenantId: "tenant-a", secret: "otro-secreto" });
+    const token = await signToken({ role: "admin", tenantId: "tenant-a", foreignKey: true });
     const response = await getIdentity(authorized(token));
     const body = await response.json();
 
@@ -77,11 +174,21 @@ describe("roles: ruta autenticada", () => {
     expect(body.error.message).not.toMatch(/firma|signature|secret/i);
   });
 
+  it("con token HS256 responde 401", async () => {
+    const token = await signToken({ role: "admin", tenantId: "tenant-a", alg: "HS256" });
+    expect((await getIdentity(authorized(token))).status).toBe(401);
+  });
+
   it("con token expirado responde 401", async () => {
-    const token = await signToken({ role: "admin", tenantId: "tenant-a", expiresIn: "-1s" });
+    const token = await signToken({ role: "admin", tenantId: "tenant-a", expiresIn: "-5m" });
     const response = await getIdentity(authorized(token));
 
     expect(response.status).toBe(401);
+  });
+
+  it("sin exp responde 401", async () => {
+    const token = await signToken({ role: "admin", tenantId: "tenant-a", withoutExp: true });
+    expect((await getIdentity(authorized(token))).status).toBe(401);
   });
 
   it("con emisor ajeno responde 401", async () => {
@@ -111,7 +218,7 @@ describe("roles: ruta autenticada", () => {
   });
 
   it("widget no alcanza rutas de dominio", async () => {
-    const token = await signToken({ role: "widget", tenantId: "tenant-a", sessionId: "chat-1" });
+    const token = await signToken({ role: "widget", tenantId: "tenant-a" });
     const response = await getPractitioners(
       new Request("http://localhost/api/v1/practitioners", {
         headers: { Authorization: `Bearer ${token}` },
@@ -119,101 +226,27 @@ describe("roles: ruta autenticada", () => {
     );
     expect(response.status).toBe(403);
   });
-});
 
-describe("roles: emision de tokens", () => {
-  const issuer = createJoseTokenIssuer(TEST_JWT);
-  const verifier = createJoseTokenVerifier(TEST_JWT);
+  it("platform no alcanza rutas de tenant", async () =>
+    expect((await getIdentity(authorized(await signToken({ role: "platform" })))).status).toBe(
+      403,
+    ));
 
-  it("un token emitido lo acepta el verificador con los mismos claims", async () => {
-    const now = new Date();
-    const token = await issuer.issue({
-      subject: "ana@clinica",
-      tenantId: "tenant-a",
-      role: "admin",
-      issuedAt: now,
-      expiresAt: new Date(now.getTime() + 60_000),
-    });
-    expect(await verifier.verify(token)).toEqual({
-      subject: "ana@clinica",
-      tenantId: "tenant-a",
-      role: "admin",
-    });
-  });
+  it("tenant fuera de una ruta FHIR con token platform → 403", async () =>
+    expect((await fhirGet("Patient", await signToken({ role: "platform" }))).response.status).toBe(
+      403,
+    ));
 
-  it("el token de widget lleva su sesion", async () => {
-    const now = new Date();
-    const token = await issuer.issue({
-      subject: "widget:s-1",
-      tenantId: "tenant-a",
-      role: "widget",
-      sessionId: "s-1",
-      issuedAt: now,
-      expiresAt: new Date(now.getTime() + 60_000),
-    });
-    expect((await verifier.verify(token)).sessionId).toBe("s-1");
-  });
+  it("token sin sid se acepta", async () =>
+    expect(
+      (await getIdentity(authorized(await signToken({ role: "admin", tenantId: "t" })))).status,
+    ).toBe(200));
 
-  it("un token ya vencido no se acepta", async () => {
-    const past = new Date(Date.now() - 120_000);
-    const token = await issuer.issue({
-      subject: "ana",
-      tenantId: "tenant-a",
-      role: "operator",
-      issuedAt: past,
-      expiresAt: new Date(past.getTime() + 60_000),
-    });
-    await expect(verifier.verify(token)).rejects.toThrow();
-  });
-});
-
-const PLATFORM_SECRET = "secreto-de-plataforma-de-pruebas-con-32-o-mas";
-
-function platformRequest(authorization: string | null, body: unknown): Request {
-  const headers = new Headers({ "Content-Type": "application/json" });
-  if (authorization) {
-    headers.set("Authorization", authorization);
-  }
-  return new Request("http://localhost/api/platform/v1/tokens", {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-}
-
-describe("roles: superficie de plataforma", () => {
-  const body = { tenant_id: "tenant-a", role: "widget", subject: "x" };
-
-  it("sin secreto responde 401", async () => {
-    expect((await issuePlatformToken(platformRequest(null, body))).status).toBe(401);
-  });
-
-  it("con secreto incorrecto responde 401", async () => {
-    const response = await issuePlatformToken(platformRequest("Bearer otro-secreto", body));
-    expect(response.status).toBe(401);
-  });
-
-  it("un JWT valido de admin no abre la plataforma", async () => {
-    const token = await signToken({ role: "admin", tenantId: "tenant-a" });
-    expect((await issuePlatformToken(platformRequest(`Bearer ${token}`, body))).status).toBe(401);
-  });
-
-  it("no emite tokens de widget", async () => {
-    const response = await issuePlatformToken(platformRequest(`Bearer ${PLATFORM_SECRET}`, body));
-    expect(response.status).toBe(422);
-    expect((await response.json()).error.details.field).toBe("role");
-  });
-
-  it("sin PLATFORM_SECRET configurado toda la superficie responde 404", async () => {
-    const saved = process.env.PLATFORM_SECRET;
-    delete process.env.PLATFORM_SECRET;
-    resetContainer();
-    try {
-      const response = await issuePlatformToken(platformRequest(`Bearer ${PLATFORM_SECRET}`, body));
-      expect(response.status).toBe(404);
-    } finally {
-      process.env.PLATFORM_SECRET = saved;
-      resetContainer();
+  it("cero o dos roles → 401", async () => {
+    const none = await signToken({ roles: [], tenantId: "t" });
+    const two = await signToken({ roles: ["admin", "operator"], tenantId: "t" });
+    for (const token of [none, two]) {
+      expect((await getIdentity(authorized(token))).status).toBe(401);
     }
   });
 });
@@ -224,7 +257,6 @@ describe("roles: bandeja del simulador", () => {
       const token = await signToken({
         role,
         tenantId: "tenant-a",
-        sessionId: role === "widget" ? "s-1" : undefined,
       });
       const response = await getSimInbox(authorized(token));
       expect(response.status).toBe(403);
@@ -247,7 +279,6 @@ describe("roles: /fhir", () => {
       const token = await signToken({
         role,
         tenantId: "tenant-a",
-        sessionId: role === "widget" ? "s-1" : undefined,
       });
       const { response, body } = await fhirGet("Patient", token);
 
@@ -273,7 +304,7 @@ describe("roles: /fhir", () => {
   });
 
   it("un token expirado o de otro emisor responde 401 con el mismo mensaje", async () => {
-    const expired = await signToken({ role: "service", tenantId: "tenant-a", expiresIn: "-1s" });
+    const expired = await signToken({ role: "service", tenantId: "tenant-a", expiresIn: "-5m" });
     const foreign = await signToken({ role: "service", tenantId: "tenant-a", issuer: "otro" });
     for (const token of [expired, foreign]) {
       const { response, body } = await fhirGet("Slot", token);

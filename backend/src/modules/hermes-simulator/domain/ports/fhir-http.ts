@@ -16,6 +16,6 @@ export type FhirHttp = {
   request(input: FhirHttpRequest): Promise<FhirHttpResponse>;
 };
 
-export type ServiceTokenIssuer = {
+export type ServiceTokenProvider = {
   issue(tenantId: string): Promise<string>;
 };

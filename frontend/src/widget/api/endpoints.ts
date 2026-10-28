@@ -9,7 +9,8 @@ import type {
   ConversationHistory,
   ConversationMessageInput,
   ConversationTurn,
-  WidgetSession,
+  WidgetSessionOpened,
+  WidgetSessionRefreshed,
   WidgetSessionRequest
 } from './models';
 
@@ -25,7 +26,7 @@ export const getOpenWidgetSessionUrl = () => {
 /**
  * Publica: la clave del widget resuelve el tenant. Exige cabecera Origin permitida e Idempotency-Key de al menos 32 caracteres (secreto del cliente: no se registra).
  */
-export const openWidgetSession = async (widgetSessionRequest: WidgetSessionRequest, options?: Parameters<typeof widgetFetcher>[1]): Promise<WidgetSession> => {
+export const openWidgetSession = async (widgetSessionRequest: WidgetSessionRequest, options?: Parameters<typeof widgetFetcher>[1]): Promise<WidgetSessionOpened> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -41,7 +42,7 @@ export const openWidgetSession = async (widgetSessionRequest: WidgetSessionReque
     }
     return headers;
   };
-return widgetFetcher<WidgetSession>(getOpenWidgetSessionUrl(),
+return widgetFetcher<WidgetSessionOpened>(getOpenWidgetSessionUrl(),
   {
     ...options,
     method: 'POST',
@@ -61,16 +62,30 @@ export const getRefreshWidgetSessionUrl = () => {
 }
 
 /**
- * Solo rol widget: renueva la sesion de su propio token.
+ * Publica (sin bearer): la autentican la clave del widget, el Origin de la sesion y X-Conversation-Secret, con el rate limit de la apertura. Token nuevo del proveedor y conversacion extendida segun el TTL del tenant.
  */
-export const refreshWidgetSession = async ( options?: Parameters<typeof widgetFetcher>[1]): Promise<WidgetSession> => {
+export const refreshWidgetSession = async (widgetSessionRequest: WidgetSessionRequest, options?: Parameters<typeof widgetFetcher>[1]): Promise<WidgetSessionRefreshed> => {
 
-  return widgetFetcher<WidgetSession>(getRefreshWidgetSessionUrl(),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return widgetFetcher<WidgetSessionRefreshed>(getRefreshWidgetSessionUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(widgetSessionRequest)
   }
 );}
 
@@ -85,7 +100,7 @@ export const getGetWidgetConversationUrl = () => {
 }
 
 /**
- * Solo rol widget: turno actual e historial redactado de su sesion. Crea la conversacion con la bienvenida si no existe.
+ * Solo rol widget: turno actual e historial redactado de la conversacion de X-Conversation-Secret. Crea la conversacion con la bienvenida si no existe.
  */
 export const getWidgetConversation = async ( options?: Parameters<typeof widgetFetcher>[1]): Promise<ConversationHistory> => {
 

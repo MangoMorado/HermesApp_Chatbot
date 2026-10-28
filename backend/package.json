@@ -23,8 +23,8 @@
     "db:pg:status": "scripts\\pg-status.cmd",
     "demo": "tsx scripts/demo.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts",
-    "token:dev": "tsx scripts/token-dev.ts",
-    "hermes:sync": "tsx scripts/hermes-sync.ts"
+    "hermes:sync": "tsx scripts/hermes-sync.ts",
+    "idp:lab": "tsx scripts/idp-lab/index.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

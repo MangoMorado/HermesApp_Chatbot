@@ -6,9 +6,8 @@ function withFhirBaseUrl<T>(value: string | undefined, run: () => T): T {
   const previous = process.env.FHIR_BASE_URL;
   const required = {
     DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://x:x@localhost:5432/x",
-    JWT_SECRET: process.env.JWT_SECRET ?? "secreto-de-prueba-con-longitud-suficiente",
   };
-  const saved = { DATABASE_URL: process.env.DATABASE_URL, JWT_SECRET: process.env.JWT_SECRET };
+  const saved = { DATABASE_URL: process.env.DATABASE_URL };
   try {
     Object.assign(process.env, required);
     if (value === undefined) {

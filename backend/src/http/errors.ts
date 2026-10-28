@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { AuthError } from "@/modules/auth/domain/auth-error";
+import {
+  IdentityUnavailableError,
+  MachineCredentialMissingError,
+} from "@/modules/auth/domain/machine-credential-error";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
+import { InvalidRequestError } from "@/modules/shared/domain/invalid-request-error";
 import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
@@ -38,6 +43,9 @@ export function toApiError(error: unknown): ApiError {
   if (error instanceof ValidationError) {
     return new ApiError("validation_failed", error.message, error.details);
   }
+  if (error instanceof InvalidRequestError) {
+    return new ApiError("invalid_request", error.message);
+  }
   if (error instanceof NotFoundError) {
     return new ApiError("not_found", error.message);
   }
@@ -48,6 +56,14 @@ export function toApiError(error: unknown): ApiError {
     return new ApiError("rate_limited", error.message, {
       retry_after_seconds: error.retryAfterSeconds,
     });
+  }
+  // Sin cliente widget la clinica no esta configurada (409); sin cliente service el fallo es
+  // de la integracion con el proveedor, no de quien llama: 503 con mensaje neutro.
+  if (error instanceof MachineCredentialMissingError && error.kind === "widget") {
+    return new ApiError("widget_not_configured", "La clinica no tiene credenciales de widget");
+  }
+  if (error instanceof MachineCredentialMissingError || error instanceof IdentityUnavailableError) {
+    return new ApiError("identity_unavailable", "Proveedor de identidad no disponible");
   }
   if (error instanceof AuthError) {
     return new ApiError(error.reason, error.message);

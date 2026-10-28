@@ -1,20 +1,48 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { decodeJwt } from "jose";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { PUT as putWidgetClient } from "@/app/api/platform/v1/tenants/[id]/widget-client/route";
 import { GET as getBotConfig } from "@/app/api/v1/bot-config/route";
 import { GET as listEntries } from "@/app/api/v1/knowledge-entries/route";
+import { GET as getIdentity } from "@/app/api/v1/me/route";
+import { GET as getConversation } from "@/app/api/v1/widget/conversation/route";
 import { POST as refreshSession } from "@/app/api/v1/widget/sessions/refresh/route";
 import { POST as openSession } from "@/app/api/v1/widget/sessions/route";
 import { resetContainer } from "@/composition-root";
-import { createJoseTokenVerifier } from "@/modules/auth/infrastructure/jose-token-verifier";
-import { authedRequest, signToken, TEST_JWT } from "../helpers/token";
-import { type ChatbotTenantSeed, insertChatbotTenant, testPrisma, truncateAll } from "./support";
+import {
+  authedRequest,
+  authorized,
+  platformToken,
+  resetFakeIdp,
+  setFakeIdpDown,
+  TEST_CLIENT_SECRET,
+} from "../helpers/idp";
+import { getChat, sendChat, type WidgetChat } from "./chat-support";
+import {
+  type ChatbotTenantSeed,
+  insertChatbotTenant,
+  insertWidgetCredential,
+  testPrisma,
+  truncateAll,
+} from "./support";
 
 const prisma: PrismaClient = testPrisma();
-const verifier = createJoseTokenVerifier(TEST_JWT);
 const ORIGIN = "https://clinica-a.test";
 const SESSIONS_URL = "http://localhost/api/v1/widget/sessions";
 const REFRESH_URL = "http://localhost/api/v1/widget/sessions/refresh";
+
+type Opened = {
+  access_token: string;
+  expires_at: string;
+  expires_in: number;
+  conversation_secret: string;
+  session_expires_at: string;
+};
+
+function sha256hex(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 function open(widgetKey: unknown, headers: Record<string, string> = {}) {
   return openSession(
@@ -31,48 +59,177 @@ function open(widgetKey: unknown, headers: Record<string, string> = {}) {
   );
 }
 
-function refresh(token: string, key = randomUUID()) {
+async function opened(widgetKey: string): Promise<Opened> {
+  const response = await open(widgetKey);
+  expect(response.status).toBe(201);
+  return response.json();
+}
+
+function refresh(
+  seed: ChatbotTenantSeed,
+  secret: string | null,
+  headers: Record<string, string> = {},
+  widgetKey: string = seed.widgetKey,
+) {
+  const all: Record<string, string> = {
+    "Content-Type": "application/json",
+    Origin: ORIGIN,
+    "Idempotency-Key": randomUUID(),
+    ...headers,
+  };
+  if (secret !== null) {
+    all["X-Conversation-Secret"] = secret;
+  }
   return refreshSession(
-    authedRequest(REFRESH_URL, token, { method: "POST", headers: { "Idempotency-Key": key } }),
+    new Request(REFRESH_URL, {
+      method: "POST",
+      headers: all,
+      body: JSON.stringify({ widget_key: widgetKey }),
+    }),
   );
 }
 
+function chatOf(body: Opened): WidgetChat {
+  return { token: body.access_token, secret: body.conversation_secret };
+}
+
+function sessionOf(secret: string) {
+  return prisma.widgetSession.findFirstOrThrow({ where: { secretHash: sha256hex(secret) } });
+}
+
+let seed: ChatbotTenantSeed;
+
+beforeEach(async () => {
+  await truncateAll(prisma);
+  resetContainer();
+  resetFakeIdp();
+  seed = await insertChatbotTenant(prisma, "a", { allowedOrigins: [ORIGIN] });
+});
+
+afterEach(() => {
+  resetFakeIdp();
+});
+
+afterAll(async () => {
+  delete process.env.TRUST_PROXY;
+  resetContainer();
+  await prisma.$disconnect();
+});
+
 describe("sesion-widget: apertura", () => {
-  let seed: ChatbotTenantSeed;
-
-  beforeEach(async () => {
-    await truncateAll(prisma);
-    resetContainer();
-    seed = await insertChatbotTenant(prisma, "a", { allowedOrigins: [ORIGIN] });
-  });
-
-  afterAll(async () => {
-    delete process.env.TRUST_PROXY;
-    resetContainer();
-    await prisma.$disconnect();
-  });
-
-  it("clave y origen validos abren una sesion con token de widget", async () => {
+  it("apertura devuelve token del proveedor y conversation_secret; en base solo el hash", async () => {
     const before = Date.now();
-    const response = await open(seed.widgetKey);
-    const body = await response.json();
+    const body = await opened(seed.widgetKey);
 
-    expect(response.status).toBe(201);
-    const claims = await verifier.verify(body.token);
-    expect(claims).toEqual({
-      subject: `widget:${body.session_id}`,
-      tenantId: seed.tenantId,
-      role: "widget",
-      sessionId: body.session_id,
+    expect(decodeJwt(body.access_token)).toMatchObject({
+      roles: ["widget"],
+      tenant_id: seed.tenantId,
     });
-    const expiresAt = new Date(body.expires_at).getTime();
-    expect(expiresAt).toBeGreaterThanOrEqual(before + 30 * 60_000);
-    expect(
-      await prisma.widgetSession.findUniqueOrThrow({ where: { id: body.session_id } }),
-    ).toMatchObject({
-      tenantId: seed.tenantId,
-      origin: ORIGIN,
+    expect(Buffer.from(body.conversation_secret, "base64url").byteLength).toBe(32);
+    expect(new Date(body.session_expires_at).getTime()).toBeGreaterThanOrEqual(
+      before + 30 * 60_000,
+    );
+    expect(new Date(body.expires_at).getTime()).toBeGreaterThan(before);
+    // Vida restante segun el reloj del servidor: el widget no depende del suyo.
+    expect(body.expires_in).toBeGreaterThan(0);
+    expect(body.expires_in).toBeLessThanOrEqual(300);
+    const row = await prisma.widgetSession.findFirstOrThrow();
+    expect(row).toMatchObject({ tenantId: seed.tenantId, origin: ORIGIN });
+    expect(row.secretHash).toBe(sha256hex(body.conversation_secret));
+    expect(JSON.stringify(row)).not.toContain(body.conversation_secret);
+  });
+
+  it("clinica sin credenciales responde 409 widget_not_configured y sin sesion creada", async () => {
+    const bare = await insertChatbotTenant(prisma, "b", {
+      allowedOrigins: [ORIGIN],
+      widgetClient: false,
     });
+    const response = await open(bare.widgetKey);
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("widget_not_configured");
+    expect(await prisma.widgetSession.count()).toBe(0);
+    expect(await prisma.idempotencyKey.count()).toBe(0);
+  });
+
+  it.each([
+    ["un cliente service", (tenantId: string) => `service-${tenantId}`],
+    ["el cliente widget de otra clinica", () => "widget-otra-clinica"],
+  ])("registrar como widget %s → 409 sin token ni sesion", async (_, clientIdFor) => {
+    const bare = await insertChatbotTenant(prisma, "m", {
+      allowedOrigins: [ORIGIN],
+      widgetClient: false,
+    });
+    await insertWidgetCredential(prisma, bare.tenantId, clientIdFor(bare.tenantId));
+    const response = await open(bare.widgetKey);
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error.code).toBe("widget_not_configured");
+    expect(body).not.toHaveProperty("access_token");
+    expect(await prisma.widgetSession.count()).toBe(0);
+    expect(await prisma.idempotencyKey.count()).toBe(0);
+  });
+
+  it("el cliente widget de la clinica A registrado para B no abre sesion en B aunque A ya lo cacheo", async () => {
+    await opened(seed.widgetKey);
+    const sessionsBefore = await prisma.widgetSession.count();
+    const other = await insertChatbotTenant(prisma, "b", { allowedOrigins: [ORIGIN] });
+    const put = await putWidgetClient(
+      new Request(`http://localhost/api/platform/v1/tenants/${other.tenantId}/widget-client`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${await platformToken()}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": randomUUID(),
+        },
+        body: JSON.stringify({
+          client_id: `widget-${seed.tenantId}`,
+          client_secret: TEST_CLIENT_SECRET,
+        }),
+      }),
+      { params: Promise.resolve({ id: other.tenantId }) },
+    );
+    expect(put.status).toBeLessThan(300);
+
+    const response = await open(other.widgetKey);
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error.code).toBe("widget_not_configured");
+    expect(body).not.toHaveProperty("access_token");
+    expect(await prisma.widgetSession.count()).toBe(sessionsBefore);
+  });
+
+  it("proveedor caido responde 503 identity_unavailable y sin sesion creada", async () => {
+    setFakeIdpDown(true);
+    const response = await open(seed.widgetKey);
+    expect(response.status).toBe(503);
+    expect((await response.json()).error.code).toBe("identity_unavailable");
+    expect(await prisma.widgetSession.count()).toBe(0);
+    expect(await prisma.idempotencyKey.count()).toBe(0);
+  });
+
+  it("replay de la apertura devuelve el mismo conversation_secret y un token valido", async () => {
+    const key = randomUUID();
+    const first = await (await open(seed.widgetKey, { "Idempotency-Key": key })).json();
+    const again = await open(seed.widgetKey, { "Idempotency-Key": key });
+    const againBody = await again.json();
+
+    expect(again.status).toBe(201);
+    expect(againBody.conversation_secret).toBe(first.conversation_secret);
+    expect((await getIdentity(authorized(againBody.access_token))).status).toBe(200);
+    expect(await prisma.widgetSession.count()).toBe(1);
+  });
+
+  it("la respuesta idempotente guardada no contiene el secreto en claro", async () => {
+    const body = await opened(seed.widgetKey);
+    const stored = await prisma.idempotencyKey.findMany();
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.responseBody).toEqual({
+      session_id: (await sessionOf(body.conversation_secret)).id,
+      sealed_secret: expect.any(String),
+    });
+    const text = JSON.stringify(stored);
+    expect(text).not.toContain(body.conversation_secret);
+    expect(text).not.toContain(body.access_token);
   });
 
   it("clave en gracia abre; con la gracia vencida, retirada o desconocida responde 401", async () => {
@@ -151,20 +308,6 @@ describe("sesion-widget: apertura", () => {
     resetContainer();
   });
 
-  it("idempotencia: repetir con la misma clave devuelve la misma sesion y no guarda el JWT", async () => {
-    const key = randomUUID();
-    const first = await (await open(seed.widgetKey, { "Idempotency-Key": key })).json();
-    const again = await open(seed.widgetKey, { "Idempotency-Key": key });
-    const againBody = await again.json();
-
-    expect(again.status).toBe(201);
-    expect(againBody.session_id).toBe(first.session_id);
-    expect((await verifier.verify(againBody.token)).sessionId).toBe(first.session_id);
-    expect(await prisma.widgetSession.count()).toBe(1);
-    const stored = await prisma.idempotencyKey.findFirstOrThrow();
-    expect(stored.responseBody).toEqual({ session_id: first.session_id });
-  });
-
   it("una Idempotency-Key de menos de 32 caracteres responde 422", async () => {
     const response = await open(seed.widgetKey, { "Idempotency-Key": "corta" });
     expect(response.status).toBe(422);
@@ -172,62 +315,147 @@ describe("sesion-widget: apertura", () => {
   });
 });
 
-describe("sesion-widget: renovacion y alcance", () => {
-  let token: string;
-  let sessionId: string;
-  let seed: ChatbotTenantSeed;
-
-  beforeEach(async () => {
-    await truncateAll(prisma);
-    resetContainer();
-    seed = await insertChatbotTenant(prisma, "a", { allowedOrigins: [ORIGIN] });
-    const body = await (await open(seed.widgetKey)).json();
-    token = body.token;
-    sessionId = body.session_id;
+describe("sesion-widget: conversacion", () => {
+  it("conversacion sin X-Conversation-Secret responde 404", async () => {
+    const body = await opened(seed.widgetKey);
+    const bare = authedRequest("http://localhost/api/v1/widget/conversation", body.access_token);
+    expect((await getConversation(bare)).status).toBe(404);
+    expect((await sendChat({ ...chatOf(body), secret: "" }, { text: "hola" })).status).toBe(404);
+    expect((await getChat(chatOf(body))).status).toBe(200);
   });
 
-  it("renueva la propia sesion y alarga expires_at", async () => {
-    const before = await prisma.widgetSession.findUniqueOrThrow({ where: { id: sessionId } });
-    const refreshKey = randomUUID();
-    const response = await refresh(token, refreshKey);
-    const body = await response.json();
+  it("secreto de la clinica A con token de la clinica B responde 404", async () => {
+    const b = await insertChatbotTenant(prisma, "b", { allowedOrigins: [ORIGIN] });
+    const chatA = chatOf(await opened(seed.widgetKey));
+    const chatB = chatOf(await opened(b.widgetKey));
+    const crossed = { token: chatB.token, secret: chatA.secret };
+    expect((await getChat(crossed)).status).toBe(404);
+    expect((await sendChat(crossed, { text: "hola" })).status).toBe(404);
+    expect(await prisma.conversation.count()).toBe(0);
+  });
 
-    expect(response.status).toBe(200);
-    expect(body.session_id).toBe(sessionId);
-    const after = await prisma.widgetSession.findUniqueOrThrow({ where: { id: sessionId } });
-    expect(after.expiresAt.getTime()).toBeGreaterThanOrEqual(before.expiresAt.getTime());
-    expect((await verifier.verify(body.token)).sessionId).toBe(sessionId);
+  it("token de widget sin secreto no alcanza la conversacion de otro paciente de la misma clinica", async () => {
+    const mine = chatOf(await opened(seed.widgetKey));
+    const theirs = chatOf(await opened(seed.widgetKey));
+    expect((await getChat(theirs)).status).toBe(200);
+    const guessed = { token: mine.token, secret: randomUUID() };
+    expect((await getChat(guessed)).status).toBe(404);
+    expect((await sendChat(guessed, { text: "hola" })).status).toBe(404);
+    expect(await prisma.conversation.count()).toBe(1);
+  });
 
+  it("claves de idempotencia del chat usan widget:<sessionId>", async () => {
+    const body = await opened(seed.widgetKey);
+    const chat = chatOf(body);
+    const history = await (await getChat(chat)).json();
+    const optionId = history.options[0]?.id ?? "?";
+    expect((await sendChat(chat, { option_id: optionId })).status).toBe(200);
+    const session = await sessionOf(body.conversation_secret);
     const stored = await prisma.idempotencyKey.findFirstOrThrow({
-      where: { path: "/api/v1/widget/sessions/refresh" },
+      where: { path: "/api/v1/widget/conversation/messages" },
     });
-    expect(stored.responseBody).toEqual({ session_id: sessionId });
+    expect(stored.actorSubject).toBe(`widget:${session.id}`);
   });
 
-  it("una sesion vencida no se renueva", async () => {
-    await prisma.widgetSession.update({
-      where: { id: sessionId },
-      data: { createdAt: new Date(Date.now() - 7_200_000), expiresAt: new Date(Date.now() - 1000) },
-    });
-    expect((await refresh(token)).status).toBe(401);
-  });
-
-  it("la Idempotency-Key de otra sesion no entrega su token", async () => {
-    const key = randomUUID();
-    expect((await refresh(token, key)).status).toBe(200);
-    const other = await (await open(seed.widgetKey)).json();
-    const response = await refresh(other.token, key);
-    expect(response.status).toBe(409);
-  });
-
-  it("operator no renueva sesiones y el widget no alcanza config ni KB", async () => {
-    const operator = await signToken({ role: "operator", tenantId: seed.tenantId });
-    expect((await refresh(operator)).status).toBe(403);
+  it("el token del widget no alcanza config ni KB", async () => {
+    const { access_token: token } = await opened(seed.widgetKey);
     expect(
       (await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", token))).status,
     ).toBe(403);
     expect(
       (await listEntries(authedRequest("http://localhost/api/v1/knowledge-entries", token))).status,
     ).toBe(403);
+  });
+});
+
+describe("sesion-widget: renovacion", () => {
+  it("refresh sin bearer con secreto + clave + origen extiende la sesion y da token nuevo", async () => {
+    const body = await opened(seed.widgetKey);
+    const session = await sessionOf(body.conversation_secret);
+    const shortened = new Date(session.createdAt.getTime() + 60_000);
+    await prisma.widgetSession.update({
+      where: { id: session.id },
+      data: { expiresAt: shortened },
+    });
+    const response = await refresh(seed, body.conversation_secret);
+    const refreshed = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(Object.keys(refreshed).sort()).toEqual([
+      "access_token",
+      "expires_at",
+      "expires_in",
+      "session_expires_at",
+    ]);
+    expect((await getIdentity(authorized(refreshed.access_token))).status).toBe(200);
+    const after = await prisma.widgetSession.findUniqueOrThrow({ where: { id: session.id } });
+    expect(after.expiresAt.getTime()).toBeGreaterThan(shortened.getTime());
+    expect(new Date(refreshed.session_expires_at).getTime()).toBe(after.expiresAt.getTime());
+    const stored = await prisma.idempotencyKey.findFirstOrThrow({
+      where: { path: "/api/v1/widget/sessions/refresh" },
+    });
+    expect(stored.actorSubject).toBe(`widget:${session.id}`);
+    expect(stored.responseBody).toEqual({ session_id: session.id });
+  });
+
+  it("refresh con Origin distinto responde 403", async () => {
+    await prisma.botConfig.update({
+      where: { tenantId: seed.tenantId },
+      data: { allowedOrigins: [ORIGIN, "https://clinica-a2.test"] },
+    });
+    const body = await opened(seed.widgetKey);
+    const response = await refresh(seed, body.conversation_secret, {
+      Origin: "https://clinica-a2.test",
+    });
+    expect(response.status).toBe(403);
+  });
+
+  it("refresh con secreto vencido, desconocido o ausente responde 404", async () => {
+    const body = await opened(seed.widgetKey);
+    expect((await refresh(seed, randomUUID())).status).toBe(404);
+    expect((await refresh(seed, null)).status).toBe(404);
+    const session = await sessionOf(body.conversation_secret);
+    await prisma.widgetSession.update({
+      where: { id: session.id },
+      data: { createdAt: new Date(Date.now() - 7_200_000), expiresAt: new Date(Date.now() - 1000) },
+    });
+    expect((await refresh(seed, body.conversation_secret)).status).toBe(404);
+    expect((await getChat(chatOf(body))).status).toBe(404);
+  });
+
+  it("refresh respeta el rate limit de la apertura y responde 429", async () => {
+    await prisma.botConfig.update({
+      where: { tenantId: seed.tenantId },
+      data: { params: { widget_sessions_per_ip_per_minute: 2 } },
+    });
+    const body = await opened(seed.widgetKey);
+    expect((await refresh(seed, body.conversation_secret)).status).toBe(200);
+    expect((await refresh(seed, body.conversation_secret)).status).toBe(429);
+  });
+
+  it("refresh con clave de widget invalida responde 401", async () => {
+    const body = await opened(seed.widgetKey);
+    const response = await refresh(seed, body.conversation_secret, {}, `wk_${"z".repeat(43)}`);
+    expect(response.status).toBe(401);
+  });
+
+  it("la Idempotency-Key de otra sesion no entrega su token", async () => {
+    const key = randomUUID();
+    const first = await opened(seed.widgetKey);
+    const own = await refresh(seed, first.conversation_secret, { "Idempotency-Key": key });
+    expect(own.status).toBe(200);
+    const other = await opened(seed.widgetKey);
+    const response = await refresh(seed, other.conversation_secret, { "Idempotency-Key": key });
+    expect(response.status).toBe(409);
+  });
+
+  it("proveedor caido en la renovacion responde 503 sin extender la sesion", async () => {
+    const body = await opened(seed.widgetKey);
+    const before = await sessionOf(body.conversation_secret);
+    resetContainer();
+    setFakeIdpDown(true);
+    expect((await refresh(seed, body.conversation_secret)).status).toBe(503);
+    const after = await sessionOf(body.conversation_secret);
+    expect(after.expiresAt).toEqual(before.expiresAt);
   });
 });

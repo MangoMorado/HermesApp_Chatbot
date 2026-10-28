@@ -43,6 +43,9 @@
                   "conflict",
                   "method_not_allowed",
                   "rate_limited",
+                  "widget_not_configured",
+                  "identity_unavailable",
+                  "invalid_request",
                   "internal_error"
                 ]
               },
@@ -374,6 +377,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -523,6 +543,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -642,6 +679,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {
@@ -813,6 +867,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -970,6 +1041,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1081,6 +1169,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {
@@ -1244,6 +1349,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1363,6 +1485,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {
@@ -1534,6 +1673,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -1691,6 +1847,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1802,6 +1975,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {
@@ -1965,6 +2155,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2084,6 +2291,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {
@@ -2255,6 +2479,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -2412,6 +2653,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2523,6 +2781,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {
@@ -2686,6 +2961,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2805,6 +3097,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {
@@ -2976,6 +3285,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -3119,6 +3445,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {
@@ -3301,6 +3644,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -3449,6 +3809,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {
@@ -3623,6 +4000,23 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -3769,6 +4163,23 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "schema": {

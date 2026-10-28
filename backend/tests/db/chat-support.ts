@@ -3,7 +3,8 @@ import type { PrismaClient } from "@prisma/client";
 import { POST as postMessage } from "@/app/api/v1/widget/conversation/messages/route";
 import { GET as getConversation } from "@/app/api/v1/widget/conversation/route";
 import { POST as openSession } from "@/app/api/v1/widget/sessions/route";
-import { authedRequest } from "../helpers/token";
+import { authedRequest } from "../helpers/idp";
+import { insertWidgetCredential } from "./support";
 
 export const CHAT_ORIGIN = "https://clinica-chat.test";
 const BASE = "http://localhost/api/v1/widget";
@@ -22,6 +23,9 @@ export type HistoryBody = {
   input: string;
 };
 
+/** Credenciales de una conversacion del widget: token del proveedor y secreto propio. */
+export type WidgetChat = { readonly token: string; readonly secret: string };
+
 /** Da de alta el widget sobre un tenant ya sembrado (seedWorld no crea bot-config). */
 export async function enableWidget(
   prisma: PrismaClient,
@@ -33,10 +37,11 @@ export async function enableWidget(
   await prisma.widgetKey.create({
     data: { id: `${tenantId}-key`, tenantId, key: widgetKey, createdAt: new Date() },
   });
+  await insertWidgetCredential(prisma, tenantId);
   return widgetKey;
 }
 
-export async function openChat(widgetKey: string): Promise<{ token: string; sessionId: string }> {
+export async function openChat(widgetKey: string): Promise<WidgetChat> {
   const response = await openSession(
     new Request(`${BASE}/sessions`, {
       method: "POST",
@@ -49,23 +54,33 @@ export async function openChat(widgetKey: string): Promise<{ token: string; sess
     }),
   );
   const body = await response.json();
-  return { token: body.token, sessionId: body.session_id };
+  return { token: body.access_token, secret: body.conversation_secret };
 }
 
-export function getChat(token: string, headers: Record<string, string> = {}) {
-  return getConversation(authedRequest(`${BASE}/conversation`, token, { headers }));
+function chatHeaders(chat: WidgetChat, headers: Record<string, string>): Record<string, string> {
+  return { "X-Conversation-Secret": chat.secret, ...headers };
+}
+
+export function getChat(chat: WidgetChat, headers: Record<string, string> = {}) {
+  return getConversation(
+    authedRequest(`${BASE}/conversation`, chat.token, { headers: chatHeaders(chat, headers) }),
+  );
 }
 
 export function sendChat(
-  token: string,
+  chat: WidgetChat,
   message: { option_id: string } | { text: string },
   key: string = randomUUID(),
   headers: Record<string, string> = {},
 ) {
   return postMessage(
-    authedRequest(`${BASE}/conversation/messages`, token, {
+    authedRequest(`${BASE}/conversation/messages`, chat.token, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": key, ...headers },
+      headers: chatHeaders(chat, {
+        "Content-Type": "application/json",
+        "Idempotency-Key": key,
+        ...headers,
+      }),
       body: JSON.stringify(message),
     }),
   );

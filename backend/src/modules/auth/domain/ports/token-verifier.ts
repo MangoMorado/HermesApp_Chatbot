@@ -1,11 +1,14 @@
 import type { Role } from "../role";
 
-/** Lo que el nucleo espera encontrar dentro de un token ya validado. */
+/**
+ * Lo que el nucleo espera encontrar dentro de un token ya validado.
+ * `tenantId` es `null` solo cuando el rol es `platform`.
+ */
 export type TokenClaims = {
   readonly subject: string;
-  readonly tenantId: string;
   readonly role: Role;
-  readonly sessionId?: string;
+  readonly tenantId: string | null;
+  readonly providerSessionId?: string;
 };
 
 /**

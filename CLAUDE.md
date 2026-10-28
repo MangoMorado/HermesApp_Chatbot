@@ -8,7 +8,7 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 
 **Fase 1 cerrada.** Docker se verificó desplegando backend y frontend en el VPS: health 200, `/me` 401 sin token y 200 con token válido. Easypanel levanta cada Dockerfile por separado, así que `docker-compose.yml` sigue sin ejecutarse de punta a punta; se dio por bueno. Están en pie: monorepo, hexágono con composition root, auth JWT con roles, contrato REST con envoltura de errores y `X-Request-Id`, OpenAPI generado, Biome + CI, Dockerfiles y compose, `AGENTS.md` y las skills del inventario.
 
-**Fase 2 cerrada** (spec en `docs/superpowers/specs/2026-09-22-fase-2-dominio-persistido-design.md`): esquema `public` + `hermes_sim`, casos de uso de lectura de agenda/historial, ajustes del tenant, simulador CRUD, seed simétrico, panel y simulador en frontend con clientes orval, suites `dominio`, `aislamiento-tenant` (HTTP), `idempotencia` (HTTP), `simetria-seed` y `test:db` en CI. Desde la 3.1 los tokens los emite el servidor (`/api/platform/v1`); `token:dev` queda solo como atajo local.
+**Fase 2 cerrada** (spec en `docs/superpowers/specs/2026-09-22-fase-2-dominio-persistido-design.md`): esquema `public` + `hermes_sim`, casos de uso de lectura de agenda/historial, ajustes del tenant, simulador CRUD, seed simétrico, panel y simulador en frontend con clientes orval, suites `dominio`, `aislamiento-tenant` (HTTP), `idempotencia` (HTTP), `simetria-seed` y `test:db` en CI. Desde la 5.1 los tokens los emite un proveedor OIDC externo; el servidor ya no firma ninguno y `token:dev` no existe.
 
 **Fase 3 cerrada** el 13 de octubre de 2026, con sus cuatro sub-proyectos en `main` (corte en la §1 de la spec de la 3.1). Al cierre: Biome, typecheck, tests unitarios (276 backend, 76 frontend), `test:db` completo (21 archivos, 178 tests, incluidas las suites de la 3.3 y la 3.4), React Doctor 100/100 y recorrido manual del widget en navegador.
 
@@ -24,7 +24,7 @@ Documentación y comentarios en español; código, nombres de campos y rutas en 
 - **4.3 pre-agenda por FHIR — cerrada** y en `main` (PR #11). Spec en `docs/superpowers/specs/2026-10-14-fase-4-3-pre-agenda-fhir-design.md`: `Appointment` `proposed` y `Task` de cancelación, resueltos por `PUT` por id.
 - **4.4 simulador por FHIR — cerrada** y en `main` (PR #12). Spec en `docs/superpowers/specs/2026-10-14-fase-4-4-simulador-fhir-design.md`: el cliente con token `service` sustituye al gateway en proceso. `hermes:sync` y la bandeja cierran maestros, pre-agenda y pre-registro solo por `/fhir`.
 
-La Fase 5 (Keycloak, JWT, sesiones y contrato) es la siguiente y no está abierta. La Fase 6 es el endurecimiento y queda fuera del MVP.
+**Fase 5 abierta** (Keycloak/OIDC, sesiones y contrato; spec en `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, tres sub-proyectos). **5.1 corte de identidad — hecha en la rama `fase-5-1-corte-identidad`, aún sin mergear a `main`**: verificador OIDC (RS256/ES256), rol `platform`, credenciales de widget cifradas, sesión del widget por el proveedor con `conversation_secret`, `service` del simulador por `client_credentials`, back-channel logout y laboratorio (`npm --prefix backend run idp:lab`; el script aún no se ha verificado contra el Keycloak real). Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`. El texto `keycloak` no puede aparecer en `backend/src/**` ni `frontend/src/**` (suite `fronteras`). Quedan la 5.2 (frontend de referencia con login PKCE) y la 5.3 (contrato publicado). La Fase 6 es el endurecimiento y queda fuera del MVP.
 
 Fuera del plan de fases, `main` incluye el rediseño del panel operativo (tablero oscuro; sistema visual en `DESIGN.md`).
 
@@ -80,6 +80,8 @@ npm test              # Vitest en ambos
 npm run doctor        # React Doctor en frontend/
 docker compose up     # Postgres + backend (3001) + frontend (3000)
 ```
+
+Laboratorio del proveedor de identidad: `npm --prefix backend run idp:lab` (crea el realm `chatbot-lab` y sus clientes; imprime las líneas `OIDC_*`). Aún no se ha verificado contra el Keycloak real.
 
 Un solo test: `npm --prefix backend exec vitest run tests/fronteras.test.ts`, o `-t "<nombre>"`.
 Prisma: `npm --prefix backend run db:generate`. Requiere `backend/.env` con `DATABASE_URL`.

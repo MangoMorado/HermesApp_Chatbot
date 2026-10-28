@@ -9,9 +9,13 @@ import { buildOpenApiDocument } from "@/http/openapi";
 import { buildPlatformOpenApiDocument } from "@/http/openapi-platform";
 import { buildSimOpenApiDocument } from "@/http/openapi-sim";
 import { REQUEST_ID_HEADER } from "@/http/request-id";
+import {
+  MachineCredentialMismatchError,
+  MachineCredentialMissingError,
+} from "@/modules/auth/domain/machine-credential-error";
 import { createCheckHealth } from "@/modules/health/application/check-health";
 import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
-import { signToken } from "./helpers/token";
+import { signToken } from "./helpers/idp";
 
 const API_DIR = join(process.cwd(), "src", "app", "api", "v1");
 const SIM_DIR = join(process.cwd(), "src", "app", "api", "sim", "v1");
@@ -181,5 +185,30 @@ describe("contrato-api: rate_limited", () => {
   it("otros errores no llevan Retry-After", () => {
     const response = errorResponse(toApiError(new Error("x")), "peticion-500");
     expect(response.headers.get("Retry-After")).toBeNull();
+  });
+});
+
+describe("contrato-api: credenciales de cliente maquina", () => {
+  it("sin cliente widget → 409 widget_not_configured", () => {
+    const error = toApiError(new MachineCredentialMissingError("widget"));
+    expect(error.code).toBe("widget_not_configured");
+  });
+
+  it("cliente widget que no emite widget de la clinica → 409 widget_not_configured", () => {
+    expect(toApiError(new MachineCredentialMismatchError("widget")).code).toBe(
+      "widget_not_configured",
+    );
+  });
+
+  it("sin cliente service → 503 identity_unavailable con mensaje neutro", () => {
+    const response = errorResponse(
+      toApiError(new MachineCredentialMissingError("service")),
+      "peticion-svc",
+    );
+    expect(response.status).toBe(503);
+    return response.json().then((body) => {
+      expect(body.error.code).toBe("identity_unavailable");
+      expect(body.error.message).not.toMatch(/widget/i);
+    });
   });
 });

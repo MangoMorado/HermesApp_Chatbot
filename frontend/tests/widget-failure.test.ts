@@ -25,6 +25,22 @@ describe("fallos que ve el paciente", () => {
     expect(describeFailure(apiError(401)).terminal).toBe(true);
   });
 
+  it("409 widget_not_configured al abrir sesión: terminal, sin detalle técnico", () => {
+    const error = new WidgetApiError(
+      409,
+      { error: { code: "widget_not_configured", message: "detalle interno" } },
+      "HTTP 409",
+    );
+    const failure = describeFailure(error);
+    expect(failure.terminal).toBe(true);
+    expect(failure.text).toBe("El chat no está disponible en este momento.");
+  });
+
+  it("503 identity_unavailable: aviso reintentable", () => {
+    const error = new WidgetApiError(503, { error: { code: "identity_unavailable" } }, "HTTP 503");
+    expect(describeFailure(error).terminal).toBe(false);
+  });
+
   it("429: espera los segundos que dice el backend", () => {
     const failure = describeFailure(apiError(429, { retry_after_seconds: 42 }));
     expect(failure.waitSeconds).toBe(42);

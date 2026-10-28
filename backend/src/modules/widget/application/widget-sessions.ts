@@ -1,27 +1,30 @@
-import { unauthorized } from "@/modules/auth/domain/auth-error";
-import type { TokenIssuer } from "@/modules/auth/domain/ports/token-issuer";
+import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import type { Clock } from "@/modules/shared/domain/ports/clock";
 import type { IdGenerator } from "@/modules/shared/domain/ports/id-generator";
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
 import type {
+  ConversationSecrets,
   WidgetAccess,
   WidgetSessionRepository,
   WidgetSettingsReader,
 } from "../domain/ports/ports";
-import {
-  isSessionActive,
-  sessionExpiry,
-  sessionSubject,
-  type WidgetSession,
-} from "../domain/widget-session";
+import { isSessionActive, sessionExpiry, type WidgetSession } from "../domain/widget-session";
+
+export type StartedWidgetSession = {
+  readonly session: WidgetSession;
+  /** En claro solo en esta respuesta: en base queda su hash. */
+  readonly conversationSecret: string;
+};
 
 export function createStartWidgetSession(deps: {
   sessions: WidgetSessionRepository;
+  secrets: ConversationSecrets;
   ids: IdGenerator;
   clock: Clock;
 }) {
-  return async (input: { access: WidgetAccess; origin: string }): Promise<WidgetSession> => {
+  return async (input: { access: WidgetAccess; origin: string }): Promise<StartedWidgetSession> => {
     const now = deps.clock.now();
+    const conversationSecret = deps.secrets.generate();
     const session: WidgetSession = {
       id: deps.ids.next(),
       tenantId: input.access.tenantId,
@@ -29,23 +32,44 @@ export function createStartWidgetSession(deps: {
       createdAt: now,
       expiresAt: sessionExpiry(now, input.access.sessionTtlMinutes),
       lastSeenAt: now,
+      secretHash: deps.secrets.hash(conversationSecret),
     };
     await deps.sessions.create(session);
-    return session;
+    return { session, conversationSecret };
   };
 }
 
-/** La vigencia se evalua al leer: una sesion vencida es `unauthorized`. */
+function activeOrNotFound(session: WidgetSession | null, now: Date): WidgetSession {
+  if (!session || !isSessionActive(session, now)) {
+    throw new NotFoundError("Conversacion vencida o inexistente");
+  }
+  return session;
+}
+
+/** La vigencia se evalua al leer: una sesion vencida o ajena es `not_found`. */
 export function createGetActiveWidgetSession(deps: {
   sessions: WidgetSessionRepository;
   clock: Clock;
 }) {
-  return async (tenantId: TenantId, sessionId: string): Promise<WidgetSession> => {
-    const session = await deps.sessions.get(tenantId, sessionId);
-    if (!session || !isSessionActive(session, deps.clock.now())) {
-      throw unauthorized("Sesion vencida o inexistente");
+  return async (tenantId: TenantId, sessionId: string): Promise<WidgetSession> =>
+    activeOrNotFound(await deps.sessions.get(tenantId, sessionId), deps.clock.now());
+}
+
+/**
+ * Resuelve la conversacion por su secreto, solo dentro del tenant del token o de la clave:
+ * un secreto de otra clinica, desconocido o de una sesion vencida es `not_found`.
+ */
+export function createFindWidgetSessionBySecret(deps: {
+  sessions: WidgetSessionRepository;
+  secrets: ConversationSecrets;
+  clock: Clock;
+}) {
+  return async (tenantId: TenantId, secret: string): Promise<WidgetSession> => {
+    if (secret === "") {
+      throw new NotFoundError("Conversacion vencida o inexistente");
     }
-    return session;
+    const session = await deps.sessions.getBySecretHash(tenantId, deps.secrets.hash(secret));
+    return activeOrNotFound(session, deps.clock.now());
   };
 }
 
@@ -67,21 +91,4 @@ export function createRefreshWidgetSession(deps: {
     await deps.sessions.extend(refreshed);
     return refreshed;
   };
-}
-
-export type SessionToken = { readonly token: string; readonly expiresAt: Date };
-
-/** El token del widget expira con la sesion y lleva su `session_id`. */
-export function createIssueSessionToken(deps: { issuer: TokenIssuer; clock: Clock }) {
-  return async (session: WidgetSession): Promise<SessionToken> => ({
-    token: await deps.issuer.issue({
-      subject: sessionSubject(session.id),
-      tenantId: session.tenantId,
-      role: "widget",
-      sessionId: session.id,
-      issuedAt: deps.clock.now(),
-      expiresAt: session.expiresAt,
-    }),
-    expiresAt: session.expiresAt,
-  });
 }

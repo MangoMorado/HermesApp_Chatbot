@@ -1,55 +1,38 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getContainer, type WritePorts } from "@/composition-root";
-import { unauthorized } from "@/modules/auth/domain/auth-error";
-import { PLATFORM_AUDIT_ACTOR } from "@/modules/platform/domain/platform-actor";
-import { NotFoundError } from "@/modules/shared/domain/not-found-error";
+import { requirePlatformActor } from "@/modules/auth/application/authorize";
+import type { PlatformActor } from "@/modules/auth/domain/actor";
 import { errorResponse, toApiError } from "./errors";
 import {
+  hashKeyFor,
   type IdempotentOutcome,
   idempotentJson,
-  parseJsonBody,
   platformScope,
   readIdempotentRequest,
   runIdempotent,
 } from "./idempotency-core";
 import { REQUEST_ID_HEADER, resolveRequestId } from "./request-id";
 
-const BEARER = /^Bearer (.+)$/;
-
-/** Compara en tiempo constante: los digests tienen siempre la misma longitud. */
-function sameSecret(presented: string, secret: string): boolean {
-  const digest = (value: string) => createHash("sha256").update(value).digest();
-  return timingSafeEqual(digest(presented), digest(secret));
+/** La plataforma es un actor fuera de todo tenant (GOBERNANZA §1.3): bearer del proveedor con rol `platform`. */
+async function authenticatePlatform(request: Request): Promise<PlatformActor> {
+  return requirePlatformActor(
+    await getContainer().authenticate(request.headers.get("Authorization")),
+  );
 }
 
-/**
- * La plataforma es un actor fuera de todo tenant (GOBERNANZA §1.3). Sin PLATFORM_SECRET la
- * superficie no existe (404), igual que el simulador apagado.
- */
-export function requirePlatform(authorization: string | null, secret: string | null): void {
-  if (secret === null) {
-    throw new NotFoundError();
-  }
-  const presented = BEARER.exec(authorization ?? "")?.[1];
-  if (!presented || !sameSecret(presented, secret)) {
-    throw unauthorized();
-  }
-}
+type PlatformHandler = (context: {
+  actor: PlatformActor;
+  requestId: string;
+  request: Request;
+}) => Promise<unknown>;
 
-export async function readJsonBody(request: Request): Promise<unknown> {
-  return parseJsonBody(await request.text());
-}
-
-type PlatformHandler = (context: { requestId: string; request: Request }) => Promise<unknown>;
-
-/** Ruta de plataforma sin escritura de dominio (lecturas y emision de tokens). */
+/** Ruta de plataforma sin escritura de dominio (lecturas). */
 export function platformRoute(handler: PlatformHandler) {
   return async (request: Request): Promise<NextResponse> => {
     const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
     try {
-      requirePlatform(request.headers.get("Authorization"), getContainer().config.platformSecret);
-      return NextResponse.json(await handler({ requestId, request }), {
+      const actor = await authenticatePlatform(request);
+      return NextResponse.json(await handler({ actor, requestId, request }), {
         headers: { [REQUEST_ID_HEADER]: requestId },
       });
     } catch (error) {
@@ -59,24 +42,33 @@ export function platformRoute(handler: PlatformHandler) {
 }
 
 type PlatformWriteHandler = (context: {
+  actor: PlatformActor;
   requestId: string;
   body: unknown;
   ports: WritePorts;
 }) => Promise<IdempotentOutcome>;
 
-/** Escritura de plataforma con `Idempotency-Key` en su propio ambito (sin tenant). */
+/**
+ * Escritura de plataforma con `Idempotency-Key` en su propio ambito (sin tenant). Los cuerpos
+ * llevan secretos de cliente: el hash de la peticion es un HMAC con clave propia.
+ */
 export function platformIdempotentRoute(handler: PlatformWriteHandler) {
   return async (request: Request): Promise<NextResponse> => {
     const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
     try {
       const container = getContainer();
-      requirePlatform(request.headers.get("Authorization"), container.config.platformSecret);
-      const idempotent = await readIdempotentRequest(request, PLATFORM_AUDIT_ACTOR.actorSubject);
+      const actor = await authenticatePlatform(request);
+      const idempotent = await readIdempotentRequest(
+        request,
+        actor.subject,
+        1,
+        hashKeyFor(container.config.credentialsEncryptionKey),
+      );
       const result = await runIdempotent({
         request: idempotent,
         outside: platformScope(container.platformIdempotencyStore),
         inside: (ports) => platformScope(ports.platformIdempotencyStore),
-        execute: (ports) => handler({ requestId, body: idempotent.body, ports }),
+        execute: (ports) => handler({ actor, requestId, body: idempotent.body, ports }),
       });
       return idempotentJson(result, requestId);
     } catch (error) {

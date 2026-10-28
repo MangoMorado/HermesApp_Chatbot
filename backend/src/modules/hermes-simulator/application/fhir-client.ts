@@ -3,7 +3,7 @@ import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { decodeCursor, encodeCursor, type Page } from "@/modules/shared/domain/pagination";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 import type { InboxRequest, InboxResolution } from "../domain/inbox";
-import type { FhirHttp, FhirHttpResponse, ServiceTokenIssuer } from "../domain/ports/fhir-http";
+import type { FhirHttp, FhirHttpResponse, ServiceTokenProvider } from "../domain/ports/fhir-http";
 import type { ChatbotRequests } from "../domain/ports/inbox";
 import {
   bookedAppointment,
@@ -106,7 +106,7 @@ function assertLive(record: Record<string, unknown>, expected: string): void {
 
 export function createFhirChatbotClient(deps: {
   readonly http: FhirHttp;
-  readonly tokens: ServiceTokenIssuer;
+  readonly tokens: ServiceTokenProvider;
 }): ChatbotRequests {
   const { http, tokens } = deps;
 

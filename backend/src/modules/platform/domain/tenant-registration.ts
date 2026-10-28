@@ -1,5 +1,7 @@
+import type { MachineCredential } from "@/modules/auth/domain/ports/machine-credentials";
 import { asRecord, requiredText } from "@/modules/shared/domain/input";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
+import { parseWidgetClient } from "./widget-client";
 
 export type TenantSummary = {
   readonly id: string;
@@ -13,6 +15,7 @@ export type TenantDraft = {
   readonly slug: string;
   readonly name: string;
   readonly allowedOrigins: unknown;
+  readonly widgetClient: MachineCredential | null;
 };
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$/;
@@ -33,5 +36,6 @@ export function parseTenantDraft(raw: unknown): TenantDraft {
     slug,
     name: requiredText(data.name, "name", NAME_MAX_LENGTH),
     allowedOrigins: data.allowed_origins ?? [],
+    widgetClient: data.widget_client == null ? null : parseWidgetClient(data.widget_client),
   };
 }

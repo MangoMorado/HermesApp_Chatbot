@@ -1,10 +1,12 @@
 import {
   authErrors,
+  CONVERSATION_SECRET_PARAMETER,
   createdJson,
   errorResponses,
   IDEMPOTENCY_PARAMETER,
   okJson,
   pageParams,
+  RATE_LIMITED_RESPONSE,
   REQUEST_ID_PARAMETER,
   REQUEST_ID_RESPONSE_HEADER,
   writeErrors,
@@ -91,18 +93,74 @@ export const CHATBOT_SCHEMAS = {
     required: ["widget_key"],
     properties: { widget_key: { type: "string" } },
   },
-  WidgetSession: {
+  WidgetSessionOpened: {
     type: "object",
-    required: ["session_id", "token", "expires_at"],
+    required: [
+      "access_token",
+      "expires_at",
+      "expires_in",
+      "conversation_secret",
+      "session_expires_at",
+    ],
     properties: {
-      session_id: { type: "string" },
-      token: { type: "string" },
+      access_token: { type: "string", description: "Token del proveedor (rol widget)." },
+      expires_at: { type: "string", format: "date-time", description: "Vence el token." },
+      expires_in: {
+        type: "integer",
+        minimum: 0,
+        description:
+          "Segundos de vida que le quedan al token segun el reloj del servidor. El cliente " +
+          "lo suma a su propio reloj al recibirlo, asi un reloj de dispositivo desfasado no " +
+          "adelanta ni retrasa la renovacion.",
+      },
+      conversation_secret: {
+        type: "string",
+        description:
+          "Secreto de la conversacion; va en X-Conversation-Secret. Solo se devuelve en la " +
+          "apertura y en su repeticion idempotente.",
+      },
+      session_expires_at: {
+        type: "string",
+        format: "date-time",
+        description: "Vence la conversacion (TTL del tenant).",
+      },
+    },
+  },
+  WidgetSessionRefreshed: {
+    type: "object",
+    required: ["access_token", "expires_at", "expires_in", "session_expires_at"],
+    properties: {
+      access_token: { type: "string" },
       expires_at: { type: "string", format: "date-time" },
+      expires_in: {
+        type: "integer",
+        minimum: 0,
+        description:
+          "Segundos de vida que le quedan al token segun el reloj del servidor. El cliente " +
+          "lo suma a su propio reloj al recibirlo, asi un reloj de dispositivo desfasado no " +
+          "adelanta ni retrasa la renovacion.",
+      },
+      session_expires_at: { type: "string", format: "date-time" },
     },
   },
 } as const;
 
 const botConfigOk = okJson({ $ref: "#/components/schemas/BotConfig" });
+
+/** Apertura y renovacion: 409 es conflict o widget_not_configured; 503 el proveedor. */
+function widgetSessionErrors(codes: readonly string[]) {
+  return {
+    ...errorResponses([...codes, "identity_unavailable", "internal_error"]),
+    "409": {
+      description: "conflict | widget_not_configured",
+      headers: REQUEST_ID_RESPONSE_HEADER,
+      content: {
+        "application/json": { schema: { $ref: "#/components/schemas/Error" } },
+      },
+    },
+    ...RATE_LIMITED_RESPONSE,
+  };
+}
 
 export const CHATBOT_PATHS = {
   "/bot-config": {
@@ -214,27 +272,8 @@ export const CHATBOT_PATHS = {
         },
       },
       responses: {
-        ...createdJson({ $ref: "#/components/schemas/WidgetSession" }),
-        ...errorResponses([
-          "unauthorized",
-          "forbidden",
-          "validation_failed",
-          "conflict",
-          "internal_error",
-        ]),
-        "429": {
-          description: "rate_limited",
-          headers: {
-            ...REQUEST_ID_RESPONSE_HEADER,
-            "Retry-After": {
-              description: "Segundos a esperar antes de reintentar.",
-              schema: { type: "integer" },
-            },
-          },
-          content: {
-            "application/json": { schema: { $ref: "#/components/schemas/Error" } },
-          },
-        },
+        ...createdJson({ $ref: "#/components/schemas/WidgetSessionOpened" }),
+        ...widgetSessionErrors(["unauthorized", "forbidden", "validation_failed"]),
       },
     },
   },
@@ -242,10 +281,22 @@ export const CHATBOT_PATHS = {
     post: {
       tags: ["widget"],
       operationId: "refreshWidgetSession",
-      description: "Solo rol widget: renueva la sesion de su propio token.",
-      security: bearer,
-      parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
-      responses: { ...okJson({ $ref: "#/components/schemas/WidgetSession" }), ...writeErrors },
+      description:
+        "Publica (sin bearer): la autentican la clave del widget, el Origin de la sesion y " +
+        "X-Conversation-Secret, con el rate limit de la apertura. Token nuevo del proveedor y " +
+        "conversacion extendida segun el TTL del tenant.",
+      security: [],
+      parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER, CONVERSATION_SECRET_PARAMETER],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": { schema: { $ref: "#/components/schemas/WidgetSessionRequest" } },
+        },
+      },
+      responses: {
+        ...okJson({ $ref: "#/components/schemas/WidgetSessionRefreshed" }),
+        ...widgetSessionErrors(["unauthorized", "forbidden", "not_found", "validation_failed"]),
+      },
     },
   },
 };

@@ -1,6 +1,6 @@
 import type { NextResponse } from "next/server";
 import { getContainer, type WritePorts } from "@/composition-root";
-import { requireRole } from "@/modules/auth/application/authorize";
+import { requireTenantActor } from "@/modules/auth/application/authorize";
 import type { Actor } from "@/modules/auth/domain/actor";
 import { fhirInvalid } from "@/modules/fhir/domain/fhir-error";
 import { operationOutcome } from "@/modules/fhir/domain/operation-outcome";
@@ -51,8 +51,10 @@ export async function serviceFhirIdempotentRoute<T>(
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
   try {
     const container = getContainer();
-    const actor = await container.authenticate(request.headers.get("Authorization"));
-    requireRole(actor, ["service"]);
+    const actor = requireTenantActor(
+      await container.authenticate(request.headers.get("Authorization")),
+      ["service"],
+    );
     const target = precheck();
     const idempotent = await readRequest(request, actor);
     const result = await runIdempotent({

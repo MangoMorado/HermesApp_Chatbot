@@ -6,7 +6,8 @@ vi.mock("@/composition-root", () => ({
   getContainer: () => ({ isWidgetOriginRegistered }),
 }));
 
-import { assertSessionOrigin, widgetPreflight, withWidgetCors } from "@/http/cors";
+import { widgetPreflight, withWidgetCors } from "@/http/cors";
+import { assertSessionOrigin } from "@/http/widget-session-response";
 import { AuthError } from "@/modules/auth/domain/auth-error";
 
 describe("cors: widget", () => {

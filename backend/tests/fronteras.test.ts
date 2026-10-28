@@ -166,3 +166,47 @@ describe("fronteras de capas", () => {
     expect([...outgoing, ...incoming]).toEqual([]);
   });
 });
+
+const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".json", ".css"];
+
+function listAllFiles(dir: string): string[] {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return [];
+  }
+  return entries.flatMap((entry) => {
+    if (entry === "node_modules") {
+      return [];
+    }
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      return listAllFiles(full);
+    }
+    return SOURCE_EXTENSIONS.some((ext) => full.endsWith(ext)) ? [full] : [];
+  });
+}
+
+describe("agnosticismo del proveedor de identidad", () => {
+  it("ningun archivo de backend/src ni frontend/src menciona keycloak", () => {
+    const roots = [join(process.cwd(), "src"), join(process.cwd(), "..", "frontend", "src")];
+    // Una raiz mal resuelta (cwd distinto) daria un falso verde: cada una debe tener archivos.
+    for (const root of roots) {
+      expect(listAllFiles(root).length).toBeGreaterThan(0);
+    }
+    const offenders = roots
+      .flatMap(listAllFiles)
+      .filter((file) => /keycloak/i.test(readFileSync(file, "utf8")));
+    expect(offenders).toEqual([]);
+  });
+
+  it("no queda emisor de tokens en el backend", () => {
+    const files = listAllFiles(join(process.cwd(), "src"));
+    expect(files.length).toBeGreaterThan(0);
+    const offenders = files.filter((file) =>
+      /\bSignJWT\b|TokenIssuer\b|JWT_SECRET|PLATFORM_SECRET/.test(readFileSync(file, "utf8")),
+    );
+    expect(offenders).toEqual([]);
+  });
+});

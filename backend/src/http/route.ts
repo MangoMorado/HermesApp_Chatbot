@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getContainer } from "@/composition-root";
-import { requireRole } from "@/modules/auth/application/authorize";
+import { requireTenantActor } from "@/modules/auth/application/authorize";
 import type { Actor } from "@/modules/auth/domain/actor";
-import type { Role } from "@/modules/auth/domain/role";
+import type { TenantRole } from "@/modules/auth/domain/role";
 import { errorResponse, toApiError } from "./errors";
 import { REQUEST_ID_HEADER, resolveRequestId } from "./request-id";
 
@@ -31,13 +31,15 @@ export function publicRoute(handler: PublicHandler) {
  * Ruta autenticada. Sin token valido responde `401` antes de tocar el handler,
  * y el tenant del actor sale solo del claim del token.
  */
-export function privateRoute(allowedRoles: readonly Role[], handler: PrivateHandler) {
+export function privateRoute(allowedRoles: readonly TenantRole[], handler: PrivateHandler) {
   return async (request: Request): Promise<NextResponse> => {
     const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
     try {
       const { authenticate } = getContainer();
-      const actor = await authenticate(request.headers.get("Authorization"));
-      requireRole(actor, allowedRoles);
+      const actor = requireTenantActor(
+        await authenticate(request.headers.get("Authorization")),
+        allowedRoles,
+      );
       return ok(await handler({ actor, requestId, request }), requestId);
     } catch (error) {
       return errorResponse(toApiError(error), requestId);

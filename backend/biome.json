@@ -4,6 +4,10 @@
   "extends": "//",
   "overrides": [
     {
+      "includes": ["scripts/idp-lab/**"],
+      "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
+    },
+    {
       "includes": ["src/modules/*/domain/**", "src/modules/*/application/**"],
       "linter": {
         "rules": {

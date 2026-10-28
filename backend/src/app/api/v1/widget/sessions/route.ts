@@ -1,5 +1,4 @@
 import { getContainer } from "@/composition-root";
-import { clientIp } from "@/http/client-ip";
 import { withWidgetCors } from "@/http/cors";
 import { errorResponse, toApiError } from "@/http/errors";
 import {
@@ -9,7 +8,11 @@ import {
   tenantScope,
 } from "@/http/idempotency-core";
 import { REQUEST_ID_HEADER, resolveRequestId } from "@/http/request-id";
-import { rebuildSessionResponse, sessionTokenJson } from "@/http/widget-session-response";
+import {
+  admitWidgetRequest,
+  openedSessionOutcome,
+  rebuildOpenedSession,
+} from "@/http/widget-session-response";
 import {
   ANONYMOUS_WIDGET_SUBJECT,
   MIN_ANONYMOUS_IDEMPOTENCY_KEY_LENGTH,
@@ -17,13 +20,10 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function widgetKeyOf(body: unknown): unknown {
-  return typeof body === "object" && body !== null
-    ? (body as { widget_key?: unknown }).widget_key
-    : undefined;
-}
-
-/** Apertura anonima: la clave publica resuelve el tenant; el cliente nunca lo elige. */
+/**
+ * Apertura anonima: la clave publica resuelve el tenant; el cliente nunca lo elige. El token
+ * del proveedor se pide antes de la transaccion, asi un fallo del proveedor no deja estado.
+ */
 async function openSession(request: Request): Promise<Response> {
   const requestId = resolveRequestId(request.headers.get(REQUEST_ID_HEADER));
   try {
@@ -33,26 +33,16 @@ async function openSession(request: Request): Promise<Response> {
       ANONYMOUS_WIDGET_SUBJECT,
       MIN_ANONYMOUS_IDEMPOTENCY_KEY_LENGTH,
     );
+    const access = await admitWidgetRequest(request, idempotent.body);
     const origin = request.headers.get("Origin") ?? "";
-    const access = await container.admitWidget({
-      widgetKey: widgetKeyOf(idempotent.body),
-      origin: origin === "" ? null : origin,
-      clientIp: clientIp(request, container.config.trustProxy),
-    });
+    const token = await container.widgetTokenFor(access.tenantId);
     const result = await runIdempotent({
       request: idempotent,
       outside: tenantScope(container.idempotencyStore, access.tenantId),
       inside: (ports) => tenantScope(ports.idempotencyStore, access.tenantId),
-      execute: async (ports) => {
-        const session = await ports.startWidgetSession({ access, origin });
-        const issued = await container.issueSessionToken(session);
-        return {
-          status: 201,
-          body: sessionTokenJson(session, issued),
-          stored: { session_id: session.id },
-        };
-      },
-      rebuild: (stored) => rebuildSessionResponse(stored, access.tenantId),
+      execute: async (ports) =>
+        openedSessionOutcome(await ports.startWidgetSession({ access, origin }), token),
+      rebuild: (stored) => rebuildOpenedSession(stored, access.tenantId, token),
     });
     return idempotentJson(result, requestId);
   } catch (error) {

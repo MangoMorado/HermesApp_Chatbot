@@ -17,5 +17,8 @@ export const ErrorErrorCode = {
   conflict: 'conflict',
   method_not_allowed: 'method_not_allowed',
   rate_limited: 'rate_limited',
+  widget_not_configured: 'widget_not_configured',
+  identity_unavailable: 'identity_unavailable',
+  invalid_request: 'invalid_request',
   internal_error: 'internal_error',
 } as const;

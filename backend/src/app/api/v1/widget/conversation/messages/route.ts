@@ -1,17 +1,19 @@
-import { getContainer } from "@/composition-root";
-import { assertSessionOrigin, withWidgetCors } from "@/http/cors";
+import { withWidgetCors } from "@/http/cors";
 import { idempotentRoute } from "@/http/idempotent-route";
 import { conversationTurnJson, replayTurn, storedTurnJson } from "@/http/serializers-conversation";
-import { sessionIdOf } from "@/http/widget-session-response";
+import { conversationSessionId, resolveWidgetConversation } from "@/http/widget-session-response";
 import { parseIncomingMessage } from "@/modules/conversation/domain/message-input";
 
 export const dynamic = "force-dynamic";
 
-/** Un turno del chat. La conversacion sale de la sesion del token, nunca del cuerpo. */
+/**
+ * Un turno del chat. La conversacion sale de `X-Conversation-Secret` dentro del tenant del
+ * token, nunca del cuerpo; el actor resuelto lleva `widget:<sessionId>`.
+ */
 const postMessage = idempotentRoute(
   ["widget"],
   async ({ actor, requestId, body, ports }) => {
-    const sessionId = sessionIdOf(actor);
+    const sessionId = conversationSessionId(actor);
     const turn = await ports.handleConversationMessage({
       tenantId: actor.tenantId,
       sessionId,
@@ -28,12 +30,8 @@ const postMessage = idempotentRoute(
   },
   {
     sensitiveBody: true,
-    guard: async ({ actor, request }) =>
-      assertSessionOrigin(
-        request,
-        await getContainer().getActiveWidgetSession(actor.tenantId, sessionIdOf(actor)),
-      ),
-    rebuild: (stored, actor) => Promise.resolve(replayTurn(stored, sessionIdOf(actor))),
+    resolveActor: async (actor, request) => (await resolveWidgetConversation(actor, request)).actor,
+    rebuild: (stored, actor) => Promise.resolve(replayTurn(stored, conversationSessionId(actor))),
   },
 );
 

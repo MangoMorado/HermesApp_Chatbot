@@ -8,7 +8,7 @@ import {
 import { fingerprint } from "../domain/fingerprint";
 import type { InboxRequest } from "../domain/inbox";
 import type { SimCatalog } from "../domain/ports/catalog";
-import type { FhirHttp, ServiceTokenIssuer } from "../domain/ports/fhir-http";
+import type { FhirHttp, ServiceTokenProvider } from "../domain/ports/fhir-http";
 import type { ChatbotRequests } from "../domain/ports/inbox";
 import { patientBody, practitionerBody, scheduleBody, serviceBody, slotBody } from "./fhir-bodies";
 import {
@@ -37,7 +37,7 @@ type Counts = { written: number; retryLater: number };
 type SyncDeps = {
   readonly catalog: SimCatalog;
   readonly http: FhirHttp;
-  readonly tokens: ServiceTokenIssuer;
+  readonly tokens: ServiceTokenProvider;
   readonly chatbot: ChatbotRequests;
   readonly approve: (command: InboxCommand) => Promise<InboxRequest>;
 };

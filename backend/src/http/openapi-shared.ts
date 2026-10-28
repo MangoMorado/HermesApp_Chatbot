@@ -28,6 +28,16 @@ export const IDEMPOTENCY_PARAMETER = {
   schema: { type: "string", minLength: 1 },
 } as const;
 
+/** Secreto propio de la conversacion del widget (spec 5 §6.1). */
+export const CONVERSATION_SECRET_PARAMETER = {
+  name: "X-Conversation-Secret",
+  in: "header",
+  required: true,
+  description:
+    "conversation_secret devuelto por la apertura. Sin el, o con uno vencido o de otra clinica, 404.",
+  schema: { type: "string", minLength: 1 },
+} as const;
+
 export function errorResponses(codes: readonly string[]): Record<string, unknown> {
   return Object.fromEntries(
     codes.map((code) => [
@@ -78,11 +88,28 @@ export function createdJson(schema: Record<string, unknown>) {
   };
 }
 
+export const RATE_LIMITED_RESPONSE = {
+  "429": {
+    description: "rate_limited",
+    headers: {
+      ...REQUEST_ID_RESPONSE_HEADER,
+      "Retry-After": {
+        description: "Segundos a esperar antes de reintentar.",
+        schema: { type: "integer" },
+      },
+    },
+    content: {
+      "application/json": { schema: { $ref: "#/components/schemas/Error" } },
+    },
+  },
+} as const;
+
 export const authErrors = errorResponses([
   "unauthorized",
   "forbidden",
   "not_found",
   "validation_failed",
+  "identity_unavailable",
   "internal_error",
 ]);
 
@@ -92,6 +119,7 @@ export const writeErrors = errorResponses([
   "not_found",
   "validation_failed",
   "conflict",
+  "identity_unavailable",
   "internal_error",
 ]);
 

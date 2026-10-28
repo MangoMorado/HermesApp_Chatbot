@@ -43,6 +43,9 @@
                   "conflict",
                   "method_not_allowed",
                   "rate_limited",
+                  "widget_not_configured",
+                  "identity_unavailable",
+                  "invalid_request",
                   "internal_error"
                 ]
               },
@@ -98,9 +101,6 @@
               "admin",
               "service"
             ]
-          },
-          "session_id": {
-            "type": "string"
           }
         }
       },
@@ -363,21 +363,63 @@
           }
         }
       },
-      "WidgetSession": {
+      "WidgetSessionOpened": {
         "type": "object",
         "required": [
-          "session_id",
-          "token",
-          "expires_at"
+          "access_token",
+          "expires_at",
+          "expires_in",
+          "conversation_secret",
+          "session_expires_at"
         ],
         "properties": {
-          "session_id": {
-            "type": "string"
+          "access_token": {
+            "type": "string",
+            "description": "Token del proveedor (rol widget)."
           },
-          "token": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Vence el token."
+          },
+          "expires_in": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Segundos de vida que le quedan al token segun el reloj del servidor. El cliente lo suma a su propio reloj al recibirlo, asi un reloj de dispositivo desfasado no adelanta ni retrasa la renovacion."
+          },
+          "conversation_secret": {
+            "type": "string",
+            "description": "Secreto de la conversacion; va en X-Conversation-Secret. Solo se devuelve en la apertura y en su repeticion idempotente."
+          },
+          "session_expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Vence la conversacion (TTL del tenant)."
+          }
+        }
+      },
+      "WidgetSessionRefreshed": {
+        "type": "object",
+        "required": [
+          "access_token",
+          "expires_at",
+          "expires_in",
+          "session_expires_at"
+        ],
+        "properties": {
+          "access_token": {
             "type": "string"
           },
           "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_in": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Segundos de vida que le quedan al token segun el reloj del servidor. El cliente lo suma a su propio reloj al recibirlo, asi un reloj de dispositivo desfasado no adelanta ni retrasa la renovacion."
+          },
+          "session_expires_at": {
             "type": "string",
             "format": "date-time"
           }
@@ -665,6 +707,136 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/backchannel-logout": {
+      "post": {
+        "operationId": "backchannelLogout",
+        "summary": "Back-channel logout OIDC",
+        "description": "Publica: la llama el proveedor de identidad servidor a servidor. Verifica el logout_token y cierra la sesion (sid) hasta que caduquen sus tokens. Idempotente.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "description": "Identificador de correlacion. Si no viene, el servicio genera uno.",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "logout_token"
+                ],
+                "properties": {
+                  "logout_token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -807,6 +979,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -979,6 +1169,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1135,6 +1343,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -1337,6 +1563,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1496,6 +1740,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -1685,6 +1947,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1848,6 +2128,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -1973,6 +2271,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -2146,6 +2462,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2263,6 +2597,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -2445,6 +2797,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2562,6 +2932,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -2745,6 +3133,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2890,6 +3296,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -3054,6 +3478,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -3237,6 +3679,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -3362,6 +3822,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -3552,6 +4030,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -3722,6 +4218,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -3779,7 +4293,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WidgetSession"
+                  "$ref": "#/components/schemas/WidgetSessionOpened"
                 }
               }
             }
@@ -3821,7 +4335,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict | widget_not_configured",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -3897,6 +4411,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -3907,12 +4439,8 @@
           "widget"
         ],
         "operationId": "refreshWidgetSession",
-        "description": "Solo rol widget: renueva la sesion de su propio token.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "description": "Publica (sin bearer): la autentican la clave del widget, el Origin de la sesion y X-Conversation-Secret, con el rate limit de la apertura. Token nuevo del proveedor y conversacion extendida segun el TTL del tenant.",
+        "security": [],
         "parameters": [
           {
             "name": "X-Request-Id",
@@ -3932,8 +4460,28 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          {
+            "name": "X-Conversation-Secret",
+            "in": "header",
+            "required": true,
+            "description": "conversation_secret devuelto por la apertura. Sin el, o con uno vencido o de otra clinica, 404.",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetSessionRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -3948,7 +4496,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WidgetSession"
+                  "$ref": "#/components/schemas/WidgetSessionRefreshed"
                 }
               }
             }
@@ -4008,7 +4556,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict | widget_not_configured",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -4043,8 +4591,50 @@
               }
             }
           },
+          "429": {
+            "description": "rate_limited",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Segundos a esperar antes de reintentar.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -4070,7 +4660,7 @@
           "widget"
         ],
         "operationId": "getWidgetConversation",
-        "description": "Solo rol widget: turno actual e historial redactado de su sesion. Crea la conversacion con la bienvenida si no existe.",
+        "description": "Solo rol widget: turno actual e historial redactado de la conversacion de X-Conversation-Secret. Crea la conversacion con la bienvenida si no existe.",
         "security": [
           {
             "bearerAuth": []
@@ -4085,6 +4675,16 @@
             "schema": {
               "type": "string",
               "maxLength": 128
+            }
+          },
+          {
+            "name": "X-Conversation-Secret",
+            "in": "header",
+            "required": true,
+            "description": "conversation_secret devuelto por la apertura. Sin el, o con uno vencido o de otra clinica, 404.",
+            "schema": {
+              "type": "string",
+              "minLength": 1
             }
           }
         ],
@@ -4196,6 +4796,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -4227,6 +4845,16 @@
             "name": "Idempotency-Key",
             "in": "header",
             "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "X-Conversation-Secret",
+            "in": "header",
+            "required": true,
+            "description": "conversation_secret devuelto por la apertura. Sin el, o con uno vencido o de otra clinica, 404.",
             "schema": {
               "type": "string",
               "minLength": 1
@@ -4354,6 +4982,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",
@@ -4539,6 +5185,24 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "identity_unavailable",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -4692,6 +5356,24 @@
           },
           "500": {
             "description": "internal_error",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador de correlacion de esta peticion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "identity_unavailable",
             "headers": {
               "X-Request-Id": {
                 "description": "Identificador de correlacion de esta peticion.",

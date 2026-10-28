@@ -87,6 +87,11 @@ export function platformScope(store: PlatformIdempotencyStore): ScopedIdempotenc
   };
 }
 
+/** Clave propia del hash de peticiones, derivada de la clave de cifrado para no reutilizarla. */
+export function hashKeyFor(key: Uint8Array): string {
+  return createHmac("sha256", key).update("idempotency-request-hash").digest("hex");
+}
+
 export function parseJsonBody(bodyText: string): unknown {
   if (bodyText === "") {
     return null;

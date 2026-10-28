@@ -1,7 +1,7 @@
 import { getContainer } from "@/composition-root";
 import { platformIdempotentRoute, platformRoute } from "@/http/platform-route";
 import { pageJson } from "@/http/serializers";
-import { tenantJson } from "@/http/serializers-chatbot";
+import { tenantJson, widgetClientJson } from "@/http/serializers-chatbot";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,18 @@ export const GET = platformRoute(async ({ request }) => {
   return pageJson(page, tenantJson);
 });
 
-export const POST = platformIdempotentRoute(async ({ requestId, body, ports }) => {
-  const { tenant, widgetKey } = await ports.registerTenant({ raw: body, requestId });
-  return { status: 201, body: { tenant: tenantJson(tenant), widget_key: widgetKey } };
+export const POST = platformIdempotentRoute(async ({ actor, requestId, body, ports }) => {
+  const { tenant, widgetKey, widgetClientId } = await ports.registerTenant({
+    raw: body,
+    actor,
+    requestId,
+  });
+  return {
+    status: 201,
+    body: {
+      tenant: tenantJson(tenant),
+      widget_key: widgetKey,
+      widget_client: widgetClientJson(widgetClientId),
+    },
+  };
 });

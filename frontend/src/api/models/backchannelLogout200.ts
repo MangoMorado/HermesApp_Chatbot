@@ -6,8 +6,4 @@
  * OpenAPI spec version: 0.3.0
  */
 
-export interface WidgetSession {
-  session_id: string;
-  token: string;
-  expires_at: string;
-}
+export type BackchannelLogout200 = { [key: string]: unknown };

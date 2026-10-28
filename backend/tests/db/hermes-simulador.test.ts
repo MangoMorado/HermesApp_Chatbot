@@ -3,7 +3,11 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createHandlerFhirHttp } from "@/composition/handler-fhir-http";
 import { resetContainer } from "@/composition-root";
 import { loadConfig } from "@/config/env";
-import { createJoseTokenIssuer } from "@/modules/auth/infrastructure/jose-token-issuer";
+import {
+  configServiceResolver,
+  createOidcClientCredentials,
+} from "@/modules/auth/infrastructure/oidc-client-credentials";
+import { createOidcDiscovery } from "@/modules/auth/infrastructure/oidc-discovery";
 import { createFhirChatbotClient } from "@/modules/hermes-simulator/application/fhir-client";
 import {
   createHermesSync,
@@ -13,6 +17,7 @@ import { createApproveInboxRequest } from "@/modules/hermes-simulator/applicatio
 import { createServiceTokens } from "@/modules/hermes-simulator/application/service-tokens";
 import { createPrismaSimCatalog } from "@/modules/hermes-simulator/infrastructure/prisma-catalog";
 import { createPrismaHermesSession } from "@/modules/hermes-simulator/infrastructure/prisma-hermes-session";
+import { systemClock } from "@/modules/shared/infrastructure/system-clock";
 import { uuidV7Generator } from "@/modules/shared/infrastructure/uuid-v7-generator";
 import { fhirGet, serviceToken } from "../helpers/fhir";
 import {
@@ -36,7 +41,14 @@ function futureStart(): Date {
 
 function cycle(db: PrismaClient) {
   const http = createHandlerFhirHttp();
-  const tokens = createServiceTokens(createJoseTokenIssuer(loadConfig().jwt));
+  const config = loadConfig();
+  const source = createOidcClientCredentials({
+    discovery: createOidcDiscovery(config.oidc),
+    resolve: configServiceResolver(config.simServiceClients),
+    clock: systemClock,
+    httpTimeoutMs: config.oidc.httpTimeoutMs,
+  });
+  const tokens = createServiceTokens(source);
   const chatbot = createFhirChatbotClient({ http, tokens });
   const catalog = createPrismaSimCatalog(db);
   return {
@@ -85,6 +97,14 @@ describe("hermes-simulador", () => {
   afterAll(async () => {
     resetContainer();
     await prisma.$disconnect();
+  });
+
+  it("el sujeto auditado de una escritura FHIR es el sub del proveedor", async () => {
+    await cycle(prisma).sync(alpha.tenantId);
+    const ev = await prisma.auditEvent.findFirstOrThrow({
+      where: { tenantId: alpha.tenantId, actorRole: "service" },
+    });
+    expect(ev.actorSubject).toBe(`service-account-service-${alpha.tenantId}`);
   });
 
   it("copia a public un maestro que solo estaba en hermes_sim, aislado por tenant", async () => {

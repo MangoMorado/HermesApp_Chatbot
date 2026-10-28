@@ -54,7 +54,6 @@ export function buildOpenApiDocument(): Record<string, unknown> {
             subject: { type: "string" },
             tenant_id: { type: "string" },
             role: { type: "string", enum: ["widget", "operator", "admin", "service"] },
-            session_id: { type: "string" },
           },
         },
         Page: PAGE_SCHEMA,
@@ -88,7 +87,39 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           parameters: [REQUEST_ID_PARAMETER],
           responses: {
             ...okJson({ $ref: "#/components/schemas/Identity" }),
-            ...errorResponses(["unauthorized", "forbidden", "internal_error"]),
+            ...errorResponses([
+              "unauthorized",
+              "forbidden",
+              "identity_unavailable",
+              "internal_error",
+            ]),
+          },
+        },
+      },
+      "/auth/backchannel-logout": {
+        post: {
+          operationId: "backchannelLogout",
+          summary: "Back-channel logout OIDC",
+          description:
+            "Publica: la llama el proveedor de identidad servidor a servidor. Verifica el " +
+            "logout_token y cierra la sesion (sid) hasta que caduquen sus tokens. Idempotente.",
+          security: [],
+          parameters: [REQUEST_ID_PARAMETER],
+          requestBody: {
+            required: true,
+            content: {
+              "application/x-www-form-urlencoded": {
+                schema: {
+                  type: "object",
+                  required: ["logout_token"],
+                  properties: { logout_token: { type: "string" } },
+                },
+              },
+            },
+          },
+          responses: {
+            ...okJson({ type: "object" }),
+            ...errorResponses(["invalid_request", "identity_unavailable", "internal_error"]),
           },
         },
       },

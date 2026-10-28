@@ -30,7 +30,8 @@ export function describeFailure(error: unknown): Failure {
   if (error.status === 403) {
     return { text: "Este sitio no está autorizado para el chat.", terminal: true, waitSeconds: 0 };
   }
-  if (error.status === 401) {
+  // 401: clave inválida; 409 widget_not_configured: la clínica no tiene cliente del proveedor.
+  if (error.status === 401 || error.code === "widget_not_configured") {
     return { text: "El chat no está disponible en este momento.", terminal: true, waitSeconds: 0 };
   }
   if (error.status === 429) {
