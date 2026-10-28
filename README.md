@@ -77,9 +77,12 @@ tenant y de roles son configurables (ver Variables).
 El `tenant_id` sale **solo** del claim. Un recurso de otro tenant responde `404`, nunca
 `403`. El rol `platform` no lleva tenant y solo alcanza `/api/platform/v1`.
 
-- **Panel (`operator`, `admin`) y Hermes (`service`):** tokens del proveedor. En 5.1 el
-  frontend de referencia usa tokens pegados a mano, obtenidos del laboratorio (ver abajo); el
-  login OIDC con PKCE llega en la 5.2. El panel lo comprueba con `GET /api/v1/me`.
+- **Panel (`operator`, `admin`) y Hermes (`service`):** tokens del proveedor. La consola de
+  referencia (`/panel`, `/simulador`) inicia sesión con Authorization Code + PKCE contra el
+  cliente público `chatbot-reference-ui` (`oidc-client-ts`, sin secreto en el navegador), renueva
+  sola con el `refresh_token` y cierra sesión también en el proveedor. No hay campo para pegar
+  tokens. Muestra lo que confirma `GET /api/v1/me` (o `GET /api/platform/v1/me` con rol
+  `platform`). `/chat` sigue abierto sin login: usa una sesión de widget.
 - **Plataforma (`platform`):** `POST /api/platform/v1/tenants` da de alta un tenant y acepta un
   `widget_client` opcional (`client_id` y `client_secret`).
   `PUT /api/platform/v1/tenants/{id}/widget-client` es idempotente y reemplaza las credenciales.
@@ -104,7 +107,8 @@ npm --prefix backend run idp:lab
 
 Construye el realm `chatbot-lab` en un Keycloak y sus clientes: `chatbot-platform`,
 `widget-<tenant>`, `service-<tenant>`, `chatbot-reference-ui` (PKCE, back-channel logout) y
-`chatbot-swagger`, más los usuarios `admin-<slug>` y `operator-<slug>`. Imprime las líneas
+`chatbot-swagger`, más los usuarios `admin-<slug>`, `operator-<slug>` y `platform-lab` (rol
+`platform`, sin clínica: da de alta tenants desde el simulador). Imprime las líneas
 `OIDC_*` para pegar en `.env`. Variables del laboratorio: `IDP_ADMIN_URL`, `IDP_ADMIN_REALM`,
 `IDP_ADMIN_CLIENT_ID`, `IDP_ADMIN_CLIENT_SECRET` (conexión de administración), `LAB_API_URL`,
 `LAB_FRONTEND_URLS`, `LAB_USER_PASSWORD`, `LAB_SERVICE_SECRET` y `LAB_PUSH_WIDGET_CLIENTS`
@@ -119,8 +123,14 @@ En Easypanel, `HERMES_SIM_SERVICE_CLIENTS` debe ir entre comillas simples
 (`HERMES_SIM_SERVICE_CLIENTS='{"*":{…}}'`): sin ellas el JSON no llega intacto al contenedor y
 todo el backend responde 500.
 
-`npm run demo` solo siembra datos: ya no firma tokens. El panel de tenants del simulador pide
-un token `platform`.
+`LAB_FRONTEND_URLS` (separadas por comas) debe incluir la URL del frontend desplegado, p. ej.
+`https://mango-chatbot-hermes-frontend.dxrulh.easypanel.host`: alimenta los redirect URIs de
+`chatbot-reference-ui` (`http://localhost:3000` va siempre). El back-channel logout de ese cliente
+apunta a `LAB_API_URL`, así que el `401` de un token reutilizado tras cerrar sesión solo se
+observa contra esa API; un backend local no recibe el aviso.
+
+`npm run demo` solo siembra datos: ya no firma tokens. El panel de tenants del simulador exige
+una sesión `platform` (usuario `platform-lab`).
 
 ### Integración con Hermes
 
@@ -224,6 +234,8 @@ provisionales hasta la Fase 6, donde salen del YAML versionado.
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose | Credenciales del contenedor de Postgres |
 | `BACKEND_URL` | frontend | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio) |
 | `PUBLIC_BACKEND_URL` | frontend | URL del backend alcanzable desde el navegador; la usa el widget del chat (CORS). Por defecto `http://localhost:3001` |
+| `PUBLIC_OIDC_ISSUER` | frontend | Issuer del proveedor para el login de la consola (p. ej. `https://keycloak.mangomorado.com/realms/chatbot-lab`); se lee en runtime. Sin él la consola avisa y no ofrece login |
+| `PUBLIC_OIDC_CLIENT_ID` | frontend | Cliente público con PKCE de la consola; en el laboratorio, `chatbot-reference-ui` |
 
 `process.env` solo se lee en `backend/src/config/env.ts`, `frontend/src/config/env.ts` y en configs de herramientas.
 
