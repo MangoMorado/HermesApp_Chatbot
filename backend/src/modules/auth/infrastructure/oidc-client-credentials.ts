@@ -33,9 +33,13 @@ type RequestDeps = Pick<Deps, "discovery" | "clock" | "httpTimeoutMs"> & {
   fetchFn: typeof fetch;
 };
 
-function cacheKey(credential: MachineCredential): string {
+/**
+ * La clave incluye tipo y clinica: un token validado para un ref nunca se sirve a otro, aunque
+ * dos refs resuelvan al mismo cliente (la cache no valida al devolver).
+ */
+function cacheKey(ref: MachineCredentialRef, credential: MachineCredential): string {
   const digest = createHash("sha256").update(credential.clientSecret).digest("hex");
-  return `${credential.clientId}:${digest}`;
+  return `${ref.kind}:${ref.tenantId}:${credential.clientId}:${digest}`;
 }
 
 function basicHeader(credential: MachineCredential): string {
@@ -81,7 +85,7 @@ async function requestToken(
   };
 }
 
-/** Token source client_credentials con cache por cliente + huella del secreto. */
+/** Token source client_credentials con cache por tipo + clinica + cliente + huella del secreto. */
 export function createOidcClientCredentials(deps: Deps): ClientTokenSource {
   const requestDeps: RequestDeps = {
     discovery: deps.discovery,
@@ -96,7 +100,7 @@ export function createOidcClientCredentials(deps: Deps): ClientTokenSource {
       if (!credential) {
         throw new MachineCredentialMissingError(ref.kind);
       }
-      const key = cacheKey(credential);
+      const key = cacheKey(ref, credential);
       const cached = cache.get(key);
       if (cached && cached.expiresAt.getTime() - SAFETY_MARGIN_MS > deps.clock.now().getTime()) {
         return cached;

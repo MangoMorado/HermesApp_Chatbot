@@ -2,6 +2,7 @@ import { decodeJwt } from "jose";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   IdentityUnavailableError,
+  MachineCredentialMismatchError,
   MachineCredentialMissingError,
 } from "@/modules/auth/domain/machine-credential-error";
 import type { MachineCredentialResolver } from "@/modules/auth/domain/ports/machine-credentials";
@@ -118,6 +119,35 @@ describe("client-credentials", () => {
     });
     await expect(source.tokenFor(ref)).rejects.toBe(rejection);
     await expect(source.tokenFor(ref)).rejects.toBe(rejection);
+    expect(tokenCalls()).toBe(2);
+  });
+
+  it("un token cacheado para una clinica no se entrega a otra aunque compartan cliente", async () => {
+    const refA = { kind: "service", tenantId: "t1" } as const;
+    const refB = { kind: "service", tenantId: "t2" } as const;
+    // Mismo cliente para ambas clinicas: el proveedor siempre emite tenant_id t1.
+    const shared: MachineCredentialResolver = async () => ({
+      clientId: "service-t1",
+      clientSecret: TEST_CLIENT_SECRET,
+    });
+    const source = createOidcClientCredentials({
+      discovery,
+      resolve: shared,
+      clock,
+      httpTimeoutMs: 5000,
+      validate: async (token, wanted) => {
+        if (decodeJwt(token.accessToken).tenant_id !== wanted.tenantId) {
+          throw new MachineCredentialMismatchError(wanted.kind);
+        }
+      },
+    });
+    const first = await source.tokenFor(refA);
+    expect(tokenCalls()).toBe(1);
+    const second = source.tokenFor(refB);
+    await expect(second).rejects.toBeInstanceOf(MachineCredentialMismatchError);
+    expect(tokenCalls()).toBe(2);
+    // La clinica propietaria sigue sirviendose de su cache.
+    expect(await source.tokenFor(refA)).toBe(first);
     expect(tokenCalls()).toBe(2);
   });
 

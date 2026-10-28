@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import { decodeJwt } from "jose";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { PUT as putWidgetClient } from "@/app/api/platform/v1/tenants/[id]/widget-client/route";
 import { GET as getBotConfig } from "@/app/api/v1/bot-config/route";
 import { GET as listEntries } from "@/app/api/v1/knowledge-entries/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
@@ -9,7 +10,14 @@ import { GET as getConversation } from "@/app/api/v1/widget/conversation/route";
 import { POST as refreshSession } from "@/app/api/v1/widget/sessions/refresh/route";
 import { POST as openSession } from "@/app/api/v1/widget/sessions/route";
 import { resetContainer } from "@/composition-root";
-import { authedRequest, authorized, resetFakeIdp, setFakeIdpDown } from "../helpers/idp";
+import {
+  authedRequest,
+  authorized,
+  platformToken,
+  resetFakeIdp,
+  setFakeIdpDown,
+  TEST_CLIENT_SECRET,
+} from "../helpers/idp";
 import { getChat, sendChat, type WidgetChat } from "./chat-support";
 import {
   type ChatbotTenantSeed,
@@ -159,6 +167,35 @@ describe("sesion-widget: apertura", () => {
     expect(body).not.toHaveProperty("access_token");
     expect(await prisma.widgetSession.count()).toBe(0);
     expect(await prisma.idempotencyKey.count()).toBe(0);
+  });
+
+  it("el cliente widget de la clinica A registrado para B no abre sesion en B aunque A ya lo cacheo", async () => {
+    await opened(seed.widgetKey);
+    const sessionsBefore = await prisma.widgetSession.count();
+    const other = await insertChatbotTenant(prisma, "b", { allowedOrigins: [ORIGIN] });
+    const put = await putWidgetClient(
+      new Request(`http://localhost/api/platform/v1/tenants/${other.tenantId}/widget-client`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${await platformToken()}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": randomUUID(),
+        },
+        body: JSON.stringify({
+          client_id: `widget-${seed.tenantId}`,
+          client_secret: TEST_CLIENT_SECRET,
+        }),
+      }),
+      { params: Promise.resolve({ id: other.tenantId }) },
+    );
+    expect(put.status).toBeLessThan(300);
+
+    const response = await open(other.widgetKey);
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error.code).toBe("widget_not_configured");
+    expect(body).not.toHaveProperty("access_token");
+    expect(await prisma.widgetSession.count()).toBe(sessionsBefore);
   });
 
   it("proveedor caido responde 503 identity_unavailable y sin sesion creada", async () => {
