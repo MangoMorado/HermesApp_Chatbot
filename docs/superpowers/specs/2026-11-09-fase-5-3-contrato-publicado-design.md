@@ -131,8 +131,12 @@ esquemas describen lo que el código ya exige.
   secretos).
 - Un caso de `contrato-api` comprueba que la colección versionada coincide con la salida del
   generador, igual que con los OpenAPI. Editar la colección a mano rompe el CI.
-- Organización: una carpeta por superficie (`chatbot`, `platform`, `sim`, `fhir`) y el recorrido
-  E2E, repetido para las dos clínicas mediante variables `tenant_a_*` y `tenant_b_*`.
+- Organización: primero los recorridos escritos a mano, que son lo que ejecuta Newman (preparación,
+  widget E2E para las dos clínicas mediante variables `tenant_a_*` y `tenant_b_*`, maestros FHIR,
+  CRUD del simulador, plataforma, panel y limpieza). Después, una carpeta `catálogo` generada
+  con una petición por operación y una subcarpeta por superficie (`chatbot`, `platform`, `sim`),
+  para explorar a mano. Newman no ejecuta el catálogo: sus ids de ruta y cuerpos de ejemplo no se
+  pueden limpiar contra el laboratorio. (Decisión de Claude al planificar.)
 
 ### 4.2 Contenido por petición
 
