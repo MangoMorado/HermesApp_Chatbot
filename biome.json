@@ -20,6 +20,8 @@
       "!**/openapi.json",
       "!**/openapi-sim.json",
       "!**/openapi-platform.json",
+      "!docs/chatbot-ingenius-360.postman_collection.json",
+      "!docs/lab.postman_environment.template.json",
       "!skills-lock.json",
       "!interactive/anatomia.html"
     ]

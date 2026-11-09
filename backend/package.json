@@ -24,7 +24,8 @@
     "demo": "tsx scripts/demo.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "hermes:sync": "tsx scripts/hermes-sync.ts",
-    "idp:lab": "tsx scripts/idp-lab/index.ts"
+    "idp:lab": "tsx scripts/idp-lab/index.ts",
+    "postman:generate": "tsx scripts/postman/generate.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

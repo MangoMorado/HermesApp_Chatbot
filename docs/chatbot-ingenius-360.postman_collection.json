@@ -1,1305 +1,3332 @@
 {
   "info": {
-    "_postman_id": "7c4e1a90-2b6d-4f18-9a3e-a1b2c3d4e5f6",
+    "_postman_id": "b1a05091-00b2-b759-589f-60b6866464a4",
     "name": "Chatbot Ingenius 360",
-    "description": "Contrato HTTP implementado: `/api/platform/v1`, `/api/v1` y `/api/sim/v1`.\n\n`/fhir` no está en esta colección: llega en la Fase 4.\n\n## Variables\n\n- `baseUrl`: backend. Local `http://localhost:3001`. En producción, la URL pública del backend.\n- `platformSecret`: secreto de plataforma (≥ 32 caracteres). Autoriza solo `/api/platform/v1`. No es el JWT del panel.\n- `jwt`: token de panel o servicio (`operator`, `admin` o `service`). Lo guarda **Emitir token**.\n- `widgetToken`: JWT de rol `widget`. Lo guarda **Abrir sesión**.\n- `widgetKey`: clave pública del widget. La guarda **Alta de tenant** (solo se devuelve en el alta).\n- `widgetOrigin`: cabecera `Origin` que el tenant tiene permitida. Obligatoria al abrir sesión.\n\n## Orden\n\n1. Listar tenants, o dar de alta uno si la lista está vacía.\n2. Emitir token con rol `admin`. El script guarda `jwt`.\n3. El resto de `/api/v1` y `/api/sim/v1` usa ese JWT.\n4. Para el chat: abrir sesión del widget (guarda `widgetToken`) y luego conversación.\n\nLas escrituras llevan `Idempotency-Key`. En el widget debe tener al menos 32 caracteres; `{{$guid}}` cumple.\n\nEl simulador responde 404 si `HERMES_SIMULATOR_ENABLED` no es `true`. En producción debe estar apagado.\n\nPaginación: `cursor` y `limit` (50 por defecto, 200 máximo). `from` y `to` son fechas `YYYY-MM-DD`; `from` tiene que ser anterior a `to`.",
+    "description": "Contrato REST publicado (Fase 5.3). Generada por `npm --prefix backend run postman:generate`:\nno se edita a mano (la suite `contrato-api` compara este archivo con el generador).\n\nLas carpetas de recorrido (todas menos `catálogo`) son lo que ejecuta Newman\n(`npm --prefix backend run postman:run -- --env <entorno>`) y se deshacen solas.\n`catálogo` trae una petición por operación para explorar a mano; su subcarpeta\n`manual — rompe el laboratorio` rota la clave del widget o reescribe su cliente: úsala a conciencia.\n\nLos tokens se piden por script contra `{{oidc_token_url}}` (variables del entorno:\n`docs/lab.postman_environment.template.json`, valores desde `idp:lab`). `/fhir` vive en\nlas carpetas de recorrido; su contrato es `GET /fhir/metadata`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{jwt}}",
-        "type": "string"
-      }
-    ]
-  },
-  "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3001" },
-    { "key": "platformSecret", "value": "" },
-    { "key": "jwt", "value": "" },
-    { "key": "widgetToken", "value": "" },
-    { "key": "widgetKey", "value": "" },
-    { "key": "widgetOrigin", "value": "http://localhost:3000" },
-    { "key": "tenantId", "value": "" },
-    { "key": "tenantSlug", "value": "clinica-demo" },
-    { "key": "practitionerId", "value": "" },
-    { "key": "healthcareServiceId", "value": "" },
-    { "key": "scheduleId", "value": "" },
-    { "key": "patientId", "value": "" },
-    { "key": "medicalRecordId", "value": "" },
-    { "key": "knowledgeEntryId", "value": "" },
-    { "key": "inboxRequestId", "value": "" },
-    { "key": "allowedOrigin", "value": "http%3A%2F%2Flocalhost%3A3000" },
-    { "key": "from", "value": "2026-10-13" },
-    { "key": "to", "value": "2026-10-20" }
-  ],
   "item": [
     {
-      "name": "Plataforma",
-      "description": "Autenticada con `PLATFORM_SECRET` en `Authorization: Bearer`. Sin ese secreto toda la superficie responde 404. El `tenant_id` viaja en el cuerpo, no en un JWT.",
-      "auth": {
-        "type": "bearer",
-        "bearer": [
-          {
-            "key": "token",
-            "value": "{{platformSecret}}",
-            "type": "string"
-          }
-        ]
-      },
+      "id": "188da889-c376-36fa-963a-89802e89b1f1",
+      "name": "catálogo",
       "item": [
         {
-          "name": "Listar tenants",
-          "event": [
+          "id": "3716661a-9bc6-3fd7-a7f6-ddd945deb767",
+          "name": "chatbot",
+          "item": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.response.json();",
-                  "const first = body.data && body.data[0];",
-                  "if (pm.response.code === 200 && first && first.id) {",
-                  "    pm.collectionVariables.set('tenantId', first.id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/platform/v1/tenants?limit=50",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "platform", "v1", "tenants"],
-              "query": [
-                { "key": "limit", "value": "50" },
-                { "key": "cursor", "value": "", "disabled": true }
+              "id": "8b4e2277-50ea-290a-8084-b5f1c9999080",
+              "name": "GET /api/v1/health",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/health",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "health"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.request.headers.remove(\"Authorization\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Comprueba que el servicio responde"
+            },
+            {
+              "id": "46fd0e75-98dd-2f82-3da6-b9d021f47b1b",
+              "name": "GET /api/v1/me",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "me"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Identidad efectiva del token"
+            },
+            {
+              "id": "0701b614-7679-e1d6-b506-fb219ec5d4af",
+              "name": "POST /api/v1/auth/backchannel-logout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/auth/backchannel-logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "backchannel-logout"
+                  ]
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "logout_token",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.request.headers.remove(\"Authorization\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Publica: la llama el proveedor de identidad servidor a servidor. Verifica el logout_token y cierra la sesion (sid) hasta que caduquen sus tokens. Idempotente."
+            },
+            {
+              "id": "abdb6d49-9d33-7b0b-9e17-3459176901c7",
+              "name": "GET /api/v1/practitioners",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/practitioners",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "practitioners"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
               ]
             },
-            "description": "Guarda el `id` del primer tenant en `tenantId`."
-          }
-        },
-        {
-          "name": "Alta de tenant",
-          "event": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.response.json();",
-                  "if (pm.response.code === 201 && body.tenant) {",
-                  "    pm.collectionVariables.set('tenantId', body.tenant.id);",
-                  "    pm.collectionVariables.set('widgetKey', body.widget_key);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "{{$guid}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"slug\": \"{{tenantSlug}}\",\n  \"name\": \"Clínica demo\",\n  \"allowed_origins\": [\"{{widgetOrigin}}\"]\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/platform/v1/tenants",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "platform", "v1", "tenants"]
-            },
-            "description": "Crea el tenant con bot-config, una entrada de conocimiento de ejemplo y la primera clave del widget. `widget_key` solo vuelve en esta respuesta (o en una repetición con la misma Idempotency-Key). `slug`: minúsculas, números y guiones."
-          }
-        },
-        {
-          "name": "Emitir token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.response.json();",
-                  "if (pm.response.code === 200 && body.token) {",
-                  "    pm.collectionVariables.set('jwt', body.token);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"role\": \"admin\",\n  \"subject\": \"operacion\",\n  \"ttl_minutes\": 480\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/platform/v1/tokens",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "platform", "v1", "tokens"]
-            },
-            "description": "Emite el JWT de panel o de servicio y lo guarda en `jwt`. `role`: `operator`, `admin` o `service` (nunca `widget`). `subject` no puede empezar por `widget:`. `ttl_minutes` opcional: panel 480 por defecto (tope 720); servicio 60 (tope 1440). No lleva Idempotency-Key: no escribe dominio y el token no se persiste.\n\nEse `token` (empieza por `eyJ`) es el que acepta la franja de sesión. `JWT_SECRET` y `PLATFORM_SECRET` no sirven como sesión."
-          }
-        }
-      ]
-    },
-    {
-      "name": "REST",
-      "description": "Superficie `/api/v1`. Errores `{ error: { code, message, request_id, details } }` y cabecera `X-Request-Id`. El tenant sale solo del JWT.",
-      "item": [
-        {
-          "name": "Salud",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "health"]
-            },
-            "description": "Pública. Responde `{ status: \"ok\", checkedAt }`."
-          }
-        },
-        {
-          "name": "Identidad",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "me"]
-            },
-            "description": "Roles: `widget`, `operator`, `admin`, `service`. Devuelve `subject`, `tenant_id`, `role` y, en el widget, `session_id`."
-          }
-        },
-        {
-          "name": "Agenda",
-          "description": "Lectura de dominio. Roles: `operator`, `admin`.",
-          "item": [
-            {
-              "name": "Listar profesionales",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "const body = pm.response.json();",
-                      "const first = body.data && body.data[0];",
-                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('practitionerId')) {",
-                      "    pm.collectionVariables.set('practitionerId', first.id);",
-                      "}"
-                    ]
-                  }
-                }
-              ],
+              "id": "18a9b7a8-bbdc-f440-d7d4-b063b86ff941",
+              "name": "GET /api/v1/healthcare-services",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/practitioners?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "practitioners"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true },
-                    { "key": "active", "value": "true", "disabled": true }
+                  "raw": "{{base_url}}/api/v1/healthcare-services",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "healthcare-services"
                   ]
                 }
-              }
-            },
-            {
-              "name": "Listar servicios",
+              },
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "const body = pm.response.json();",
-                      "const first = body.data && body.data[0];",
-                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('healthcareServiceId')) {",
-                      "    pm.collectionVariables.set('healthcareServiceId', first.id);",
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
                       "}"
                     ]
                   }
                 }
-              ],
+              ]
+            },
+            {
+              "id": "7bd223af-4220-dec9-6440-b112b41e217a",
+              "name": "GET /api/v1/schedules",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/healthcare-services?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "healthcare-services"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true },
-                    { "key": "active", "value": "true", "disabled": true }
+                  "raw": "{{base_url}}/api/v1/schedules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "schedules"
                   ]
                 }
-              }
-            },
-            {
-              "name": "Listar agendas",
+              },
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "const body = pm.response.json();",
-                      "const first = body.data && body.data[0];",
-                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('scheduleId')) {",
-                      "    pm.collectionVariables.set('scheduleId', first.id);",
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
                       "}"
                     ]
                   }
                 }
-              ],
+              ]
+            },
+            {
+              "id": "af4aaef1-a1f1-f07e-ca2f-2aa79067950a",
+              "name": "GET /api/v1/availability",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/schedules?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "schedules"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true },
-                    { "key": "practitioner_id", "value": "{{practitionerId}}", "disabled": true },
+                  "raw": "{{base_url}}/api/v1/availability",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "availability"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "896eb1c3-0b02-244d-36ea-b2ccda716940",
+              "name": "GET /api/v1/schedules/{id}/slots",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/schedules/:id/slots",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "schedules",
+                    ":id",
+                    "slots"
+                  ],
+                  "variable": [
                     {
-                      "key": "healthcare_service_id",
-                      "value": "{{healthcareServiceId}}",
-                      "disabled": true
-                    },
-                    { "key": "active", "value": "true", "disabled": true }
+                      "key": "id",
+                      "value": ""
+                    }
                   ]
                 }
-              }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
             },
             {
-              "name": "Disponibilidad",
+              "id": "8b29d28e-4e05-ee6d-6cfc-87f580c79a6d",
+              "name": "GET /api/v1/appointments",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/availability?from={{from}}&to={{to}}&limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "availability"],
-                  "query": [
-                    { "key": "from", "value": "{{from}}" },
-                    { "key": "to", "value": "{{to}}" },
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true },
+                  "raw": "{{base_url}}/api/v1/appointments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "appointments"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "1971632c-c0e1-150e-3f65-1c6131296103",
+              "name": "POST /api/v1/medical-records/search",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/medical-records/search",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "medical-records",
+                    "search"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"document_type\": \"CC\",\n  \"document_number\": \"newman-ejemplo\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Busca un expediente por documento. POST para que el documento no viaje en la URL; no escribe."
+            },
+            {
+              "id": "ac6cc623-09d8-9c4a-1e01-22cc766d3489",
+              "name": "GET /api/v1/medical-records/{id}",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/medical-records/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "medical-records",
+                    ":id"
+                  ],
+                  "variable": [
                     {
-                      "key": "healthcare_service_id",
-                      "value": "{{healthcareServiceId}}",
-                      "disabled": true
-                    },
-                    { "key": "practitioner_id", "value": "{{practitionerId}}", "disabled": true },
-                    { "key": "schedule_id", "value": "{{scheduleId}}", "disabled": true }
-                  ]
-                },
-                "description": "`from` y `to` son obligatorios."
-              }
-            },
-            {
-              "name": "Cupos de una agenda",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/schedules/{{scheduleId}}/slots?from={{from}}&to={{to}}&limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "schedules", "{{scheduleId}}", "slots"],
-                  "query": [
-                    { "key": "from", "value": "{{from}}" },
-                    { "key": "to", "value": "{{to}}" },
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true }
+                      "key": "id",
+                      "value": ""
+                    }
                   ]
                 }
-              }
-            },
-            {
-              "name": "Citas de una agenda",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/appointments?schedule_id={{scheduleId}}&from={{from}}&to={{to}}&limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "appointments"],
-                  "query": [
-                    { "key": "schedule_id", "value": "{{scheduleId}}" },
-                    { "key": "from", "value": "{{from}}" },
-                    { "key": "to", "value": "{{to}}" },
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true }
-                  ]
-                },
-                "description": "`schedule_id`, `from` y `to` son obligatorios."
-              }
-            }
-          ]
-        },
-        {
-          "name": "Expedientes",
-          "description": "Roles: `operator`, `admin`. El documento va en el cuerpo para que no quede en la URL.",
-          "item": [
-            {
-              "name": "Buscar por documento",
+              },
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "const body = pm.response.json();",
-                      "if (pm.response.code === 200 && body.id) {",
-                      "    pm.collectionVariables.set('medicalRecordId', body.id);",
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "968ecad0-9033-6d08-9aa0-e1e7029b728d",
+              "name": "GET /api/v1/medical-records/{id}/appointments",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/medical-records/:id/appointments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "medical-records",
+                    ":id",
+                    "appointments"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "b7169927-4ae3-aa44-290f-618562af2ae4",
+              "name": "GET /api/v1/tenant-settings",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/tenant-settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenant-settings"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "fcb910ec-c6ac-e851-9141-96054344bc45",
+              "name": "PATCH /api/v1/tenant-settings",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/tenant-settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenant-settings"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"max_query_range_days\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "7b51a6a4-e365-cf87-ffd0-40aa11c51900",
+              "name": "GET /api/v1/bot-config",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/bot-config",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "bot-config"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "bc96ccb4-cfdc-fd4d-fffc-6ce92732129f",
+              "name": "PATCH /api/v1/bot-config",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/bot-config",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "bot-config"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"texts\": {},\n  \"params\": {},\n  \"allowed_origins\": [\n    \"newman-ejemplo\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
                       "}"
                     ]
                   }
                 }
               ],
-              "request": {
-                "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"document_type\": \"CC\",\n  \"document_number\": \"1234567890\"\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/medical-records/search",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "medical-records", "search"]
-                },
-                "description": "No escribe. `document_type`: `CC`, `TI`, `CE`, `PA` o `RC`. Guarda `medicalRecordId` si la respuesta trae `id`."
-              }
+              "description": "Parche parcial. Un texto o param en null vuelve al predeterminado."
             },
             {
-              "name": "Leer expediente",
+              "id": "30e93c12-2694-e41f-c057-c10dcf82ec5b",
+              "name": "GET /api/v1/knowledge-entries",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/medical-records/{{medicalRecordId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "medical-records", "{{medicalRecordId}}"]
-                }
-              }
-            },
-            {
-              "name": "Citas del expediente",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/medical-records/{{medicalRecordId}}/appointments?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "medical-records", "{{medicalRecordId}}", "appointments"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true }
+                  "raw": "{{base_url}}/api/v1/knowledge-entries",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "knowledge-entries"
                   ]
                 }
-              }
-            }
-          ]
-        },
-        {
-          "name": "Ajustes del tenant",
-          "item": [
-            {
-              "name": "Leer ajustes",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/tenant-settings",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "tenant-settings"]
-                },
-                "description": "Roles: `operator`, `admin`."
-              }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
             },
             {
-              "name": "Actualizar ajustes",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"max_query_range_days\": 31\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/tenant-settings",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "tenant-settings"]
-                },
-                "description": "Rol: `admin`. `max_query_range_days` entre 1 y 366."
-              }
-            }
-          ]
-        },
-        {
-          "name": "Bot",
-          "description": "Lectura: `operator` y `admin`. Escritura: `admin`.",
-          "item": [
-            {
-              "name": "Leer configuración",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/bot-config",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "bot-config"]
-                },
-                "description": "Textos efectivos (valor y si está sobrescrito), parámetros, orígenes permitidos y claves del widget (vigente y en gracia)."
-              }
-            },
-            {
-              "name": "Actualizar configuración",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"texts\": {\n    \"welcome\": \"Hola, te atiende {clinic_name}.\"\n  },\n  \"params\": {\n    \"kb_max_results\": 3\n  }\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/bot-config",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "bot-config"]
-                },
-                "description": "Parche parcial. Un texto o parámetro en `null` vuelve al predeterminado. Parámetros: `widget_session_ttl_minutes`, `widget_sessions_per_ip_per_minute`, `widget_key_grace_hours`, `kb_max_results`, `request_hold_minutes`, `max_pending_requests_per_patient`, `verification_max_attempts`, `verification_lock_minutes`."
-              }
-            },
-            {
-              "name": "Rotar clave del widget",
-              "request": {
-                "method": "POST",
-                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/bot-config/widget-keys/rotate",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "bot-config", "widget-keys", "rotate"]
-                },
-                "description": "La clave vigente pasa a gracia (`widget_key_grace_hours`) y la que ya estaba en gracia deja de valer. La clave nueva va en la respuesta, no se guarda sola en `widgetKey`."
-              }
-            },
-            {
-              "name": "Agregar origen permitido",
+              "id": "3074a007-20dd-0472-3e63-b0a056f9df81",
+              "name": "POST /api/v1/knowledge-entries",
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/knowledge-entries",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "knowledge-entries"
+                  ]
+                },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"origin\": \"{{widgetOrigin}}\"\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/bot-config/allowed-origins",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "bot-config", "allowed-origins"]
-                },
-                "description": "Máximo 20 orígenes. Si ya está, responde 200 sin cambios. Forma: `https://host` o `http://host[:puerto]`."
-              }
+                  "raw": "{\n  \"category\": \"newman-ejemplo\",\n  \"question\": \"newman-ejemplo\",\n  \"answer\": \"newman-ejemplo\",\n  \"detail\": \"newman-ejemplo\",\n  \"keywords\": [\n    \"newman-ejemplo\"\n  ],\n  \"position\": 0,\n  \"active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 201\", function () {",
+                      "  pm.expect([201]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "category, question y answer son obligatorios. Maximo 500 entradas por tenant."
             },
             {
-              "name": "Quitar origen permitido",
+              "id": "934f6223-3de5-019e-2eed-6330f5c88e54",
+              "name": "GET /api/v1/knowledge-entries/{id}",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/knowledge-entries/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "knowledge-entries",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "d6219290-3293-c9f8-f4ad-a103823c2ab1",
+              "name": "PATCH /api/v1/knowledge-entries/{id}",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/knowledge-entries/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "knowledge-entries",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category\": \"newman-ejemplo\",\n  \"question\": \"newman-ejemplo\",\n  \"answer\": \"newman-ejemplo\",\n  \"detail\": \"newman-ejemplo\",\n  \"keywords\": [\n    \"newman-ejemplo\"\n  ],\n  \"position\": 0,\n  \"active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "47b827d4-f8b4-ec14-50fe-342ad209a08f",
+              "name": "DELETE /api/v1/knowledge-entries/{id}",
               "request": {
                 "method": "DELETE",
-                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/bot-config/allowed-origins/{{allowedOrigin}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "bot-config", "allowed-origins", "{{allowedOrigin}}"]
-                },
-                "description": "`allowedOrigin` va codificado con `encodeURIComponent`. El valor de ejemplo es `http://localhost:3000`."
-              }
-            }
-          ]
-        },
-        {
-          "name": "Conocimiento",
-          "description": "Lectura: `operator` y `admin`. Alta, cambio y baja: `admin`. Máximo 500 entradas por tenant.",
-          "item": [
-            {
-              "name": "Listar entradas",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "const body = pm.response.json();",
-                      "const first = body.data && body.data[0];",
-                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('knowledgeEntryId')) {",
-                      "    pm.collectionVariables.set('knowledgeEntryId', first.id);",
-                      "}"
-                    ]
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
                   }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/knowledge-entries?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "knowledge-entries"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true },
-                    { "key": "category", "value": "", "disabled": true },
-                    { "key": "active", "value": "true", "disabled": true }
+                  "raw": "{{base_url}}/api/v1/knowledge-entries/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "knowledge-entries",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
                   ]
                 }
-              }
-            },
-            {
-              "name": "Crear entrada",
+              },
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "const body = pm.response.json();",
-                      "if (pm.response.code === 201 && body.id) {",
-                      "    pm.collectionVariables.set('knowledgeEntryId', body.id);",
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
                       "}"
                     ]
                   }
                 }
-              ],
+              ]
+            },
+            {
+              "id": "9c681827-fd05-1614-8cb1-bf1bc61a97cc",
+              "name": "POST /api/v1/widget/sessions",
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{widget_origin_a}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/widget/sessions",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "widget",
+                    "sessions"
+                  ]
+                },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"category\": \"horarios\",\n  \"question\": \"¿Cuál es el horario de atención?\",\n  \"answer\": \"Atendemos de lunes a viernes de 7:00 a 17:00.\",\n  \"detail\": null,\n  \"keywords\": [\"horario\", \"atención\"],\n  \"position\": 0,\n  \"active\": true\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "raw": "{\n  \"widget_key\": \"newman-ejemplo\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.request.headers.remove(\"Authorization\");"
+                    ]
+                  }
                 },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/knowledge-entries",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "knowledge-entries"]
-                },
-                "description": "`category`, `question` y `answer` son obligatorios."
-              }
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 201\", function () {",
+                      "  pm.expect([201]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Publica: la clave del widget resuelve el tenant. Exige cabecera Origin permitida e Idempotency-Key de al menos 32 caracteres (secreto del cliente: no se registra)."
             },
             {
-              "name": "Leer entrada",
+              "id": "c6f29624-8da4-1617-ccce-d0dcd1707a58",
+              "name": "POST /api/v1/widget/sessions/refresh",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "X-Conversation-Secret",
+                    "value": "{{conversation_secret_a}}"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{widget_origin_a}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/widget/sessions/refresh",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "widget",
+                    "sessions",
+                    "refresh"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"widget_key\": \"newman-ejemplo\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.request.headers.remove(\"Authorization\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Publica (sin bearer): la autentican la clave del widget, el Origin de la sesion y X-Conversation-Secret, con el rate limit de la apertura. Token nuevo del proveedor y conversacion extendida segun el TTL del tenant."
+            },
+            {
+              "id": "076db4e7-3cf7-e713-9a56-8f419287d57a",
+              "name": "GET /api/v1/widget/conversation",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "X-Conversation-Secret",
+                    "value": "{{conversation_secret_a}}"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/knowledge-entries/{{knowledgeEntryId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "knowledge-entries", "{{knowledgeEntryId}}"]
+                  "raw": "{{base_url}}/api/v1/widget/conversation",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "widget",
+                    "conversation"
+                  ]
                 }
-              }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set(\"access_token\", pm.collectionVariables.get(\"widget_token_a\"));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Solo rol widget: turno actual e historial redactado de la conversacion de X-Conversation-Secret. Crea la conversacion con la bienvenida si no existe."
             },
             {
-              "name": "Actualizar entrada",
+              "id": "e1d4e6ff-0d71-79ed-e8c0-67a46142b7e6",
+              "name": "POST /api/v1/widget/conversation/messages",
               "request": {
-                "method": "PATCH",
+                "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "X-Conversation-Secret",
+                    "value": "{{conversation_secret_a}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/widget/conversation/messages",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "widget",
+                    "conversation",
+                    "messages"
+                  ]
+                },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"answer\": \"Atendemos de lunes a viernes de 8:00 a 16:00.\",\n  \"active\": true\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/knowledge-entries/{{knowledgeEntryId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "knowledge-entries", "{{knowledgeEntryId}}"]
+                  "raw": "{\n  \"option_id\": \"newman-ejemplo\",\n  \"text\": \"newman-ejemplo\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 }
-              }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.variables.set(\"access_token\", pm.collectionVariables.get(\"widget_token_a\"));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Solo rol widget: un turno. option_id de una opcion vigente (409 stale_option si no) o text donde el turno lo pide."
             },
             {
-              "name": "Borrar entrada",
+              "id": "f485f10c-1c96-d9c9-a6c8-8892253bae8e",
+              "name": "POST /api/v1/bot-config/allowed-origins",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/bot-config/allowed-origins",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "bot-config",
+                    "allowed-origins"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"origin\": \"newman-ejemplo\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Agrega un origen (maximo 20). Si ya esta, responde 200 sin cambios."
+            },
+            {
+              "id": "e227ee3f-399c-689e-a830-78b32d5301cb",
+              "name": "DELETE /api/v1/bot-config/allowed-origins/{origin}",
               "request": {
                 "method": "DELETE",
-                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/knowledge-entries/{{knowledgeEntryId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "knowledge-entries", "{{knowledgeEntryId}}"]
-                },
-                "description": "Responde `{ deleted: true }`."
-              }
+                  "raw": "{{base_url}}/api/v1/bot-config/allowed-origins/:origin",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "bot-config",
+                    "allowed-origins",
+                    ":origin"
+                  ],
+                  "variable": [
+                    {
+                      "key": "origin",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Quita un origen. El origen va codificado (encodeURIComponent)."
             }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Widget",
-      "description": "El chat habla directo con el backend. Abrir sesión es público: la clave resuelve el tenant y `Origin` tiene que estar permitido. El resto exige el JWT de rol `widget`.",
-      "item": [
-        {
-          "name": "Abrir sesión",
+          ],
           "event": [
             {
-              "listen": "test",
+              "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const body = pm.response.json();",
-                  "if (pm.response.code === 201 && body.token) {",
-                  "    pm.collectionVariables.set('widgetToken', body.token);",
-                  "}"
+                  "(function () {",
+                  "  var cacheKey = \"token_user_admin_a\";",
+                  "  var expKey = \"token_exp_user_admin_a\";",
+                  "  var now = Date.now();",
+                  "  var cached = pm.collectionVariables.get(cacheKey);",
+                  "  var exp = Number(pm.collectionVariables.get(expKey) || 0);",
+                  "  if (cached && exp - now > 30000) {",
+                  "    pm.variables.set(\"access_token\", cached);",
+                  "    return;",
+                  "  }",
+                  "  pm.sendRequest({",
+                  "    url: pm.variables.get(\"oidc_token_url\"),",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/x-www-form-urlencoded\" },",
+                  "    body: { mode: \"raw\", raw: \"grant_type=password&scope=openid\" + \"&client_id=\" + encodeURIComponent(pm.variables.get(\"newman_client_id\")) + \"&client_secret=\" + encodeURIComponent(pm.variables.get(\"newman_client_secret\")) + \"&username=\" + encodeURIComponent(\"admin-\" + pm.variables.get(\"tenant_a_slug\")) + \"&password=\" + encodeURIComponent(pm.variables.get(\"lab_user_password\")) },",
+                  "  }, function (err, res) {",
+                  "    if (err) { throw err; }",
+                  "    var json = res.json();",
+                  "    if (!json.access_token) { throw new Error(\"Token endpoint sin access_token\"); }",
+                  "    pm.collectionVariables.set(cacheKey, json.access_token);",
+                  "    pm.collectionVariables.set(expKey, String(now + json.expires_in * 1000));",
+                  "    pm.variables.set(\"access_token\", json.access_token);",
+                  "  });",
+                  "})();"
                 ]
               }
             }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Origin", "value": "{{widgetOrigin}}" },
-              { "key": "Idempotency-Key", "value": "{{$guid}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"widget_key\": \"{{widgetKey}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/widget/sessions",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "widget", "sessions"]
-            },
-            "description": "Pública. `Idempotency-Key` de al menos 32 caracteres. Hay límite por IP (`widget_sessions_per_ip_per_minute`); si se pasa, 429 con `Retry-After`. Guarda `widgetToken`."
-          }
+          ]
         },
         {
-          "name": "Renovar sesión",
+          "id": "eb1e27c8-5f2f-d1b0-3dc9-8aedbba50d47",
+          "name": "platform",
+          "item": [
+            {
+              "id": "44b74b72-c53d-4876-e1f0-707997d0ed09",
+              "name": "GET /api/platform/v1/me",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/platform/v1/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "platform",
+                    "v1",
+                    "me"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Identidad que el backend resolvio del token `platform`."
+            },
+            {
+              "id": "fc7523b3-392a-64ce-47ce-052d2f32a4b2",
+              "name": "GET /api/platform/v1/tenants",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/platform/v1/tenants",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "platform",
+                    "v1",
+                    "tenants"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "bb08e08f-5cb3-c98a-b02a-0175299c5b0d",
+              "name": "POST /api/platform/v1/tenants",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/platform/v1/tenants",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "platform",
+                    "v1",
+                    "tenants"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"slug\": \"newman-ejemplo\",\n  \"name\": \"newman-ejemplo\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 201\", function () {",
+                      "  pm.expect([201]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Alta con predeterminados: bot-config, KB de ejemplo y primera clave del widget. Una repeticion con la misma Idempotency-Key devuelve la respuesta original, con la widget_key emitida en el alta aunque despues se haya rotado."
+            }
+          ],
           "event": [
             {
-              "listen": "test",
+              "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const body = pm.response.json();",
-                  "if (pm.response.code === 200 && body.token) {",
-                  "    pm.collectionVariables.set('widgetToken', body.token);",
-                  "}"
+                  "(function () {",
+                  "  var cacheKey = \"token_client_platform\";",
+                  "  var expKey = \"token_exp_client_platform\";",
+                  "  var now = Date.now();",
+                  "  var cached = pm.collectionVariables.get(cacheKey);",
+                  "  var exp = Number(pm.collectionVariables.get(expKey) || 0);",
+                  "  if (cached && exp - now > 30000) {",
+                  "    pm.variables.set(\"access_token\", cached);",
+                  "    return;",
+                  "  }",
+                  "  pm.sendRequest({",
+                  "    url: pm.variables.get(\"oidc_token_url\"),",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/x-www-form-urlencoded\" },",
+                  "    body: { mode: \"raw\", raw: \"grant_type=client_credentials\" + \"&client_id=\" + encodeURIComponent(pm.variables.get(\"platform_client_id\")) + \"&client_secret=\" + encodeURIComponent(pm.variables.get(\"platform_client_secret\")) },",
+                  "  }, function (err, res) {",
+                  "    if (err) { throw err; }",
+                  "    var json = res.json();",
+                  "    if (!json.access_token) { throw new Error(\"Token endpoint sin access_token\"); }",
+                  "    pm.collectionVariables.set(cacheKey, json.access_token);",
+                  "    pm.collectionVariables.set(expKey, String(now + json.expires_in * 1000));",
+                  "    pm.variables.set(\"access_token\", json.access_token);",
+                  "  });",
+                  "})();"
                 ]
               }
             }
+          ]
+        },
+        {
+          "id": "757d14cf-a687-85fe-2f83-1548ebbd6914",
+          "name": "sim",
+          "item": [
+            {
+              "id": "ad036385-6ddf-a59b-6b94-e653fcd0de55",
+              "name": "GET /api/sim/v1/practitioners",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/practitioners",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "practitioners"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "7d5bc092-a209-0724-e8ce-2a2b272caf95",
+              "name": "POST /api/sim/v1/practitioners",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/practitioners",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "practitioners"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "bc7c02eb-d766-f127-ac1f-7bf393739188",
+              "name": "GET /api/sim/v1/practitioners/{id}",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/practitioners/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "practitioners",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "4c11f622-53e9-ccb9-673e-acdbc31ccff4",
+              "name": "PATCH /api/sim/v1/practitioners/{id}",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/practitioners/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "practitioners",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "af07fb6e-a079-b415-e5ee-037a38568836",
+              "name": "DELETE /api/sim/v1/practitioners/{id}",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/practitioners/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "practitioners",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "47c5c9ea-04e6-9993-f11c-175cfe3a2c4d",
+              "name": "GET /api/sim/v1/healthcare-services",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/healthcare-services",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "healthcare-services"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "7ac13d7f-01ae-9cdb-7aa6-813905a3f189",
+              "name": "POST /api/sim/v1/healthcare-services",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/healthcare-services",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "healthcare-services"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "416ca45d-7c36-5ba8-6b27-ca30a990b590",
+              "name": "GET /api/sim/v1/healthcare-services/{id}",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/healthcare-services/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "healthcare-services",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "93aef897-9807-fdb5-0afb-809f7e6cf1be",
+              "name": "PATCH /api/sim/v1/healthcare-services/{id}",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/healthcare-services/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "healthcare-services",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "09932bde-6156-0d4e-ffaa-b56cfb70ea38",
+              "name": "DELETE /api/sim/v1/healthcare-services/{id}",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/healthcare-services/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "healthcare-services",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "5107ff03-af6b-13bb-9dbf-c631e3cd3082",
+              "name": "GET /api/sim/v1/schedules",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/schedules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "schedules"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "d74ca9df-56e5-06f1-168f-3e5d1057ef20",
+              "name": "POST /api/sim/v1/schedules",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/schedules",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "schedules"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "0ca62201-4100-5998-582f-6ab4da1bd663",
+              "name": "GET /api/sim/v1/schedules/{id}",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/schedules/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "schedules",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "e7782912-5f57-22f8-675e-a80fcade3117",
+              "name": "PATCH /api/sim/v1/schedules/{id}",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/schedules/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "schedules",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "07a78f95-1601-7225-a8ca-ce5092fb4629",
+              "name": "DELETE /api/sim/v1/schedules/{id}",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/schedules/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "schedules",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "73ee24cf-bd42-23c4-52fc-3e723c02020e",
+              "name": "GET /api/sim/v1/patients",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/patients",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "patients"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "dd98855f-af1d-b52f-663a-498127071c01",
+              "name": "POST /api/sim/v1/patients",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/patients",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "patients"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "691aa180-f69e-cae9-a4a5-f362abf3798a",
+              "name": "GET /api/sim/v1/patients/{id}",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/patients/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "patients",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "72e47f7c-a0a4-9d6e-5b23-a538438efb8c",
+              "name": "PATCH /api/sim/v1/patients/{id}",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/patients/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "patients",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "2b3897c7-70d3-292d-3d18-29c1f27b03da",
+              "name": "DELETE /api/sim/v1/patients/{id}",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/patients/:id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "patients",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "374f0aea-8dcc-acce-75ca-ea1eb631dbd5",
+              "name": "POST /api/sim/v1/schedules/{id}/slots/generate",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/schedules/:id/slots/generate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "schedules",
+                    ":id",
+                    "slots",
+                    "generate"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Genera cupos (equivalente a slots:generate de la spec)"
+            },
+            {
+              "id": "4d484dd5-4aea-454f-1a30-34111ead13df",
+              "name": "GET /api/sim/v1/inbox",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/inbox",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "inbox"
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Solicitudes pendientes y vivas del tenant (vence las caducadas antes de responder)"
+            },
+            {
+              "id": "9958f0d9-9553-883e-3379-d1638fc073ed",
+              "name": "POST /api/sim/v1/inbox/{id}/approve",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/inbox/:id/approve",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "inbox",
+                    ":id",
+                    "approve"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Hermes aprueba: reserva si su cupo sigue libre; si no, rechaza por slot_unavailable"
+            },
+            {
+              "id": "be44f93f-ad88-0b2f-fc81-e818f2b7c519",
+              "name": "POST /api/sim/v1/inbox/{id}/reject",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/sim/v1/inbox/:id/reject",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "sim",
+                    "v1",
+                    "inbox",
+                    ":id",
+                    "reject"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Hermes rechaza (declined)"
+            }
           ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{widgetToken}}", "type": "string" }]
-            },
-            "method": "POST",
-            "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/widget/sessions/refresh",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "widget", "sessions", "refresh"]
-            },
-            "description": "Solo rol `widget`: renueva la sesión de su propio token."
-          }
-        },
-        {
-          "name": "Leer conversación",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{widgetToken}}", "type": "string" }]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/widget/conversation",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "widget", "conversation"]
-            },
-            "description": "Solo rol `widget`. Si no hay conversación, la crea con la bienvenida. El historial va redactado."
-          }
-        },
-        {
-          "name": "Enviar opción",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{widgetToken}}", "type": "string" }]
-            },
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "{{$guid}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"option_id\": \"option_kb\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/widget/conversation/messages",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "widget", "conversation", "messages"]
-            },
-            "description": "Exactamente uno de `option_id` o `text`. `option_id` tiene que ser una opción vigente del turno; si no, 409 `stale_option`. Cambia el id por el que devolvió la lectura."
-          }
-        },
-        {
-          "name": "Enviar texto",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{widgetToken}}", "type": "string" }]
-            },
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "{{$guid}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"text\": \"horario de atención\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/widget/conversation/messages",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "widget", "conversation", "messages"]
-            },
-            "description": "Solo cuando el turno pide `input` `text` o `date`. `text` de 1 a 500 caracteres."
-          }
-        }
-      ]
-    },
-    {
-      "name": "Simulador",
-      "description": "`/api/sim/v1`. Rol `admin`. Responde 404 si `HERMES_SIMULATOR_ENABLED` no es `true`. Misma envoltura de error que `/api/v1`.",
-      "item": [
-        {
-          "name": "Profesionales",
-          "item": [
+          "event": [
             {
-              "name": "Listar",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/practitioners?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "practitioners"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true }
-                  ]
-                }
-              }
-            },
-            {
-              "name": "Crear",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "const body = pm.response.json();",
-                      "if (pm.response.code === 200 && body.id) {",
-                      "    pm.collectionVariables.set('practitionerId', body.id);",
-                      "}"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"identifier_value\": \"prac-001\",\n  \"name\": \"Ana Pérez\",\n  \"active\": true\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/practitioners",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "practitioners"]
-                },
-                "description": "`identifier_value` y `name` son obligatorios. El sistema de identificador lo fija el servidor (`urn:hermes:practitioner`)."
-              }
-            },
-            {
-              "name": "Leer",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/practitioners/{{practitionerId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "practitioners", "{{practitionerId}}"]
-                }
-              }
-            },
-            {
-              "name": "Actualizar",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Ana Pérez Gómez\",\n  \"active\": true\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/practitioners/{{practitionerId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "practitioners", "{{practitionerId}}"]
-                },
-                "description": "Acepta `name` y `active`."
-              }
-            },
-            {
-              "name": "Borrar",
-              "request": {
-                "method": "DELETE",
-                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/practitioners/{{practitionerId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "practitioners", "{{practitionerId}}"]
-                },
-                "description": "409 si el profesional tiene agendas asociadas."
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "(function () {",
+                  "  var cacheKey = \"token_user_admin_a\";",
+                  "  var expKey = \"token_exp_user_admin_a\";",
+                  "  var now = Date.now();",
+                  "  var cached = pm.collectionVariables.get(cacheKey);",
+                  "  var exp = Number(pm.collectionVariables.get(expKey) || 0);",
+                  "  if (cached && exp - now > 30000) {",
+                  "    pm.variables.set(\"access_token\", cached);",
+                  "    return;",
+                  "  }",
+                  "  pm.sendRequest({",
+                  "    url: pm.variables.get(\"oidc_token_url\"),",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/x-www-form-urlencoded\" },",
+                  "    body: { mode: \"raw\", raw: \"grant_type=password&scope=openid\" + \"&client_id=\" + encodeURIComponent(pm.variables.get(\"newman_client_id\")) + \"&client_secret=\" + encodeURIComponent(pm.variables.get(\"newman_client_secret\")) + \"&username=\" + encodeURIComponent(\"admin-\" + pm.variables.get(\"tenant_a_slug\")) + \"&password=\" + encodeURIComponent(pm.variables.get(\"lab_user_password\")) },",
+                  "  }, function (err, res) {",
+                  "    if (err) { throw err; }",
+                  "    var json = res.json();",
+                  "    if (!json.access_token) { throw new Error(\"Token endpoint sin access_token\"); }",
+                  "    pm.collectionVariables.set(cacheKey, json.access_token);",
+                  "    pm.collectionVariables.set(expKey, String(now + json.expires_in * 1000));",
+                  "    pm.variables.set(\"access_token\", json.access_token);",
+                  "  });",
+                  "})();"
+                ]
               }
             }
           ]
         },
         {
-          "name": "Servicios",
+          "id": "0431d7f8-f609-83ef-44e3-8eff94d20510",
+          "name": "manual — rompe el laboratorio",
           "item": [
             {
-              "name": "Listar",
+              "id": "7cefb850-6fc1-41a5-3676-7d0bb5ab7a02",
+              "name": "POST /api/v1/bot-config/widget-keys/rotate",
               "request": {
-                "method": "GET",
-                "header": [],
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "healthcare-services"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true }
+                  "raw": "{{base_url}}/api/v1/bot-config/widget-keys/rotate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "bot-config",
+                    "widget-keys",
+                    "rotate"
                   ]
                 }
-              }
-            },
-            {
-              "name": "Crear",
+              },
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "const body = pm.response.json();",
-                      "if (pm.response.code === 200 && body.id) {",
-                      "    pm.collectionVariables.set('healthcareServiceId', body.id);",
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
                       "}"
                     ]
                   }
                 }
               ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"identifier_value\": \"svc-medicina-general\",\n  \"name\": \"Medicina general\",\n  \"active\": true\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "healthcare-services"]
-                },
-                "description": "`identifier_value` y `name` son obligatorios."
-              }
+              "description": "Crea una clave vigente; la anterior queda en gracia widget_key_grace_hours y la que ya estaba en gracia deja de valer."
             },
             {
-              "name": "Leer",
+              "id": "3687aa49-0739-1a25-b278-29296bdf6a00",
+              "name": "PUT /api/platform/v1/tenants/{id}/widget-client",
               "request": {
-                "method": "GET",
-                "header": [],
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{access_token}}"
+                  },
+                  {
+                    "key": "Idempotency-Key",
+                    "value": "{{$guid}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services/{{healthcareServiceId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "healthcare-services", "{{healthcareServiceId}}"]
+                  "raw": "{{base_url}}/api/platform/v1/tenants/:id/widget-client",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "platform",
+                    "v1",
+                    "tenants",
+                    ":id",
+                    "widget-client"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": ""
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"client_id\": \"newman-ejemplo\",\n  \"client_secret\": \"newman-ejemplo\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 }
-              }
-            },
-            {
-              "name": "Actualizar",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Medicina general\",\n  \"active\": true\n}",
-                  "options": { "raw": { "language": "json" } }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "(function () {",
+                      "  var cacheKey = \"token_client_platform\";",
+                      "  var expKey = \"token_exp_client_platform\";",
+                      "  var now = Date.now();",
+                      "  var cached = pm.collectionVariables.get(cacheKey);",
+                      "  var exp = Number(pm.collectionVariables.get(expKey) || 0);",
+                      "  if (cached && exp - now > 30000) {",
+                      "    pm.variables.set(\"access_token\", cached);",
+                      "    return;",
+                      "  }",
+                      "  pm.sendRequest({",
+                      "    url: pm.variables.get(\"oidc_token_url\"),",
+                      "    method: \"POST\",",
+                      "    header: { \"Content-Type\": \"application/x-www-form-urlencoded\" },",
+                      "    body: { mode: \"raw\", raw: \"grant_type=client_credentials\" + \"&client_id=\" + encodeURIComponent(pm.variables.get(\"platform_client_id\")) + \"&client_secret=\" + encodeURIComponent(pm.variables.get(\"platform_client_secret\")) },",
+                      "  }, function (err, res) {",
+                      "    if (err) { throw err; }",
+                      "    var json = res.json();",
+                      "    if (!json.access_token) { throw new Error(\"Token endpoint sin access_token\"); }",
+                      "    pm.collectionVariables.set(cacheKey, json.access_token);",
+                      "    pm.collectionVariables.set(expKey, String(now + json.expires_in * 1000));",
+                      "    pm.variables.set(\"access_token\", json.access_token);",
+                      "  });",
+                      "})();"
+                    ]
+                  }
                 },
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services/{{healthcareServiceId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "healthcare-services", "{{healthcareServiceId}}"]
-                },
-                "description": "Acepta `name` y `active`."
-              }
-            },
-            {
-              "name": "Borrar",
-              "request": {
-                "method": "DELETE",
-                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/healthcare-services/{{healthcareServiceId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "healthcare-services", "{{healthcareServiceId}}"]
-                },
-                "description": "409 si el servicio tiene agendas asociadas."
-              }
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"status 200\", function () {",
+                      "  pm.expect([200]).to.include(pm.response.code);",
+                      "});",
+                      "pm.test(\"X-Request-Id\", function () {",
+                      "  pm.expect(pm.response.headers.has(\"X-Request-Id\")).to.be.true;",
+                      "});",
+                      "if (pm.response.code >= 400) {",
+                      "  pm.test(\"envoltura de error\", function () {",
+                      "    var error = pm.response.json().error;",
+                      "    pm.expect(error).to.include.keys(\"code\", \"message\", \"request_id\");",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "description": "Registra o rota las credenciales del cliente OIDC del widget de la clinica. Una repeticion con la misma Idempotency-Key y el mismo cuerpo repite la respuesta."
             }
-          ]
-        },
-        {
-          "name": "Agendas",
-          "item": [
+          ],
+          "event": [
             {
-              "name": "Listar",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/schedules?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "schedules"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true }
-                  ]
-                }
-              }
-            },
-            {
-              "name": "Crear",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "const body = pm.response.json();",
-                      "if (pm.response.code === 200 && body.id) {",
-                      "    pm.collectionVariables.set('scheduleId', body.id);",
-                      "}"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"identifier_value\": \"sch-001\",\n  \"practitioner_id\": \"{{practitionerId}}\",\n  \"healthcare_service_id\": \"{{healthcareServiceId}}\",\n  \"active\": true\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/schedules",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "schedules"]
-                },
-                "description": "`identifier_value`, `practitioner_id` y `healthcare_service_id` son obligatorios."
-              }
-            },
-            {
-              "name": "Leer",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/schedules/{{scheduleId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "schedules", "{{scheduleId}}"]
-                }
-              }
-            },
-            {
-              "name": "Actualizar",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"active\": true\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/schedules/{{scheduleId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "schedules", "{{scheduleId}}"]
-                },
-                "description": "Solo cambia `active`."
-              }
-            },
-            {
-              "name": "Generar cupos",
-              "request": {
-                "method": "POST",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"from\": \"{{from}}\",\n  \"to\": \"{{to}}\",\n  \"duration_minutes\": 20,\n  \"windows\": [\n    { \"weekday\": 1, \"start_time\": \"08:00\", \"end_time\": \"12:00\" }\n  ]\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/schedules/{{scheduleId}}/slots/generate",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "schedules", "{{scheduleId}}", "slots", "generate"]
-                },
-                "description": "`weekday` de 0 (domingo) a 6 (sábado). Responde `{ created }`."
-              }
-            },
-            {
-              "name": "Borrar",
-              "request": {
-                "method": "DELETE",
-                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/schedules/{{scheduleId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "schedules", "{{scheduleId}}"]
-                },
-                "description": "409 si la agenda tiene cupos o citas."
-              }
-            }
-          ]
-        },
-        {
-          "name": "Pacientes",
-          "item": [
-            {
-              "name": "Listar",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/patients?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "patients"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true }
-                  ]
-                }
-              }
-            },
-            {
-              "name": "Crear",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "const body = pm.response.json();",
-                      "if (pm.response.code === 200 && body.id) {",
-                      "    pm.collectionVariables.set('patientId', body.id);",
-                      "}"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"identifier_value\": \"pat-001\",\n  \"document_type\": \"CC\",\n  \"document_number\": \"1234567890\",\n  \"given_names\": \"Luis\",\n  \"family_names\": \"Gómez\",\n  \"birth_date\": \"1990-04-12\",\n  \"phone\": \"3000000000\",\n  \"email\": \"luis@example.com\",\n  \"status\": \"active\"\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/patients",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "patients"]
-                },
-                "description": "`document_type`: `CC`, `TI`, `CE`, `PA` o `RC`. `status`: `active` o `pre_registered`."
-              }
-            },
-            {
-              "name": "Leer",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/patients/{{patientId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "patients", "{{patientId}}"]
-                }
-              }
-            },
-            {
-              "name": "Actualizar",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "Idempotency-Key", "value": "{{$guid}}" }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"phone\": \"3000000001\",\n  \"email\": \"luis@example.com\",\n  \"status\": \"active\"\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/patients/{{patientId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "patients", "{{patientId}}"]
-                },
-                "description": "Acepta `given_names`, `family_names`, `phone`, `email` y `status`."
-              }
-            },
-            {
-              "name": "Borrar",
-              "request": {
-                "method": "DELETE",
-                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/patients/{{patientId}}",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "patients", "{{patientId}}"]
-                },
-                "description": "409 si el paciente tiene citas asociadas."
-              }
-            }
-          ]
-        },
-        {
-          "name": "Bandeja",
-          "description": "Solicitudes de pre-agenda que el chat originó. Aprobar reserva el cupo si sigue libre; si no, rechaza por `slot_unavailable`. Rechazar libera el cupo (`declined`).",
-          "item": [
-            {
-              "name": "Listar pendientes",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "const body = pm.response.json();",
-                      "const first = body.data && body.data[0];",
-                      "if (pm.response.code === 200 && first && first.id && !pm.collectionVariables.get('inboxRequestId')) {",
-                      "    pm.collectionVariables.set('inboxRequestId', first.id);",
-                      "}"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/inbox?limit=50",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "inbox"],
-                  "query": [
-                    { "key": "limit", "value": "50" },
-                    { "key": "cursor", "value": "", "disabled": true }
-                  ]
-                },
-                "description": "Vence las solicitudes caducadas antes de responder."
-              }
-            },
-            {
-              "name": "Aprobar",
-              "request": {
-                "method": "POST",
-                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/inbox/{{inboxRequestId}}/approve",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "inbox", "{{inboxRequestId}}", "approve"]
-                }
-              }
-            },
-            {
-              "name": "Rechazar",
-              "request": {
-                "method": "POST",
-                "header": [{ "key": "Idempotency-Key", "value": "{{$guid}}" }],
-                "url": {
-                  "raw": "{{baseUrl}}/api/sim/v1/inbox/{{inboxRequestId}}/reject",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "sim", "v1", "inbox", "{{inboxRequestId}}", "reject"]
-                }
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "(function () {",
+                  "  var cacheKey = \"token_user_admin_a\";",
+                  "  var expKey = \"token_exp_user_admin_a\";",
+                  "  var now = Date.now();",
+                  "  var cached = pm.collectionVariables.get(cacheKey);",
+                  "  var exp = Number(pm.collectionVariables.get(expKey) || 0);",
+                  "  if (cached && exp - now > 30000) {",
+                  "    pm.variables.set(\"access_token\", cached);",
+                  "    return;",
+                  "  }",
+                  "  pm.sendRequest({",
+                  "    url: pm.variables.get(\"oidc_token_url\"),",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/x-www-form-urlencoded\" },",
+                  "    body: { mode: \"raw\", raw: \"grant_type=password&scope=openid\" + \"&client_id=\" + encodeURIComponent(pm.variables.get(\"newman_client_id\")) + \"&client_secret=\" + encodeURIComponent(pm.variables.get(\"newman_client_secret\")) + \"&username=\" + encodeURIComponent(\"admin-\" + pm.variables.get(\"tenant_a_slug\")) + \"&password=\" + encodeURIComponent(pm.variables.get(\"lab_user_password\")) },",
+                  "  }, function (err, res) {",
+                  "    if (err) { throw err; }",
+                  "    var json = res.json();",
+                  "    if (!json.access_token) { throw new Error(\"Token endpoint sin access_token\"); }",
+                  "    pm.collectionVariables.set(cacheKey, json.access_token);",
+                  "    pm.collectionVariables.set(expKey, String(now + json.expires_in * 1000));",
+                  "    pm.variables.set(\"access_token\", json.access_token);",
+                  "  });",
+                  "})();"
+                ]
               }
             }
           ]

@@ -1,6 +1,10 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildPostmanCollection } from "../scripts/postman/build-collection";
+import { buildEnvironmentTemplate } from "../scripts/postman/environment";
+import { FRAGMENTS } from "../scripts/postman/fragments";
+import { COLLECTION_PATH, ENVIRONMENT_TEMPLATE_PATH, serialized } from "../scripts/postman/paths";
 import { GET as getHealth } from "@/app/api/v1/health/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { ERROR_CODES } from "@/http/error-codes";
@@ -152,6 +156,18 @@ describe("contrato-api: OpenAPI", () => {
 
     expect(response.status).toBe(200);
     expect(Object.keys(identity?.responses ?? {})).toContain("401");
+  });
+});
+
+describe("contrato-api: coleccion Postman", () => {
+  it("la coleccion Postman esta al dia con el generador", () => {
+    const onDisk = readFileSync(COLLECTION_PATH, "utf8");
+    expect(onDisk).toBe(serialized(buildPostmanCollection(FRAGMENTS)));
+  });
+
+  it("la plantilla de entorno esta al dia", () => {
+    const onDisk = readFileSync(ENVIRONMENT_TEMPLATE_PATH, "utf8");
+    expect(onDisk).toBe(serialized(buildEnvironmentTemplate()));
   });
 });
 
