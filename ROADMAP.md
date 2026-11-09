@@ -12,10 +12,29 @@ calidad y Docker listos en la primera versión.
 
 | Alcance                      | Avance    |
 | ---------------------------- | --------- |
-| MVP (fases 1–5)              | **93,3%** |
-| Roadmap completo (fases 1–6) | **77,8%** |
+| MVP (fases 1–5)              | **100%**  |
+| Roadmap completo (fases 1–6) | **83,3%** |
 
-Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 está abierta y se partió en tres sub-proyectos de igual peso (spec `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, §3): la 5.1 (corte de identidad a OIDC) y la 5.2 (frontend de referencia) están cerradas en `main` (PR #13 y PR #14); la 5.3 sigue abierta. La Fase 6 no está abierta.
+Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 se partió en tres sub-proyectos de igual peso (spec `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, §3), y los tres están en `main`: la 5.1 (corte de identidad a OIDC, PR #13), la 5.2 (frontend de referencia, PR #14) y la 5.3 (contrato publicado, PR #15). El porcentaje cuenta la 5.3 porque está en `main` (`GOBERNANZA.md` §7.1). Para cerrar la Fase 5 falta terminar su verificación manual en el laboratorio (ver «Siguiente tarea»). Mientras tanto, el criterio 7 de la Fase 5 (Postman de punta a punta contra el entorno desplegado) y el criterio 9 del MVP (§3.6) siguen sin demostrar. La Fase 6 no está abierta.
+
+**5.3 en `main`** el 9 de noviembre de 2026 (PR #15; spec `docs/superpowers/specs/2026-11-09-fase-5-3-contrato-publicado-design.md`):
+
+- Swagger UI en `/docs` con los tres contratos y «Authorize» contra el proveedor. Solo funciona en laboratorio y desarrollo (`DOCS_ENABLED`) y no hace peticiones a terceros.
+- Colección Postman generada desde los contratos OpenAPI. Recorre el widget de punta a punta, el panel, la plataforma, el simulador y el ciclo de Hermes por `/fhir` con las dos clínicas, y deshace lo que crea.
+- Runner de Newman (`postman:run`).
+- Cliente `chatbot-newman` del laboratorio, el único con password grant.
+- Suite `contrato-rutas`: invoca cada operación declarada y valida su status y su cuerpo contra el esquema.
+
+Verificación manual (§8 de la spec):
+
+- Hecho: `/docs` carga los tres contratos. «Authorize» con PKCE como `admin-clinica-norte` da `200` en el panel.
+- Hecho: en `chatbot-lab` se configuraron a mano `chatbot-newman` y los `webOrigins` del backend.
+- Pendiente: el recorrido de Newman no se ha ejecutado de punta a punta. Se interrumpió en local por falta de memoria.
+
+Quedan dos menores diferidos a la Fase 6:
+
+- `POST /api/sim/v1/patients` con un documento duplicado responde `500` en vez de `409`.
+- Las operaciones que solo admiten `oidcUser` salen sin candado en Swagger cuando el proveedor no publica `authorization_endpoint`.
 
 **5.2 cerrada** el 9 de noviembre de 2026 (spec `docs/superpowers/specs/2026-10-28-fase-5-2-frontend-referencia-design.md`): `GET /api/platform/v1/me`, el usuario `platform-lab` del laboratorio, el almacén de sesión con una sola renovación ante `401`, el login OIDC con PKCE en la consola, la identidad de clínica o de plataforma desde `/me` y las pantallas sin token pegado. Puertas: Biome, typecheck, tests unitarios (637 backend, 150 frontend) y React Doctor 100/100. El recorrido manual de la §6 se hizo en Easypanel contra `chatbot-lab`: `admin-clinica-norte` entra y ve `/panel`, `/simulador` y la clave vigente en `/chat`; `operator-clinica-sur` ve solo su clínica y recibe `403` en `/api/platform/v1/me`; `platform-lab` da de alta un tenant desde Simulador → Tenants (tenant de prueba `qa-5-2`); la consola renueva el token sola al caducar; un access token reutilizado tras cerrar sesión, aún sin caducar, recibe `401`; y `/chat` conversa sin sesión de panel con la clave de una clínica.
 
@@ -31,7 +50,13 @@ El 9 de noviembre de 2026 se creó `platform-lab` a mano con la API de administr
 
 **La 5.1** cerró el corte total del emisor HS256: el backend verifica tokens de un proveedor OIDC (RS256/ES256, JWKS), con rol `platform`, credenciales de widget cifradas, sesión del widget emitida por el proveedor, `service` del simulador por `client_credentials` y back-channel logout. Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`.
 
-**Siguiente tarea:** Fase **5.3 — Contrato publicado** (Swagger UI, colección Postman y prueba de rutas contra OpenAPI; plan en `docs/superpowers/plans/`). Con ella cierra la Fase 5 y el MVP. La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a que la 5 esté cerrada.
+**Siguiente tarea:** terminar la verificación manual de la **5.3** en Easypanel (§8 de su spec). Hace falta desplegar la rama con `DOCS_ENABLED=true` (incluye el arreglo del validador de Swagger, `d95a48e`) y comprobar tres cosas:
+
+- «Authorize» con `client_credentials`: como `chatbot-platform`, `GET /api/platform/v1/me` da `200`; como `service-<tenant>`, `GET /api/v1/me` da `200`.
+- `newman run` pasa dos veces seguidas en verde, con los mismos cupos `free` antes y después.
+- Con `DOCS_ENABLED=false`, `/docs` responde `404`.
+
+Con eso cierran la Fase 5 y el MVP. La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a ese cierre.
 
 ---
 

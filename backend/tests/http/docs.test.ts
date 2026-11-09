@@ -123,6 +123,12 @@ describe("docs: Swagger UI en /docs", () => {
     }
   });
 
+  it("el arranque no consulta el validador publico de Swagger (tercero)", async () => {
+    enable();
+    const init = await (await asset("init.js")).text();
+    expect(init).toContain("validatorUrl: null");
+  });
+
   it("la pagina de retorno OAuth2 carga su script del mismo origen", async () => {
     enable();
     const response = await getRedirect(new Request("http://localhost/docs/oauth2-redirect.html"));
