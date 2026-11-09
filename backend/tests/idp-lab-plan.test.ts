@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { userAttributes } from "../scripts/idp-lab/apply";
 import { buildLabPlan } from "../scripts/idp-lab/plan";
 
 const plan = buildLabPlan({
@@ -28,7 +29,24 @@ describe("idp-lab plan", () => {
     expect(plan.users.map((u) => u.username)).toEqual([
       "admin-clinica-norte",
       "operator-clinica-norte",
+      "platform-lab",
     ]);
+  });
+  it("platform-lab tiene rol platform y no lleva tenant", () => {
+    expect(plan.users.find((u) => u.username === "platform-lab")).toEqual({
+      username: "platform-lab",
+      role: "platform",
+    });
+  });
+  it("userAttributes fija tenant_id o lo quita", () => {
+    expect(userAttributes({ x: ["1"] }, { username: "a", role: "admin", tenantId: "t" })).toEqual({
+      x: ["1"],
+      tenant_id: ["t"],
+    });
+    expect(
+      userAttributes({ x: ["1"], tenant_id: ["viejo"] }, { username: "p", role: "platform" }),
+    ).toEqual({ x: ["1"] });
+    expect(userAttributes(undefined, { username: "p", role: "platform" })).toEqual({});
   });
   it("roles, scope y plataforma", () => {
     expect(plan.roles).toEqual(["widget", "operator", "admin", "service", "platform"]);

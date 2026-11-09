@@ -49,10 +49,11 @@ function SessionChip({
   let label = "Sin sesión";
   if (token && identity.isError) {
     state = "error";
-    label = "Token rechazado";
+    label = "Sesión rechazada";
   } else if (token && identity.data) {
     state = "on";
-    label = `${identity.data.role} · ${identity.data.tenant_id.slice(0, 8)}`;
+    const me = identity.data;
+    label = me.kind === "tenant" ? `${me.role} · ${me.tenantId.slice(0, 8)}` : "platform";
   } else if (token) {
     label = "Verificando…";
   }

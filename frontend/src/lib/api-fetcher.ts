@@ -1,5 +1,5 @@
 import { IDEMPOTENCY_HEADER, settleIdempotencyKey } from "./idempotency";
-import { getToken } from "./token";
+import { getToken, renewToken } from "./token";
 
 export type ApiErrorBody = {
   error: {
@@ -66,24 +66,41 @@ async function readJson<T>(response: Response, requestHeaders: Headers): Promise
   return data as T;
 }
 
-/**
- * Mutator orval: fetch + Bearer desde sessionStorage. Las URLs son relativas
- * (`/api/v1/...`): las atiende el proxy same-origin de `app/api/[...path]`.
- */
-export async function apiFetcher<T>(url: string, options?: RequestInit): Promise<T> {
-  const headers = jsonHeaders(options);
-  const token = getToken();
+function withBearer(headers: Headers, token: string | null): Headers {
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  return readJson<T>(await fetch(url, { ...options, headers }), headers);
+  return headers;
 }
 
 /**
- * Mutator de `/api/platform/v1`. No toca el JWT de la sesión: el token
- * `platform` del proveedor viaja solo en el `Authorization` que pase quien llama, y no se guarda.
+ * Fetch con el token de la sesión. Ante un `401` pide una renovación y reintenta **una** vez
+ * con los mismos cabeceros (misma `Idempotency-Key`) y el mismo cuerpo.
  */
+async function authorizedFetch(url: string, options?: RequestInit): Promise<[Response, Headers]> {
+  const headers = withBearer(jsonHeaders(options), getToken());
+  const response = await fetch(url, { ...options, headers });
+  if (response.status !== 401) {
+    return [response, headers];
+  }
+  const renewed = await renewToken();
+  if (!renewed) {
+    return [response, headers];
+  }
+  withBearer(headers, renewed);
+  return [await fetch(url, { ...options, headers }), headers];
+}
+
+/**
+ * Mutator orval: fetch + Bearer de la sesión. Las URLs son relativas
+ * (`/api/v1/...`): las atiende el proxy same-origin de `app/api/[...path]`.
+ */
+export async function apiFetcher<T>(url: string, options?: RequestInit): Promise<T> {
+  const [response, headers] = await authorizedFetch(url, options);
+  return readJson<T>(response, headers);
+}
+
+/** Mutator de `/api/platform/v1`: mismo bearer de sesión (persona con rol `platform`). */
 export async function platformFetcher<T>(url: string, options?: RequestInit): Promise<T> {
-  const headers = jsonHeaders(options);
-  return readJson<T>(await fetch(url, { ...options, headers }), headers);
+  return apiFetcher<T>(url, options);
 }

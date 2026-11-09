@@ -5,46 +5,36 @@ import { ErrorBox } from "@/components/error-box";
 import { Field } from "@/components/ui/field";
 import { idempotent } from "@/lib/idempotency";
 import { useAction } from "@/lib/use-action";
+import { useAuthStatus, useIdentity } from "@/lib/use-session";
 import { createTenant } from "@/platform/default/default";
 import type { TenantCreated } from "@/platform/models/tenantCreated";
-
-function bearer(platformToken: string, init?: RequestInit): RequestInit {
-  const headers = new Headers(init?.headers);
-  headers.set("Authorization", `Bearer ${platformToken.trim()}`);
-  return { ...init, headers };
-}
 
 export function TenantsPanel() {
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
-  const [platformToken, setPlatformToken] = useState("");
   const [created, setCreated] = useState<TenantCreated | null>(null);
   const { pending, error, run } = useAction();
-  const ready = Boolean(slug.trim() && name.trim() && platformToken.trim());
+  const isPlatform = useIdentity().data?.kind === "platform";
+  const ready = isPlatform && Boolean(slug.trim() && name.trim());
 
   const create = () =>
     run("create", async () => {
       setCreated(null);
       const body = { slug: slug.trim(), name: name.trim() };
-      const result = await createTenant(
-        body,
-        bearer(platformToken, idempotent(`tenant.create:${body.slug}`, body)),
-      );
+      const result = await createTenant(body, idempotent(`tenant.create:${body.slug}`, body));
       setCreated(result);
     });
 
   return (
     <section className="board" aria-labelledby="tenants-title">
-      <TenantHead error={error} />
+      <TenantHead error={error} isPlatform={isPlatform} />
       <TenantForm
         slug={slug}
         name={name}
-        platformToken={platformToken}
         ready={ready}
         pending={pending}
         onSlug={setSlug}
         onName={setName}
-        onPlatformToken={setPlatformToken}
         onCreate={create}
       />
       {created ? <TenantResult created={created} /> : null}
@@ -52,15 +42,38 @@ export function TenantsPanel() {
   );
 }
 
-function TenantHead({ error }: { readonly error: unknown }) {
+function SessionHint({ isPlatform }: { readonly isPlatform: boolean }) {
+  const status = useAuthStatus();
+  if (isPlatform) {
+    return null;
+  }
+  return (
+    <p className="hint" role="status">
+      {status === "authenticated" ? (
+        <>
+          El alta de clínicas requiere una sesión <code>platform</code> (usuario{" "}
+          <code>platform-lab</code> del laboratorio).
+        </>
+      ) : (
+        "Inicia sesión en la franja de sesión (tecla 0) con una cuenta platform."
+      )}
+    </p>
+  );
+}
+
+function TenantHead({
+  error,
+  isPlatform,
+}: {
+  readonly error: unknown;
+  readonly isPlatform: boolean;
+}) {
   return (
     <div className="board-head">
       <div className="board-title">
         <h2 id="tenants-title">Agregar tenant</h2>
-        <p>
-          Alta con bot, conocimiento de ejemplo y clave de widget. Pega un token de plataforma del
-          proveedor de identidad; no se guarda.
-        </p>
+        <p>Alta con bot, conocimiento de ejemplo y clave de widget, con la sesión de plataforma.</p>
+        <SessionHint isPlatform={isPlatform} />
       </div>
       <ErrorBox error={error} />
     </div>
@@ -70,22 +83,18 @@ function TenantHead({ error }: { readonly error: unknown }) {
 function TenantForm({
   slug,
   name,
-  platformToken,
   ready,
   pending,
   onSlug,
   onName,
-  onPlatformToken,
   onCreate,
 }: {
   readonly slug: string;
   readonly name: string;
-  readonly platformToken: string;
   readonly ready: boolean;
   readonly pending: string | null;
   readonly onSlug: (value: string) => void;
   readonly onName: (value: string) => void;
-  readonly onPlatformToken: (value: string) => void;
   readonly onCreate: () => void;
 }) {
   return (
@@ -104,15 +113,6 @@ function TenantForm({
           value={slug}
           pattern="^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$"
           onChange={(event) => onSlug(event.target.value)}
-        />
-      </Field>
-      <Field label="Token de plataforma" apiKey="Authorization" className="field-wide">
-        <input
-          className="input data"
-          type="password"
-          autoComplete="off"
-          value={platformToken}
-          onChange={(event) => onPlatformToken(event.target.value)}
         />
       </Field>
       <button

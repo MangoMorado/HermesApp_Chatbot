@@ -6,12 +6,13 @@ import { getTenantSettings, updateTenantSettings } from "@/api/default/default";
 import { ErrorBox } from "@/components/error-box";
 import { Field } from "@/components/ui/field";
 import { useAction } from "@/lib/use-action";
-import { useToken } from "@/lib/use-session";
+import { useSessionKey, useToken } from "@/lib/use-session";
 
 function useSettings() {
   const token = useToken();
+  const sessionKey = useSessionKey();
   return useQuery({
-    queryKey: ["tenant-settings", token?.slice(-16) ?? null],
+    queryKey: ["tenant-settings", sessionKey],
     queryFn: () => getTenantSettings(),
     enabled: Boolean(token),
     retry: false,

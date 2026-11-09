@@ -11,6 +11,8 @@ export * from './errorError';
 export * from './errorErrorCode';
 export * from './listTenantsParams';
 export * from './page';
+export * from './platformIdentity';
+export * from './platformIdentityRole';
 export * from './tenant';
 export * from './tenantCreated';
 export * from './tenantRequest';

@@ -6,7 +6,7 @@ calidad y Docker listos en la primera versión.
 
 ## Estado
 
-> Revisión: 27 de octubre de 2026. El cálculo y la obligación de reescribir este
+> Revisión: 9 de noviembre de 2026. El cálculo y la obligación de reescribir este
 > bloque al lanzar o cerrar una spec están en `GOBERNANZA.md` §7.1. Solo cuenta lo
 > cerrado en `main`.
 
@@ -15,11 +15,23 @@ calidad y Docker listos en la primera versión.
 | MVP (fases 1–5) | **86,7%** |
 | Roadmap completo (fases 1–6) | **72,2%** |
 
-Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 está abierta y se partió en tres sub-proyectos de igual peso (spec `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, §3): la 5.1 (corte de identidad a OIDC) está cerrada en `main` (PR #13) y verificada contra el Keycloak del laboratorio; la 5.2 y la 5.3 siguen abiertas. La Fase 6 no está abierta.
+Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 está abierta y se partió en tres sub-proyectos de igual peso (spec `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, §3): la 5.1 (corte de identidad a OIDC) está cerrada en `main` (PR #13) y verificada contra el Keycloak del laboratorio; la 5.2 está implementada en la rama `fase-5-2-frontend-referencia`, sin merge, y la 5.3 sigue abierta. La Fase 6 no está abierta. El avance no cambia hasta que la 5.2 llegue a `main`.
 
-**En curso:** Fase 5, con la 5.2 y la 5.3 pendientes. La 5.1 cerró el corte total del emisor HS256: el backend verifica tokens de un proveedor OIDC (RS256/ES256, JWKS), con rol `platform`, credenciales de widget cifradas, sesión del widget emitida por el proveedor, `service` del simulador por `client_credentials` y back-channel logout. Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`.
+**En curso:** Fase **5.2 — Frontend de referencia** (spec `docs/superpowers/specs/2026-10-28-fase-5-2-frontend-referencia-design.md`). En la rama están `GET /api/platform/v1/me`, el usuario `platform-lab` del laboratorio, el almacén de sesión con una sola renovación ante `401`, el login OIDC con PKCE en la consola, la identidad de clínica o de plataforma desde `/me` y las pantallas sin token pegado. Puertas al 9 de noviembre de 2026: Biome, typecheck, tests unitarios (637 backend, 150 frontend) y React Doctor 100/100 en verde. Falta el recorrido manual de la §6 de la spec: la parte local (`admin-clinica-norte`, `operator-clinica-sur`, renovación y `/chat`) se hace con `next dev` apuntando al backend de Easypanel; `platform-lab` y el `401` tras logout esperan a que la rama esté desplegada, porque Easypanel corre `main`, que aún no tiene `/api/platform/v1/me`.
 
-**Siguiente tarea:** Fase **5.2 — Frontend de referencia**: login OIDC con PKCE en `/panel`, `/simulador` y `/chat`, y widget de referencia con `conversation_secret`. Después, la **5.3 — Contrato publicado** (Swagger UI, colección Postman y prueba de rutas contra OpenAPI). La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a que la 5 esté cerrada.
+**Usuarios del laboratorio** (realm `chatbot-lab` en `keycloak.mangomorado.com`, solo pruebas):
+
+| Usuario | Rol | Clínica | Contraseña |
+| --- | --- | --- | --- |
+| `admin-clinica-norte`, `admin-clinica-sur` | `admin` | la de su nombre | `LAB_USER_PASSWORD` (texto literal) |
+| `operator-clinica-norte`, `operator-clinica-sur` | `operator` | la de su nombre | `LAB_USER_PASSWORD` (texto literal) |
+| `platform-lab` | `platform` | ninguna | `LAB_USER_PASSWORD` (texto literal) |
+
+El 9 de noviembre de 2026 se creó `platform-lab` a mano con la API de administración, con el mismo plan que `idp:lab`, y los cinco usuarios quedaron con el texto literal `LAB_USER_PASSWORD` como contraseña, no temporal. La siguiente corrida de `idp:lab` las sustituye todas por el valor que tenga esa variable.
+
+**Antes, la 5.1** cerró cerró el corte total del emisor HS256: el backend verifica tokens de un proveedor OIDC (RS256/ES256, JWKS), con rol `platform`, credenciales de widget cifradas, sesión del widget emitida por el proveedor, `service` del simulador por `client_credentials` y back-channel logout. Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`.
+
+**Siguiente tarea:** cerrar la 5.2 con el recorrido manual, el merge y el despliegue en Easypanel. Después, la **5.3 — Contrato publicado** (Swagger UI, colección Postman y prueba de rutas contra OpenAPI). La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a que la 5 esté cerrada.
 
 ---
 

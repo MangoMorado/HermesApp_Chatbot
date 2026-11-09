@@ -3,14 +3,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { getTenantSettings, listSchedules } from "@/api/default/default";
 import type { Row } from "@/components/ui/board";
-import { useToken } from "@/lib/use-session";
+import { useSessionKey, useToken } from "@/lib/use-session";
 
 type PageResult = { data?: Row[]; next_cursor?: string | null };
 
 /** Lecturas que el panel necesita al abrir: ajustes del tenant y agendas activas. */
 export function usePanelData() {
   const token = useToken();
-  const session = token?.slice(-16) ?? null;
+  const session = useSessionKey();
 
   const settings = useQuery({
     queryKey: ["tenant-settings", session],

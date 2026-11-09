@@ -28,6 +28,7 @@ import type {
   Error,
   ListTenantsParams,
   Page,
+  PlatformIdentity,
   TenantCreated,
   TenantRequest,
   WidgetClientRequest,
@@ -55,6 +56,103 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetPlatformIdentityUrl = () => {
+
+
+
+
+  return `/api/platform/v1/me`
+}
+
+/**
+ * Identidad que el backend resolvio del bearer `platform`.
+ */
+export const getPlatformIdentity = async ( options?: Parameters<typeof platformFetcher>[1]): Promise<PlatformIdentity> => {
+
+  return platformFetcher<PlatformIdentity>(getGetPlatformIdentityUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlatformIdentityQueryKey = () => {
+    return [
+    `/api/platform/v1/me`
+    ] as const;
+    }
+
+
+export const getGetPlatformIdentityQueryOptions = <TData = Awaited<ReturnType<typeof getPlatformIdentity>>, TError = Error>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlatformIdentity>>, TError, TData>>, request?: SecondParameter<typeof platformFetcher>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlatformIdentityQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformIdentity>>> = ({ signal }) => getPlatformIdentity({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlatformIdentity>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPlatformIdentityQueryResult = NonNullable<Awaited<ReturnType<typeof getPlatformIdentity>>>
+export type GetPlatformIdentityQueryError = Error
+
+
+export function useGetPlatformIdentity<TData = Awaited<ReturnType<typeof getPlatformIdentity>>, TError = Error>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlatformIdentity>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPlatformIdentity>>,
+          TError,
+          Awaited<ReturnType<typeof getPlatformIdentity>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof platformFetcher>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPlatformIdentity<TData = Awaited<ReturnType<typeof getPlatformIdentity>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlatformIdentity>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPlatformIdentity>>,
+          TError,
+          Awaited<ReturnType<typeof getPlatformIdentity>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof platformFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPlatformIdentity<TData = Awaited<ReturnType<typeof getPlatformIdentity>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlatformIdentity>>, TError, TData>>, request?: SecondParameter<typeof platformFetcher>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetPlatformIdentity<TData = Awaited<ReturnType<typeof getPlatformIdentity>>, TError = Error>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlatformIdentity>>, TError, TData>>, request?: SecondParameter<typeof platformFetcher>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetPlatformIdentityQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
 
 export const getListTenantsUrl = (params?: ListTenantsParams,) => {
   const normalizedParams = new URLSearchParams();

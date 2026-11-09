@@ -61,7 +61,10 @@ export function SchedulesBoard({ rows, loading, error, more, pickedId, onPick, o
         idle={
           error
             ? { title: "No se pudieron cargar", hint: "Revisa el aviso y pulsa Recargar." }
-            : { title: "Sin sesión", hint: "Pega un token para ver las agendas del tenant." }
+            : {
+                title: "Sin sesión",
+                hint: "Inicia sesión (tecla 0) para ver las agendas del tenant.",
+              }
         }
         empty={{
           title: "No hay agendas activas",

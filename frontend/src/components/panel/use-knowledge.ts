@@ -12,15 +12,16 @@ import type { KnowledgeEntry } from "@/api/models";
 import { idempotent } from "@/lib/idempotency";
 import { draftOf, EMPTY_DRAFT, inputOf } from "@/lib/knowledge-draft";
 import { useAction } from "@/lib/use-action";
-import { useToken } from "@/lib/use-session";
+import { useSessionKey, useToken } from "@/lib/use-session";
 
 const PAGE_SIZE = 100;
 
 /** Lista paginada por cursor y formulario de alta/edición; cada escritura lleva su clave. */
 export function useKnowledge() {
   const token = useToken();
+  const sessionKey = useSessionKey();
   const list = useInfiniteQuery({
-    queryKey: ["knowledge-entries", token?.slice(-16) ?? null],
+    queryKey: ["knowledge-entries", sessionKey],
     queryFn: ({ pageParam }) =>
       listKnowledgeEntries({ limit: PAGE_SIZE, ...(pageParam ? { cursor: pageParam } : {}) }),
     initialPageParam: "",

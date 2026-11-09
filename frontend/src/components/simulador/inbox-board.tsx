@@ -8,7 +8,7 @@ import { ApiClientError } from "@/lib/api-fetcher";
 import { text } from "@/lib/format";
 import { idempotent } from "@/lib/idempotency";
 import { useAction } from "@/lib/use-action";
-import { useToken } from "@/lib/use-session";
+import { useSessionKey, useToken } from "@/lib/use-session";
 import { approveSimInboxRequest, listSimInbox, rejectSimInboxRequest } from "@/sim/default/default";
 import type { InboxRequest } from "@/sim/models";
 
@@ -93,14 +93,15 @@ function idleMessage(error: unknown, hasToken: boolean): { title: string; hint: 
   }
   return hasToken
     ? { title: "Cargando la bandeja…", hint: "Consultando las solicitudes pendientes." }
-    : { title: "Sin sesión", hint: "Pega un token admin en la franja de sesión." };
+    : { title: "Sin sesión", hint: "Inicia sesión como admin en la franja de sesión (tecla 0)." };
 }
 
 /** Solicitudes pendientes de pre-agenda: Hermes (simulado) las aprueba o las rechaza. */
 export function InboxBoard() {
   const token = useToken();
+  const sessionKey = useSessionKey();
   const list = useInfiniteQuery({
-    queryKey: ["sim-inbox", token?.slice(-16) ?? null],
+    queryKey: ["sim-inbox", sessionKey],
     queryFn: ({ pageParam }) =>
       listSimInbox({ limit: PAGE_SIZE, ...(pageParam ? { cursor: pageParam } : {}) }),
     initialPageParam: "",

@@ -1,8 +1,8 @@
 import { defineConfig } from "react-doctor/api";
 
 /**
- * Fase 2: el JWT se pega en sessionStorage a propósito (sin emisión de producto).
- * Fase 3 introduce cookies HttpOnly; hasta entonces esta regla queda off.
+ * Fase 5.2: la sesión OIDC (cliente público con PKCE) vive en sessionStorage por pestaña, como
+ * hace `oidc-client-ts` por defecto. Moverla a memoria o a un BFF es endurecimiento de la Fase 6.
  */
 export default defineConfig({
   ignore: {

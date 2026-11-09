@@ -23,3 +23,13 @@ function withoutTrailingSlashes(value: string): string {
 export function publicBackendUrl(): string {
   return withoutTrailingSlashes(process.env.PUBLIC_BACKEND_URL || "http://localhost:3001");
 }
+
+/**
+ * Proveedor de identidad de la consola (cliente público con PKCE). Se lee en runtime y pasa
+ * al navegador por props; `null` si falta alguna variable (la consola avisa, no se cae).
+ */
+export function oidcConfig(): { issuer: string; clientId: string } | null {
+  const issuer = withoutTrailingSlashes(process.env.PUBLIC_OIDC_ISSUER ?? "");
+  const clientId = process.env.PUBLIC_OIDC_CLIENT_ID ?? "";
+  return issuer && clientId ? { issuer, clientId } : null;
+}

@@ -20,7 +20,7 @@ export type ClientPlan = {
   fixedSecret?: "service";
   mappers: MapperPlan[];
 };
-export type UserPlan = { username: string; tenantId: string; role: LabRole };
+export type UserPlan = { username: string; tenantId?: string; role: LabRole };
 export type LabPlan = {
   realm: { name: string; accessTokenLifespan: number };
   userProfileAttributes: string[];
@@ -144,12 +144,16 @@ export function buildLabPlan(input: LabInput): LabPlan {
       ...input.tenants.flatMap((t) => machineClients(t.id)),
       ...interactiveClients(input),
     ],
-    users: input.tenants.flatMap((t) =>
-      (["admin", "operator"] as const).map((role) => ({
-        username: `${role}-${t.slug}`,
-        tenantId: t.id,
-        role,
-      })),
-    ),
+    users: [
+      ...input.tenants.flatMap((t) =>
+        (["admin", "operator"] as const).map((role) => ({
+          username: `${role}-${t.slug}`,
+          tenantId: t.id,
+          role,
+        })),
+      ),
+      // Persona de plataforma: da de alta clínicas desde la consola; sin tenant.
+      { username: "platform-lab", role: "platform" },
+    ],
   };
 }
