@@ -23,11 +23,11 @@ Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 está abierta y se partió en t
 
 | Usuario | Rol | Clínica | Contraseña |
 | --- | --- | --- | --- |
-| `admin-clinica-norte`, `admin-clinica-sur` | `admin` | la de su nombre | la de `LAB_USER_PASSWORD` con que se corrió `idp:lab` |
-| `operator-clinica-norte`, `operator-clinica-sur` | `operator` | la de su nombre | la de `LAB_USER_PASSWORD` con que se corrió `idp:lab` |
+| `admin-clinica-norte`, `admin-clinica-sur` | `admin` | la de su nombre | `LAB_USER_PASSWORD` (texto literal) |
+| `operator-clinica-norte`, `operator-clinica-sur` | `operator` | la de su nombre | `LAB_USER_PASSWORD` (texto literal) |
 | `platform-lab` | `platform` | ninguna | `LAB_USER_PASSWORD` (texto literal) |
 
-`platform-lab` se creó a mano el 9 de noviembre de 2026 con la API de administración, con el mismo plan que `idp:lab`, y con el texto literal `LAB_USER_PASSWORD` como contraseña. La siguiente corrida de `idp:lab` la sustituye por el valor real de esa variable.
+El 9 de noviembre de 2026 se creó `platform-lab` a mano con la API de administración, con el mismo plan que `idp:lab`, y los cinco usuarios quedaron con el texto literal `LAB_USER_PASSWORD` como contraseña, no temporal. La siguiente corrida de `idp:lab` las sustituye todas por el valor que tenga esa variable.
 
 **Antes, la 5.1** cerró cerró el corte total del emisor HS256: el backend verifica tokens de un proveedor OIDC (RS256/ES256, JWKS), con rol `platform`, credenciales de widget cifradas, sesión del widget emitida por el proveedor, `service` del simulador por `client_credentials` y back-channel logout. Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`.
 

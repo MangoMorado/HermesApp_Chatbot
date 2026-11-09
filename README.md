@@ -133,13 +133,14 @@ Usuarios del realm `chatbot-lab` (solo pruebas):
 
 | Usuario | Rol | Clínica | Contraseña |
 | --- | --- | --- | --- |
-| `admin-clinica-norte`, `admin-clinica-sur` | `admin` | la de su nombre | valor de `LAB_USER_PASSWORD` en la corrida de `idp:lab` |
-| `operator-clinica-norte`, `operator-clinica-sur` | `operator` | la de su nombre | valor de `LAB_USER_PASSWORD` en la corrida de `idp:lab` |
+| `admin-clinica-norte`, `admin-clinica-sur` | `admin` | la de su nombre | `LAB_USER_PASSWORD` (texto literal) |
+| `operator-clinica-norte`, `operator-clinica-sur` | `operator` | la de su nombre | `LAB_USER_PASSWORD` (texto literal) |
 | `platform-lab` | `platform` | ninguna | `LAB_USER_PASSWORD` (texto literal) |
 
-`platform-lab` se creó a mano el 9 de noviembre de 2026 con el mismo plan que `idp:lab`
-(rol `platform`, sin `tenant_id`) y con el texto literal `LAB_USER_PASSWORD` como contraseña.
-Una nueva corrida de `idp:lab` la sustituye por el valor real de esa variable.
+El 9 de noviembre de 2026 se creó `platform-lab` a mano con el mismo plan que `idp:lab` (rol
+`platform`, sin `tenant_id`), y los cinco usuarios quedaron con el texto literal
+`LAB_USER_PASSWORD` como contraseña, no temporal. Una nueva corrida de `idp:lab` las sustituye
+todas por el valor que tenga esa variable.
 
 Para probar el login de la consola sin desplegar, crea `frontend/.env.local` con `BACKEND_URL` y
 `PUBLIC_BACKEND_URL` apuntando al backend (local o de Easypanel), y con `PUBLIC_OIDC_ISSUER` y
