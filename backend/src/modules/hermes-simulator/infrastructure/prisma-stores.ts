@@ -280,13 +280,11 @@ export function createPrismaSimSlotGenerator(
       if (!first) {
         return 0;
       }
-      const rangeStart = candidates.reduce(
-        (min, slot) => (slot.startAt < min ? slot.startAt : min),
-        first.startAt,
+      const rangeStart = new Date(
+        candidates.reduce((min, slot) => Math.min(min, slot.startAt.getTime()), first.startAt.getTime()),
       );
-      const rangeEnd = candidates.reduce(
-        (max, slot) => (slot.endAt > max ? slot.endAt : max),
-        first.endAt,
+      const rangeEnd = new Date(
+        candidates.reduce((max, slot) => Math.max(max, slot.endAt.getTime()), first.endAt.getTime()),
       );
       const existing = await db.simSlot.findMany({
         where: {

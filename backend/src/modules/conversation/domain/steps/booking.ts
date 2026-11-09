@@ -42,7 +42,7 @@ function slotsOfDay(booking: BookingDraft, env: StepEnv): Promise<AvailableSlot[
     return Promise.resolve([]);
   }
   const bounds = dayBounds(booking.day, env.timeZone);
-  const from = bounds.from > env.now ? bounds.from : env.now;
+  const from = new Date(Math.max(bounds.from.getTime(), env.now.getTime()));
   return slotsBetween(booking, env, from, bounds.to);
 }
 

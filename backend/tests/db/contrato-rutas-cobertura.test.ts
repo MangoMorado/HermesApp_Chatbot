@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { CHATBOT_PANEL_CASES } from "./contrato-rutas/cases-chatbot-panel";
 import { CHATBOT_WIDGET_CASES } from "./contrato-rutas/cases-chatbot-widget";
+import { PLATFORM_CASES } from "./contrato-rutas/cases-platform";
+import { SIM_CASES } from "./contrato-rutas/cases-sim";
 import { coverageGaps } from "./contrato-rutas/coverage";
 import { contractDocument, declaredOperations } from "./contrato-rutas/documents";
 import { EXEMPTIONS } from "./contrato-rutas/exemptions";
-import { CHECKED_STATUSES, type Surface } from "./contrato-rutas/types";
+import { CHECKED_STATUSES, type ContractCase, type Surface } from "./contrato-rutas/types";
 import { createContractValidator } from "./contrato-rutas/validator";
 
 const SURFACES: readonly Surface[] = ["chatbot", "platform", "sim"];
@@ -117,7 +119,13 @@ describe("contrato-rutas: errores comunes y exenciones", () => {
 });
 
 describe("contrato-rutas: cobertura", () => {
-  it("toda operacion del chatbot tiene sus casos o exenciones", () => {
-    expect(coverageGaps("chatbot", [...CHATBOT_PANEL_CASES, ...CHATBOT_WIDGET_CASES])).toEqual([]);
+  const casesBySurface: Record<Surface, readonly ContractCase[]> = {
+    chatbot: [...CHATBOT_PANEL_CASES, ...CHATBOT_WIDGET_CASES],
+    platform: PLATFORM_CASES,
+    sim: SIM_CASES,
+  };
+
+  it.each(SURFACES)("toda operacion de %s tiene sus casos o exenciones", (surface) => {
+    expect(coverageGaps(surface, casesBySurface[surface])).toEqual([]);
   });
 });
