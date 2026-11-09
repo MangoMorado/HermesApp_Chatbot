@@ -177,13 +177,32 @@ Newman y la suite `contrato-rutas` del CI.
 Con `DOCS_ENABLED=true` (laboratorio y desarrollo; en producción, apagado), el backend sirve
 `/docs` con los tres contratos: chatbot, plataforma y, si `HERMES_SIMULATOR_ENABLED=true`,
 simulador. Los activos salen del paquete `swagger-ui-dist` (nada de CDN) y `/docs` lleva su
-propia CSP. «Authorize» ofrece:
+propia CSP. «Authorize» ofrece tres esquemas; la diferencia es quién se autentica:
 
-- `oidcUser` (authorization code con PKCE, cliente `DOCS_OIDC_CLIENT_ID`): `admin-*`, `operator-*`
-  o `platform-lab`;
-- `oidcClient` (client credentials): `service-<tenant>` o `chatbot-platform`; el secreto lo
-  teclea quien prueba, `/docs` nunca lo sirve;
-- `widgetSession`: el `access_token` que devuelve `POST /widget/sessions`.
+- **`oidcUser` (authorization code con PKCE): una persona.** Swagger redirige al login del
+  proveedor y vuelve a `/docs` con un token de ese usuario, con su rol (`admin`, `operator` o
+  `platform`) y, si la tiene, su clínica. El cliente es `DOCS_OIDC_CLIENT_ID`
+  (`chatbot-swagger`), público y sin secreto: PKCE protege el intercambio del código. En el
+  diálogo, `client_id` ya viene relleno; deja `client_secret` vacío, marca el scope `openid` y
+  pulsa «Authorize». Sirve para el panel (`admin-*`, `operator-*`) y para la plataforma
+  (`platform-lab`).
+- **`oidcClient` (client credentials): una máquina.** Sin login ni persona: Swagger pide el
+  token directamente con `client_id` y `client_secret`. Es como entra Hermes
+  (`service-<tenant>`, cuyo trabajo va sobre todo por `/fhir`) o la plataforma automatizada
+  (`chatbot-platform`). El secreto lo teclea quien prueba; `/docs` nunca lo sirve. El navegador
+  lo pide directo al proveedor, así que el cliente necesita CORS para el origen de la API (lo
+  configura `idp:lab` en `service-*` y `chatbot-platform`).
+- **`widgetSession` (bearer): el widget.** No sale del proveedor por este diálogo: es el
+  `access_token` que devuelve `POST /widget/sessions`, y se pega a mano.
+
+Qué usar en el laboratorio:
+
+| Prueba                                 | Esquema         | Credencial                                                  |
+| -------------------------------------- | --------------- | ----------------------------------------------------------- |
+| Panel, p. ej. `GET /knowledge-entries` | `oidcUser`      | `admin-clinica-norte` / `LAB_USER_PASSWORD` (texto literal) |
+| `GET /me` de plataforma                | `oidcClient`    | `chatbot-platform` + el secreto que imprime `idp:lab`       |
+| `GET /api/v1/me` como Hermes           | `oidcClient`    | `service-<tenant_id>` + `LAB_SERVICE_SECRET`                |
+| Chat del widget                        | `widgetSession` | `access_token` de `POST /widget/sessions`                   |
 
 El JSON versionado lleva URLs OAuth2 de marcador (`https://oidc.invalid/...`); `/docs/openapi/*.json`
 las sustituye por las del discovery de `OIDC_ISSUER`. Si el proveedor no responde, `503`.
