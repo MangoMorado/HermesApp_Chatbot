@@ -1,5 +1,6 @@
 import { CHATBOT_PATHS, CHATBOT_SCHEMAS } from "./openapi-paths-chatbot";
 import { CONVERSATION_PATHS, CONVERSATION_SCHEMAS } from "./openapi-paths-conversation";
+import { ANY_IDENTITY, SECURITY_SCHEMES, USER } from "./openapi-security";
 import {
   authErrors,
   ERROR_SCHEMA,
@@ -34,9 +35,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
     },
     servers: [{ url: "/api/v1" }],
     components: {
-      securitySchemes: {
-        bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
-      },
+      securitySchemes: SECURITY_SCHEMES,
       schemas: {
         Error: ERROR_SCHEMA,
         Health: {
@@ -83,7 +82,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         get: {
           operationId: "getIdentity",
           summary: "Identidad efectiva del token",
-          security: [{ bearerAuth: [] }],
+          security: ANY_IDENTITY,
           parameters: [REQUEST_ID_PARAMETER],
           responses: {
             ...okJson({ $ref: "#/components/schemas/Identity" }),
@@ -126,7 +125,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/practitioners": {
         get: {
           operationId: "listPractitioners",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [
             REQUEST_ID_PARAMETER,
             ...pageParams,
@@ -138,7 +137,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/healthcare-services": {
         get: {
           operationId: "listHealthcareServices",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [
             REQUEST_ID_PARAMETER,
             ...pageParams,
@@ -150,7 +149,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/schedules": {
         get: {
           operationId: "listSchedules",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [
             REQUEST_ID_PARAMETER,
             ...pageParams,
@@ -164,7 +163,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/availability": {
         get: {
           operationId: "listAvailability",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [
             REQUEST_ID_PARAMETER,
             ...rangeParams,
@@ -179,7 +178,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/schedules/{id}/slots": {
         get: {
           operationId: "listScheduleSlots",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [
             REQUEST_ID_PARAMETER,
             { name: "id", in: "path", required: true, schema: { type: "string" } },
@@ -192,7 +191,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/appointments": {
         get: {
           operationId: "listAppointments",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [
             REQUEST_ID_PARAMETER,
             { name: "schedule_id", in: "query", required: true, schema: { type: "string" } },
@@ -207,7 +206,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
           operationId: "findMedicalRecord",
           description:
             "Busca un expediente por documento. POST para que el documento no viaje en la URL; no escribe.",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [REQUEST_ID_PARAMETER],
           requestBody: {
             required: true,
@@ -230,7 +229,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/medical-records/{id}": {
         get: {
           operationId: "getMedicalRecord",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [
             REQUEST_ID_PARAMETER,
             { name: "id", in: "path", required: true, schema: { type: "string" } },
@@ -241,7 +240,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/medical-records/{id}/appointments": {
         get: {
           operationId: "listMedicalRecordAppointments",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [
             REQUEST_ID_PARAMETER,
             { name: "id", in: "path", required: true, schema: { type: "string" } },
@@ -253,7 +252,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
       "/tenant-settings": {
         get: {
           operationId: "getTenantSettings",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [REQUEST_ID_PARAMETER],
           responses: {
             ...okJson({ $ref: "#/components/schemas/TenantSettings" }),
@@ -262,7 +261,7 @@ export function buildOpenApiDocument(): Record<string, unknown> {
         },
         patch: {
           operationId: "updateTenantSettings",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
           requestBody: {
             required: true,

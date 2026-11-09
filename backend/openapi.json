@@ -12,10 +12,34 @@
   ],
   "components": {
     "securitySchemes": {
-      "bearerAuth": {
+      "oidcUser": {
+        "type": "oauth2",
+        "description": "Usuario de la clinica (admin u operator) o de plataforma, con PKCE.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://oidc.invalid/authorize",
+            "tokenUrl": "https://oidc.invalid/token",
+            "scopes": {
+              "openid": "Identidad OIDC"
+            }
+          }
+        }
+      },
+      "oidcClient": {
+        "type": "oauth2",
+        "description": "Cliente de maquina (service de una clinica o plataforma).",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://oidc.invalid/token",
+            "scopes": {}
+          }
+        }
+      },
+      "widgetSession": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "JWT",
+        "description": "Token devuelto por POST /widget/sessions"
       }
     },
     "schemas": {
@@ -620,7 +644,13 @@
         "summary": "Identidad efectiva del token",
         "security": [
           {
-            "bearerAuth": []
+            "widgetSession": []
+          },
+          {
+            "oidcUser": []
+          },
+          {
+            "oidcClient": []
           }
         ],
         "parameters": [
@@ -846,7 +876,7 @@
         "operationId": "listPractitioners",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1021,7 +1051,7 @@
         "operationId": "listHealthcareServices",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1196,7 +1226,7 @@
         "operationId": "listSchedules",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1385,7 +1415,7 @@
         "operationId": "listAvailability",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1590,7 +1620,7 @@
         "operationId": "listScheduleSlots",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1782,7 +1812,7 @@
         "operationId": "listAppointments",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1975,7 +2005,7 @@
         "description": "Busca un expediente por documento. POST para que el documento no viaje en la URL; no escribe.",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2155,7 +2185,7 @@
         "operationId": "getMedicalRecord",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2313,7 +2343,7 @@
         "operationId": "listMedicalRecordAppointments",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2489,7 +2519,7 @@
         "operationId": "getTenantSettings",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2637,7 +2667,7 @@
         "operationId": "updateTenantSettings",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2824,7 +2854,7 @@
         "operationId": "getBotConfig",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2973,7 +3003,7 @@
         "description": "Parche parcial. Un texto o param en null vuelve al predeterminado.",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3161,7 +3191,7 @@
         "description": "Crea una clave vigente; la anterior queda en gracia widget_key_grace_hours y la que ya estaba en gracia deja de valer.",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3338,7 +3368,7 @@
         "operationId": "listKnowledgeEntries",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3519,7 +3549,7 @@
         "description": "category, question y answer son obligatorios. Maximo 500 entradas por tenant.",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3706,7 +3736,7 @@
         "operationId": "getKnowledgeEntry",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3862,7 +3892,7 @@
         "operationId": "updateKnowledgeEntry",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -4055,7 +4085,7 @@
         "operationId": "deleteKnowledgeEntry",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -4663,7 +4693,7 @@
         "description": "Solo rol widget: turno actual e historial redactado de la conversacion de X-Conversation-Secret. Crea la conversacion con la bienvenida si no existe.",
         "security": [
           {
-            "bearerAuth": []
+            "widgetSession": []
           }
         ],
         "parameters": [
@@ -4827,7 +4857,7 @@
         "description": "Solo rol widget: un turno. option_id de una opcion vigente (409 stale_option si no) o text donde el turno lo pide.",
         "security": [
           {
-            "bearerAuth": []
+            "widgetSession": []
           }
         ],
         "parameters": [
@@ -5025,7 +5055,7 @@
         "description": "Agrega un origen (maximo 20). Si ya esta, responde 200 sin cambios.",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -5213,7 +5243,7 @@
         "description": "Quita un origen. El origen va codificado (encodeURIComponent).",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
