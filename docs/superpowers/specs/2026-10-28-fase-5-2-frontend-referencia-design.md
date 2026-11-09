@@ -18,11 +18,11 @@ en `sessionStorage` (`lib/token.ts`). El alta de clínicas (`components/simulado
 pide pegar un segundo token de rol `platform`. Esta entrega sustituye los dos por un login
 estándar Authorization Code + PKCE contra el proveedor.
 
-| Sub-proyecto | Contenido | Entregables | Criterios |
-| --- | --- | --- | --- |
-| 5.1 Corte de identidad | Cerrada en `main` (PR #13) | 2, 3, 4, 5, 6, 7 | 1, 2, 3, 4, 5, 6 |
-| **5.2 Frontend de referencia** (esta spec) | Login PKCE en `/panel` y `/simulador`, persona `platform` en el laboratorio, fin del token pegado | 1, 4 | 1, 3 (manual en navegador) |
-| 5.3 Contrato publicado | Swagger UI, Postman, `contrato-rutas` | 8, 9, 10 | 7, 8 |
+| Sub-proyecto                               | Contenido                                                                                         | Entregables      | Criterios                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------- | ---------------- | -------------------------- |
+| 5.1 Corte de identidad                     | Cerrada en `main` (PR #13)                                                                        | 2, 3, 4, 5, 6, 7 | 1, 2, 3, 4, 5, 6           |
+| **5.2 Frontend de referencia** (esta spec) | Login PKCE en `/panel` y `/simulador`, persona `platform` en el laboratorio, fin del token pegado | 1, 4             | 1, 3 (manual en navegador) |
+| 5.3 Contrato publicado                     | Swagger UI, Postman, `contrato-rutas`                                                             | 8, 9, 10         | 7, 8                       |
 
 ### 1.1 Objetivos
 
@@ -47,27 +47,27 @@ estándar Authorization Code + PKCE contra el proveedor.
 
 ## 2. Decisiones tomadas
 
-Las marcadas *usuario* se acordaron en el brainstorming; las marcadas *diseño* son del redactor,
+Las marcadas _usuario_ se acordaron en el brainstorming; las marcadas _diseño_ son del redactor,
 revisables.
 
-| Tema | Decisión | Quién | Razón |
-| --- | --- | --- | --- |
-| Papel del frontend | Ejemplo de Hermes y herramienta de pruebas/demostración. Todo token lo emite el proveedor | usuario | Mostrar el camino real, sin atajos |
-| Alta de clínicas | La hace una **persona** con usuario de rol `platform` en el proveedor, con su sesión PKCE | usuario | El secreto de `chatbot-platform` no puede ir al navegador |
-| `/chat` | Sigue abierto, sin login: se pega la clave pública del widget como hoy | usuario | Es la vista de un sitio público de clínica |
-| Widget | Sin cambios de comportamiento: ya abre y renueva su sesión con el proveedor y `conversation_secret` desde la 5.1. Solo se verifica a mano | diseño | La 5.1 dejó el widget completo |
-| Librería OIDC | `oidc-client-ts` (genérica, certificable, sin código del proveedor) | diseño | Evita escribir PKCE, `state`, `nonce` y renovación a mano; cumple el anti-objetivo de `keycloak-js` |
-| Almacenamiento | `sessionStorage` (por pestaña), como hoy | diseño | Mismo alcance que el token pegado; cerrar la pestaña cierra la consola |
-| Renovación | Automática con el `refresh_token` del proveedor antes de vencer el acceso (5 min en el laboratorio) | diseño | Spec de fase §6.3: la renovación es del cliente |
-| Cambio de rol | Cerrar sesión y entrar con otro usuario | diseño | Un rol por token (spec de fase §4) |
-| Cierre de sesión | RP-initiated logout (`end_session_endpoint`) con `id_token_hint` y vuelta a la página de inicio | diseño | Cierra la sesión del proveedor, que dispara el back-channel hacia la API |
-| Identidad de `platform` | Nuevo `GET /api/platform/v1/me` → `{ subject, role }` | diseño | `/api/v1/me` excluye `platform` y no debe ganarlo (spec de fase §6.4); la franja sigue mostrando lo que confirma el backend |
-| Qué `/me` llamar | `useIdentity()` pide `/api/v1/me` y `/api/platform/v1/me` en paralelo y se queda con el que responda `200`. Si ninguno, muestra el error de `/api/v1/me` | diseño | Sin decodificar el token y sin usar un `403` como señal ambigua |
-| `/chat` y la sesión | Queda dentro del grupo `(console)` y de `AuthProvider`, que no bloquea la carga sin sesión. Si hay sesión de clínica, conserva el relleno de la clave vigente | diseño | Sigue abierto sin login (decisión del usuario) y no pierde lo que hace hoy |
-| Logout `401` | La prueba de token reutilizado tras logout se hace **solo en Easypanel**. En local el logout funciona, pero el back-channel apunta a `LAB_API_URL` (la API desplegada) y el backend local no se entera | diseño | Un realm, un `backchannel.logout.url`; el proveedor no alcanza `localhost` |
-| Configuración | `PUBLIC_OIDC_ISSUER` y `PUBLIC_OIDC_CLIENT_ID` en `frontend/src/config/env.ts`, leídas en el servidor por petición y pasadas al cliente por props | diseño | Mismo patrón que `publicBackendUrl()` |
-| Persona `platform` | `idp:lab` crea `platform-lab` con rol `platform` y sin atributo `tenant_id` | diseño | Nombre sin clínica, coherente con `admin-<slug>` / `operator-<slug>` |
-| Redirecciones | `LAB_FRONTEND_URLS` ya alimenta los redirect URIs de `chatbot-reference-ui`; se documenta incluir ahí la URL del frontend de Easypanel | diseño | El script ya lo soporta; solo falta usarlo |
+| Tema                    | Decisión                                                                                                                                                                                               | Quién   | Razón                                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Papel del frontend      | Ejemplo de Hermes y herramienta de pruebas/demostración. Todo token lo emite el proveedor                                                                                                              | usuario | Mostrar el camino real, sin atajos                                                                                          |
+| Alta de clínicas        | La hace una **persona** con usuario de rol `platform` en el proveedor, con su sesión PKCE                                                                                                              | usuario | El secreto de `chatbot-platform` no puede ir al navegador                                                                   |
+| `/chat`                 | Sigue abierto, sin login: se pega la clave pública del widget como hoy                                                                                                                                 | usuario | Es la vista de un sitio público de clínica                                                                                  |
+| Widget                  | Sin cambios de comportamiento: ya abre y renueva su sesión con el proveedor y `conversation_secret` desde la 5.1. Solo se verifica a mano                                                              | diseño  | La 5.1 dejó el widget completo                                                                                              |
+| Librería OIDC           | `oidc-client-ts` (genérica, certificable, sin código del proveedor)                                                                                                                                    | diseño  | Evita escribir PKCE, `state`, `nonce` y renovación a mano; cumple el anti-objetivo de `keycloak-js`                         |
+| Almacenamiento          | `sessionStorage` (por pestaña), como hoy                                                                                                                                                               | diseño  | Mismo alcance que el token pegado; cerrar la pestaña cierra la consola                                                      |
+| Renovación              | Automática con el `refresh_token` del proveedor antes de vencer el acceso (5 min en el laboratorio)                                                                                                    | diseño  | Spec de fase §6.3: la renovación es del cliente                                                                             |
+| Cambio de rol           | Cerrar sesión y entrar con otro usuario                                                                                                                                                                | diseño  | Un rol por token (spec de fase §4)                                                                                          |
+| Cierre de sesión        | RP-initiated logout (`end_session_endpoint`) con `id_token_hint` y vuelta a la página de inicio                                                                                                        | diseño  | Cierra la sesión del proveedor, que dispara el back-channel hacia la API                                                    |
+| Identidad de `platform` | Nuevo `GET /api/platform/v1/me` → `{ subject, role }`                                                                                                                                                  | diseño  | `/api/v1/me` excluye `platform` y no debe ganarlo (spec de fase §6.4); la franja sigue mostrando lo que confirma el backend |
+| Qué `/me` llamar        | `useIdentity()` pide `/api/v1/me` y `/api/platform/v1/me` en paralelo y se queda con el que responda `200`. Si ninguno, muestra el error de `/api/v1/me`                                               | diseño  | Sin decodificar el token y sin usar un `403` como señal ambigua                                                             |
+| `/chat` y la sesión     | Queda dentro del grupo `(console)` y de `AuthProvider`, que no bloquea la carga sin sesión. Si hay sesión de clínica, conserva el relleno de la clave vigente                                          | diseño  | Sigue abierto sin login (decisión del usuario) y no pierde lo que hace hoy                                                  |
+| Logout `401`            | La prueba de token reutilizado tras logout se hace **solo en Easypanel**. En local el logout funciona, pero el back-channel apunta a `LAB_API_URL` (la API desplegada) y el backend local no se entera | diseño  | Un realm, un `backchannel.logout.url`; el proveedor no alcanza `localhost`                                                  |
+| Configuración           | `PUBLIC_OIDC_ISSUER` y `PUBLIC_OIDC_CLIENT_ID` en `frontend/src/config/env.ts`, leídas en el servidor por petición y pasadas al cliente por props                                                      | diseño  | Mismo patrón que `publicBackendUrl()`                                                                                       |
+| Persona `platform`      | `idp:lab` crea `platform-lab` con rol `platform` y sin atributo `tenant_id`                                                                                                                            | diseño  | Nombre sin clínica, coherente con `admin-<slug>` / `operator-<slug>`                                                        |
+| Redirecciones           | `LAB_FRONTEND_URLS` ya alimenta los redirect URIs de `chatbot-reference-ui`; se documenta incluir ahí la URL del frontend de Easypanel                                                                 | diseño  | El script ya lo soporta; solo falta usarlo                                                                                  |
 
 ## 3. Arquitectura del frontend
 
@@ -102,12 +102,12 @@ frontend/src/
 
 ### 3.1 Qué ve cada rol
 
-| Sesión | `/panel` | `/simulador` (datos y bandeja) | `/simulador` (alta de clínicas) | Franja de sesión |
-| --- | --- | --- | --- | --- |
-| Sin sesión | Botón «Iniciar sesión» | Botón «Iniciar sesión» | Botón «Iniciar sesión» | «Iniciar sesión» |
-| `admin` | Completo | Completo | Explica que hace falta entrar como `platform` | rol, clínica, sujeto (`/api/v1/me`) |
-| `operator` | Lo que su rol alcanza, como hoy | Lo que devuelva la API (hoy `403`, mostrado con `ErrorBox`) | Igual que `admin` | rol, clínica, sujeto |
-| `platform` | Explica que `platform` no opera dentro de una clínica | Igual que `/panel` | Formulario de alta con el token de la sesión | rol y sujeto (`/api/platform/v1/me`), sin clínica |
+| Sesión     | `/panel`                                              | `/simulador` (datos y bandeja)                              | `/simulador` (alta de clínicas)               | Franja de sesión                                  |
+| ---------- | ----------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------- |
+| Sin sesión | Botón «Iniciar sesión»                                | Botón «Iniciar sesión»                                      | Botón «Iniciar sesión»                        | «Iniciar sesión»                                  |
+| `admin`    | Completo                                              | Completo                                                    | Explica que hace falta entrar como `platform` | rol, clínica, sujeto (`/api/v1/me`)               |
+| `operator` | Lo que su rol alcanza, como hoy                       | Lo que devuelva la API (hoy `403`, mostrado con `ErrorBox`) | Igual que `admin`                             | rol, clínica, sujeto                              |
+| `platform` | Explica que `platform` no opera dentro de una clínica | Igual que `/panel`                                          | Formulario de alta con el token de la sesión  | rol y sujeto (`/api/platform/v1/me`), sin clínica |
 
 El frontend elige qué pantalla mostrar según el rol que confirma el backend, sin replicar las
 reglas de autorización: si la API responde `401`/`403`/`404`, se muestra su error tal cual.

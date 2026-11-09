@@ -20,23 +20,29 @@
 ## Tasks
 
 ### Task 1: orval + dependencias
+
 - Añadir orval, @tanstack/react-query; scripts `api:generate`.
 - Config orval para `openapi.json` → `src/api/` y `openapi-sim.json` → `src/sim/`.
 - Generar clientes.
 
 ### Task 2: Auth de pegado de token
+
 - Componente/página para pegar JWT, guardar/borrar en sessionStorage.
 - Provider de query + fetch con Authorization Bearer.
 
 ### Task 3: `/panel`
+
 - Disponibilidad, agenda, búsqueda de expediente + historial.
 - Tope de rango desde `GET /tenant-settings`.
 
 ### Task 4: `/panel/ajustes` (admin)
+
 - Editar `max_query_range_days` con Idempotency-Key.
 
 ### Task 5: `/simulador`
+
 - CRUD maestros + generar cupos.
 
 ### Task 6: Puertas
+
 - typecheck, test, biome, React Doctor.

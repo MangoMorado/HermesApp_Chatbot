@@ -35,13 +35,22 @@ services:
       HERMES_SIM_SERVICE_CLIENTS: ${HERMES_SIM_SERVICE_CLIENTS:-}
       TRUST_PROXY: ${TRUST_PROXY:-false}
       FHIR_BASE_URL: ${FHIR_BASE_URL:-}
+      # Swagger UI: encendido en desarrollo local; en produccion, DOCS_ENABLED=false.
+      DOCS_ENABLED: ${DOCS_ENABLED:-true}
+      DOCS_OIDC_CLIENT_ID: ${DOCS_OIDC_CLIENT_ID:-chatbot-swagger}
     ports:
       - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       retries: 5

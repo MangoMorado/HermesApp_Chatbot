@@ -5,13 +5,16 @@
  * Uso: npm --prefix backend run idp:lab
  * Env: IDP_ADMIN_URL, IDP_ADMIN_REALM (master), IDP_ADMIN_CLIENT_ID, IDP_ADMIN_CLIENT_SECRET,
  *      LAB_API_URL, LAB_FRONTEND_URLS, LAB_USER_PASSWORD, LAB_SERVICE_SECRET,
- *      LAB_PUSH_WIDGET_CLIENTS (true).
+ *      LAB_PUSH_WIDGET_CLIENTS (true), LAB_POSTMAN_ENV_OUT (opcional: ruta del entorno de
+ *      Postman con valores; fuera del repo o con nombre *.postman_environment.json, ignorado).
  */
 import { createHash } from "node:crypto";
+import { writeFileSync } from "node:fs";
 import { seedId } from "../../prisma/seed/data";
 import { AdminClient, fetchClientToken } from "./admin-client";
 import { applyPlan } from "./apply";
 import { API_AUDIENCE, buildLabPlan, type LabPlan, REALM } from "./plan";
+import { postmanEnvironment, postmanValues } from "./postman-env";
 
 const SLUGS = ["clinica-norte", "clinica-sur"] as const;
 const REQUIRED = [
@@ -33,6 +36,7 @@ type LabEnv = {
   userPassword: string;
   serviceSecret: string;
   push: boolean;
+  postmanEnvOut: string | null;
 };
 
 function readEnv(): LabEnv {
@@ -54,6 +58,7 @@ function readEnv(): LabEnv {
     userPassword: env.LAB_USER_PASSWORD as string,
     serviceSecret: env.LAB_SERVICE_SECRET as string,
     push: (env.LAB_PUSH_WIDGET_CLIENTS ?? "true") === "true",
+    postmanEnvOut: env.LAB_POSTMAN_ENV_OUT || null,
   };
 }
 
@@ -99,6 +104,32 @@ function printEnv(env: LabEnv, plan: LabPlan, secrets: Record<string, string>): 
     console.log(`  ${user.username} tenant_id=${user.tenantId ?? "(sin clínica)"}`);
 }
 
+/** Bloque para el entorno de Postman y, si se pide, el archivo de entorno con valores. */
+function printPostman(
+  env: LabEnv,
+  tenants: { id: string; slug: string }[],
+  secrets: Record<string, string>,
+): void {
+  const values = postmanValues({
+    issuer: `${env.adminUrl}/realms/${REALM}`,
+    apiUrl: env.apiUrl,
+    userPassword: env.userPassword,
+    serviceSecret: env.serviceSecret,
+    tenants,
+    secrets,
+  });
+  console.log("\n# Postman (docs/lab.postman_environment.template.json)");
+  for (const { key, value } of values) {
+    if (key !== "lab_user_password") console.log(`${key}=${value}`);
+  }
+  console.log("lab_user_password=(LAB_USER_PASSWORD)");
+  if (env.postmanEnvOut) {
+    const file = `${JSON.stringify(postmanEnvironment(values), null, 2)}\n`;
+    writeFileSync(env.postmanEnvOut, file, "utf8");
+    console.log(`Entorno de Postman escrito en ${env.postmanEnvOut}`);
+  }
+}
+
 async function main(): Promise<void> {
   const env = readEnv();
   const tenants = SLUGS.map((slug) => ({ id: seedId(`tenant:${slug}`), slug }));
@@ -116,6 +147,7 @@ async function main(): Promise<void> {
   console.log(`Creado en esta ejecucion: ${result.created.length}`);
   for (const item of result.created) console.log(`  + ${item}`);
   printEnv(env, plan, result.clientSecrets);
+  printPostman(env, tenants, result.clientSecrets);
   if (env.push) await pushWidgetClients(env, tenants, result.clientSecrets);
 }
 

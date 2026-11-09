@@ -1,8 +1,9 @@
-import { getContainer } from "@/composition-root";
+import { getContainer, type WritePorts } from "@/composition-root";
 import { idempotentRoute } from "@/http/idempotent-route";
 import { requireSimulatorEnabled } from "@/http/require-simulator";
 import { privateRoute } from "@/http/route";
 import { pageJson, simScheduleJson } from "@/http/serializers";
+import { NotFoundError } from "@/modules/shared/domain/not-found-error";
 import { parseLimit } from "@/modules/shared/domain/pagination";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
 
@@ -39,6 +40,7 @@ export const POST = idempotentRoute(["admin"], async ({ actor, requestId, body, 
   if (typeof identifierValue !== "string" || !identifierValue.trim()) {
     throw new ValidationError("identifier_value es obligatorio", { field: "identifier_value" });
   }
+  await requireOwnReferences(ports, actor.tenantId, practitionerId, healthcareServiceId);
   const created = await ports.simSchedules.create({
     id: ports.ids.next(),
     tenantId: actor.tenantId,
@@ -60,3 +62,19 @@ export const POST = idempotentRoute(["admin"], async ({ actor, requestId, body, 
   });
   return { status: 200, body: simScheduleJson(created) };
 });
+
+/** Profesional y servicio de otra clinica (o inexistentes): 404, nunca un fallo de clave ajena. */
+async function requireOwnReferences(
+  ports: WritePorts,
+  tenantId: string,
+  practitionerId: string,
+  healthcareServiceId: string,
+): Promise<void> {
+  const [practitioner, service] = await Promise.all([
+    ports.simPractitioners.get(tenantId, practitionerId),
+    ports.simServices.get(tenantId, healthcareServiceId),
+  ]);
+  if (!practitioner || !service) {
+    throw new NotFoundError("Profesional o servicio inexistente");
+  }
+}

@@ -1,4 +1,5 @@
 import { ERROR_CODES, STATUS_BY_CODE } from "./error-codes";
+import { SECURITY_SCHEMES, USER } from "./openapi-security";
 import { REQUEST_ID_HEADER } from "./request-id";
 
 const REQUEST_ID_PARAMETER = {
@@ -58,7 +59,7 @@ function crudPaths(resource: string, operationBase: string): Record<string, unkn
     [`/${resource}`]: {
       get: {
         operationId: `list${operationBase}`,
-        security: [{ bearerAuth: [] }],
+        security: USER,
         parameters: [REQUEST_ID_PARAMETER],
         responses: {
           "200": {
@@ -71,7 +72,7 @@ function crudPaths(resource: string, operationBase: string): Record<string, unkn
       },
       post: {
         operationId: `create${operationBase}`,
-        security: [{ bearerAuth: [] }],
+        security: USER,
         parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
         responses: {
           "200": {
@@ -86,7 +87,7 @@ function crudPaths(resource: string, operationBase: string): Record<string, unkn
     [`/${resource}/{id}`]: {
       get: {
         operationId: `get${operationBase}`,
-        security: [{ bearerAuth: [] }],
+        security: USER,
         parameters: [
           REQUEST_ID_PARAMETER,
           { name: "id", in: "path", required: true, schema: { type: "string" } },
@@ -102,7 +103,7 @@ function crudPaths(resource: string, operationBase: string): Record<string, unkn
       },
       patch: {
         operationId: `update${operationBase}`,
-        security: [{ bearerAuth: [] }],
+        security: USER,
         parameters: [
           REQUEST_ID_PARAMETER,
           IDEMPOTENCY_PARAMETER,
@@ -119,7 +120,7 @@ function crudPaths(resource: string, operationBase: string): Record<string, unkn
       },
       delete: {
         operationId: `delete${operationBase}`,
-        security: [{ bearerAuth: [] }],
+        security: USER,
         parameters: [
           REQUEST_ID_PARAMETER,
           IDEMPOTENCY_PARAMETER,
@@ -201,7 +202,7 @@ function inboxDecision(operationId: string, summary: string) {
     post: {
       operationId,
       summary,
-      security: [{ bearerAuth: [] }],
+      security: USER,
       parameters: [
         REQUEST_ID_PARAMETER,
         IDEMPOTENCY_PARAMETER,
@@ -226,7 +227,7 @@ const INBOX_PATHS = {
     get: {
       operationId: "listSimInbox",
       summary: "Solicitudes pendientes y vivas del tenant (vence las caducadas antes de responder)",
-      security: [{ bearerAuth: [] }],
+      security: USER,
       parameters: [
         REQUEST_ID_PARAMETER,
         { name: "cursor", in: "query", required: false, schema: { type: "string" } },
@@ -277,9 +278,7 @@ export function buildSimOpenApiDocument(): Record<string, unknown> {
     },
     servers: [{ url: "/api/sim/v1" }],
     components: {
-      securitySchemes: {
-        bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
-      },
+      securitySchemes: SECURITY_SCHEMES,
       schemas: {
         Error: {
           type: "object",
@@ -309,7 +308,7 @@ export function buildSimOpenApiDocument(): Record<string, unknown> {
         post: {
           operationId: "generateSimSlots",
           summary: "Genera cupos (equivalente a slots:generate de la spec)",
-          security: [{ bearerAuth: [] }],
+          security: USER,
           parameters: [
             REQUEST_ID_PARAMETER,
             IDEMPOTENCY_PARAMETER,

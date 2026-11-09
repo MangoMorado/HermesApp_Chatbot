@@ -1,3 +1,4 @@
+import { USER, WIDGET } from "./openapi-security";
 import {
   authErrors,
   CONVERSATION_SECRET_PARAMETER,
@@ -8,7 +9,6 @@ import {
 } from "./openapi-shared";
 
 /** Rutas de /api/v1 de la Fase 3.3: origenes del widget y conversacion. */
-const bearer = [{ bearerAuth: [] }];
 const botConfigOk = okJson({ $ref: "#/components/schemas/BotConfig" });
 
 export const CONVERSATION_SCHEMAS = {
@@ -71,7 +71,7 @@ export const CONVERSATION_PATHS = {
       operationId: "getWidgetConversation",
       description:
         "Solo rol widget: turno actual e historial redactado de la conversacion de X-Conversation-Secret. Crea la conversacion con la bienvenida si no existe.",
-      security: bearer,
+      security: WIDGET,
       parameters: [REQUEST_ID_PARAMETER, CONVERSATION_SECRET_PARAMETER],
       responses: { ...okJson({ $ref: "#/components/schemas/ConversationHistory" }), ...authErrors },
     },
@@ -82,7 +82,7 @@ export const CONVERSATION_PATHS = {
       operationId: "sendWidgetMessage",
       description:
         "Solo rol widget: un turno. option_id de una opcion vigente (409 stale_option si no) o text donde el turno lo pide.",
-      security: bearer,
+      security: WIDGET,
       parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER, CONVERSATION_SECRET_PARAMETER],
       requestBody: {
         required: true,
@@ -97,7 +97,7 @@ export const CONVERSATION_PATHS = {
     post: {
       operationId: "addAllowedOrigin",
       description: "Agrega un origen (maximo 20). Si ya esta, responde 200 sin cambios.",
-      security: bearer,
+      security: USER,
       parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
       requestBody: {
         required: true,
@@ -112,7 +112,7 @@ export const CONVERSATION_PATHS = {
     delete: {
       operationId: "removeAllowedOrigin",
       description: "Quita un origen. El origen va codificado (encodeURIComponent).",
-      security: bearer,
+      security: USER,
       parameters: [
         REQUEST_ID_PARAMETER,
         IDEMPOTENCY_PARAMETER,

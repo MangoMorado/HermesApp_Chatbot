@@ -35,7 +35,7 @@ Lo que aún no existe está descrito como destino, no como hecho. Verifica antes
 ## No negociables (aplican a todo cambio)
 
 - **Sin IA.** Ningún LLM, embeddings, RAG ni n8n, ni en dependencias ni en despliegue. El chatbot es una máquina de estados determinista; todo texto sale de la config del tenant, su base de conocimiento o datos de dominio.
-- **Hermes es la fuente de verdad.** El servicio solo origina *solicitudes* y pre-registros; nunca confirma ni modifica una cita en firme.
+- **Hermes es la fuente de verdad.** El servicio solo origina _solicitudes_ y pre-registros; nunca confirma ni modifica una cita en firme.
 - **Tenant solo del claim del JWT.** Nunca del body, query string ni header libre. Recurso de otro tenant → `404`, nunca `403`.
 - **Rol `widget`** alcanza únicamente el chat de su propia sesión; jamás datos de dominio ni `/fhir`.
 - **No divulgación.** No se persisten respuestas de verificación ni datos clínicos en mensajes, auditoría ni logs.
@@ -57,10 +57,10 @@ Monorepo con `backend/` y `frontend/` independientes, cada uno con su `package.j
 
 **Dos superficies HTTP sobre un mismo dominio, con contratos de error distintos:**
 
-| Superficie | Consumidores | Errores |
-| --- | --- | --- |
-| REST `/api/v1` | widget, panel, chat | `{ error: { code, message, request_id, details } }` + `X-Request-Id` |
-| FHIR R4 `/fhir` | Hermes (rol `service`) | `OperationOutcome` con `application/fhir+json` |
+| Superficie      | Consumidores           | Errores                                                              |
+| --------------- | ---------------------- | -------------------------------------------------------------------- |
+| REST `/api/v1`  | widget, panel, chat    | `{ error: { code, message, request_id, details } }` + `X-Request-Id` |
+| FHIR R4 `/fhir` | Hermes (rol `service`) | `OperationOutcome` con `application/fhir+json`                       |
 
 Nunca mezclar las envolturas. `GET /fhir/metadata` (CapabilityStatement) debe declarar **exactamente** lo implementado; perfiles y constantes FHIR viven en un solo módulo.
 
@@ -92,7 +92,7 @@ Detalles de instalación que muerden: npm 12 bloquea los scripts de instalación
 Si `biome` no produce salida, el binario se bajó truncado: borra `node_modules/@biomejs`
 y reinstala (el `.exe` correcto pesa ~76 MB).
 
-Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`.
+Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`, `contrato-rutas`.
 
 ## Puertas de calidad por PR
 
@@ -107,17 +107,17 @@ Umbrales de Clean Code: complejidad cognitiva ≤ 15 por función, ≤ 40 línea
 
 En `.agents/skills/` (espejo en `.claude/skills/` y, para Copilot, `.github/skills/`) y fijadas en `skills-lock.json`, vía [skills.sh](https://skills.sh). El inventario canónico y los conflictos con la política del repo están en `GOBERNANZA.md` §6.
 
-| Skill | Origen | Uso |
-| --- | --- | --- |
-| `dry-refactoring` | `kucherenko/jscpd` | Eliminar duplicación detectada por jscpd |
-| `fhir-developer-skill` | `anthropics/healthcare` | R4: recursos, value sets, `OperationOutcome`, búsqueda |
-| `find-skills` | `vercel-labs/skills` | Descubrir e instalar skills del ecosistema |
-| `frontend-design` | `anthropics/skills` | Dirección visual distintiva (ligera) al construir UI |
-| `grilling` | `mattpocock/skills` | Stress-test de planes y decisiones |
-| `hexagonal-architecture` | `lexler/skill-factory` | Regla I/O vs. núcleo al trazar fronteras de capa |
-| `impeccable` | `pbakaus/impeccable` | Diseño UI de producción: craft, critique, audit, polish, DESIGN.md |
-| `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI |
-| `security-best-practices` | `openai/skills` | Revisión de seguridad (JS/TS, Next.js) |
+| Skill                          | Origen                       | Uso                                                                |
+| ------------------------------ | ---------------------------- | ------------------------------------------------------------------ |
+| `dry-refactoring`              | `kucherenko/jscpd`           | Eliminar duplicación detectada por jscpd                           |
+| `fhir-developer-skill`         | `anthropics/healthcare`      | R4: recursos, value sets, `OperationOutcome`, búsqueda             |
+| `find-skills`                  | `vercel-labs/skills`         | Descubrir e instalar skills del ecosistema                         |
+| `frontend-design`              | `anthropics/skills`          | Dirección visual distintiva (ligera) al construir UI               |
+| `grilling`                     | `mattpocock/skills`          | Stress-test de planes y decisiones                                 |
+| `hexagonal-architecture`       | `lexler/skill-factory`       | Regla I/O vs. núcleo al trazar fronteras de capa                   |
+| `impeccable`                   | `pbakaus/impeccable`         | Diseño UI de producción: craft, critique, audit, polish, DESIGN.md |
+| `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI                                       |
+| `security-best-practices`      | `openai/skills`              | Revisión de seguridad (JS/TS, Next.js)                             |
 
 Actualizar: `npx skills update`. Reinstalar desde el lock: `npx skills experimental_install`. Refresco de Impeccable: `npx impeccable update`.
 

@@ -12,10 +12,34 @@
   ],
   "components": {
     "securitySchemes": {
-      "bearerAuth": {
+      "oidcUser": {
+        "type": "oauth2",
+        "description": "Usuario de la clinica (admin u operator) o de plataforma, con PKCE.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://oidc.invalid/authorize",
+            "tokenUrl": "https://oidc.invalid/token",
+            "scopes": {
+              "openid": "Identidad OIDC"
+            }
+          }
+        }
+      },
+      "oidcClient": {
+        "type": "oauth2",
+        "description": "Cliente de maquina (service de una clinica o plataforma).",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://oidc.invalid/token",
+            "scopes": {}
+          }
+        }
+      },
+      "widgetSession": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "JWT",
+        "description": "Token devuelto por POST /widget/sessions"
       }
     },
     "schemas": {
@@ -261,7 +285,7 @@
         "operationId": "listSimPractitioner",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -401,7 +425,7 @@
         "operationId": "createSimPractitioner",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -569,7 +593,7 @@
         "operationId": "getSimPractitioner",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -717,7 +741,7 @@
         "operationId": "updateSimPractitioner",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -891,7 +915,7 @@
         "operationId": "deleteSimPractitioner",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1067,7 +1091,7 @@
         "operationId": "listSimHealthcareService",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1207,7 +1231,7 @@
         "operationId": "createSimHealthcareService",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1375,7 +1399,7 @@
         "operationId": "getSimHealthcareService",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1523,7 +1547,7 @@
         "operationId": "updateSimHealthcareService",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1697,7 +1721,7 @@
         "operationId": "deleteSimHealthcareService",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -1873,7 +1897,7 @@
         "operationId": "listSimSchedule",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2013,7 +2037,7 @@
         "operationId": "createSimSchedule",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2181,7 +2205,7 @@
         "operationId": "getSimSchedule",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2329,7 +2353,7 @@
         "operationId": "updateSimSchedule",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2503,7 +2527,7 @@
         "operationId": "deleteSimSchedule",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2679,7 +2703,7 @@
         "operationId": "listSimPatient",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2819,7 +2843,7 @@
         "operationId": "createSimPatient",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -2987,7 +3011,7 @@
         "operationId": "getSimPatient",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3135,7 +3159,7 @@
         "operationId": "updateSimPatient",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3309,7 +3333,7 @@
         "operationId": "deleteSimPatient",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3486,7 +3510,7 @@
         "summary": "Genera cupos (equivalente a slots:generate de la spec)",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3671,7 +3695,7 @@
         "summary": "Solicitudes pendientes y vivas del tenant (vence las caducadas antes de responder)",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -3850,7 +3874,7 @@
         "summary": "Hermes aprueba: reserva si su cupo sigue libre; si no, rechaza por slot_unavailable",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [
@@ -4027,7 +4051,7 @@
         "summary": "Hermes rechaza (declined)",
         "security": [
           {
-            "bearerAuth": []
+            "oidcUser": []
           }
         ],
         "parameters": [

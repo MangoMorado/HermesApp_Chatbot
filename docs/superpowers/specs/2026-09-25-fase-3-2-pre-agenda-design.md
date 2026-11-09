@@ -14,17 +14,17 @@ solicitudes nacen de un caso de uso de aplicación que consumirá el motor conve
 
 ## 2. Decisiones tomadas
 
-| Tema | Decisión | Razón |
-| --- | --- | --- |
-| Resolución sin FHIR | El chatbot expone el caso de uso «Hermes resuelve la solicitud»; en la 3.2 lo invoca el simulador en proceso; en la Fase 4 lo invoca el adaptador FHIR (`PUT Appointment`/`Task`) | Nada se tira en la Fase 4; el chatbot nunca confirma por sí mismo |
-| Origen de las solicitudes | Solo el caso de uso y sus tests; sin ruta REST de creación ni solicitudes en el seed | El chat (3.3) es el único originador previsto; no abrir contrato que nadie pidió |
-| Apartado atómico | `UPDATE` condicional `status='free'` + bloqueo `FOR UPDATE` de la historia clínica + índices únicos parciales | Correcto con el aislamiento por defecto, sin reintentos; la base se protege sola |
-| Plazo del apartado | `request_hold_minutes`: 240 por defecto, rango 15–4320, recortado al inicio del cupo | Cubre una jornada de recepción con revisiones cada pocas horas |
-| Tope de pendientes | `max_pending_requests_per_patient`: 2 por defecto, rango 1–5, cuenta solo `book` y `reschedule` vivas | Lo que acapara cupos es el apartado; cancelar no acapara |
-| Cambios sobre una cita | Una sola solicitud viva (`reschedule` o `cancel`) por cita, por índice único parcial | Evita decisiones contradictorias de Hermes sobre la misma cita |
-| Vencimiento | Al leer y al crear, con un `UPDATE` por conjunto; el barrido de la Fase 6 reutiliza el mismo caso de uso | Regla de gobernanza §3: Hermes nunca ve un apartado vencido como vigente |
-| Orden en la bandeja | Primero escribe `hermes_sim`, después resuelve en el chatbot; si el chatbot rechaza por vencimiento, el simulador deshace lo suyo | Hermes es la fuente de verdad; el chatbot refleja su decisión |
-| Errores | Sin códigos nuevos: `409 conflict` con `details.reason` | El contrato de errores REST no cambia |
+| Tema                      | Decisión                                                                                                                                                                          | Razón                                                                            |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Resolución sin FHIR       | El chatbot expone el caso de uso «Hermes resuelve la solicitud»; en la 3.2 lo invoca el simulador en proceso; en la Fase 4 lo invoca el adaptador FHIR (`PUT Appointment`/`Task`) | Nada se tira en la Fase 4; el chatbot nunca confirma por sí mismo                |
+| Origen de las solicitudes | Solo el caso de uso y sus tests; sin ruta REST de creación ni solicitudes en el seed                                                                                              | El chat (3.3) es el único originador previsto; no abrir contrato que nadie pidió |
+| Apartado atómico          | `UPDATE` condicional `status='free'` + bloqueo `FOR UPDATE` de la historia clínica + índices únicos parciales                                                                     | Correcto con el aislamiento por defecto, sin reintentos; la base se protege sola |
+| Plazo del apartado        | `request_hold_minutes`: 240 por defecto, rango 15–4320, recortado al inicio del cupo                                                                                              | Cubre una jornada de recepción con revisiones cada pocas horas                   |
+| Tope de pendientes        | `max_pending_requests_per_patient`: 2 por defecto, rango 1–5, cuenta solo `book` y `reschedule` vivas                                                                             | Lo que acapara cupos es el apartado; cancelar no acapara                         |
+| Cambios sobre una cita    | Una sola solicitud viva (`reschedule` o `cancel`) por cita, por índice único parcial                                                                                              | Evita decisiones contradictorias de Hermes sobre la misma cita                   |
+| Vencimiento               | Al leer y al crear, con un `UPDATE` por conjunto; el barrido de la Fase 6 reutiliza el mismo caso de uso                                                                          | Regla de gobernanza §3: Hermes nunca ve un apartado vencido como vigente         |
+| Orden en la bandeja       | Primero escribe `hermes_sim`, después resuelve en el chatbot; si el chatbot rechaza por vencimiento, el simulador deshace lo suyo                                                 | Hermes es la fuente de verdad; el chatbot refleja su decisión                    |
+| Errores                   | Sin códigos nuevos: `409 conflict` con `details.reason`                                                                                                                           | El contrato de errores REST no cambia                                            |
 
 ## 3. Arquitectura del backend
 
@@ -51,18 +51,18 @@ backend/src/composition/
 Tabla nueva `appointment_requests`, con FK compuestas `(tenant_id, …)` como el resto del
 esquema:
 
-| Campo | Notas |
-| --- | --- |
-| `id`, `tenant_id` | UUID v7 del `IdGenerator` |
-| `kind` | enum `appointment_request_kind`: `book` · `reschedule` · `cancel` |
-| `status` | enum `appointment_request_status`: `pending` · `approved` · `rejected` · `expired` |
-| `medical_record_id` | Paciente (`active` o `pre_registered`) |
-| `slot_id` | Cupo apartado; obligatorio en `book`/`reschedule`, nulo en `cancel` |
-| `appointment_id` | Cita en firme afectada; obligatoria en `reschedule`/`cancel`, nula en `book` |
-| `expires_at` | `timestamptz`; ver §5.2 |
-| `resolution_reason` | Solo en `rejected`: `slot_unavailable` · `declined` |
-| `resulting_appointment_id` | Cita creada al aprobar `book`/`reschedule` |
-| `created_at`, `resolved_at` | `resolved_at` se llena en `approved`, `rejected` y `expired` |
+| Campo                       | Notas                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `id`, `tenant_id`           | UUID v7 del `IdGenerator`                                                          |
+| `kind`                      | enum `appointment_request_kind`: `book` · `reschedule` · `cancel`                  |
+| `status`                    | enum `appointment_request_status`: `pending` · `approved` · `rejected` · `expired` |
+| `medical_record_id`         | Paciente (`active` o `pre_registered`)                                             |
+| `slot_id`                   | Cupo apartado; obligatorio en `book`/`reschedule`, nulo en `cancel`                |
+| `appointment_id`            | Cita en firme afectada; obligatoria en `reschedule`/`cancel`, nula en `book`       |
+| `expires_at`                | `timestamptz`; ver §5.2                                                            |
+| `resolution_reason`         | Solo en `rejected`: `slot_unavailable` · `declined`                                |
+| `resulting_appointment_id`  | Cita creada al aprobar `book`/`reschedule`                                         |
+| `created_at`, `resolved_at` | `resolved_at` se llena en `approved`, `rejected` y `expired`                       |
 
 Restricciones (en SQL crudo dentro de la misma migración de Prisma, porque Prisma no las expresa):
 
@@ -109,12 +109,12 @@ La tabla no guarda nada propio de FHIR. En la Fase 4 una solicitud `pending` se 
 
 ### 4.3 Casos de uso (`application/`)
 
-| Caso de uso | Consumidor |
-| --- | --- |
-| `createAppointmentRequest(cmd)` | Motor conversacional (3.3) y tests |
+| Caso de uso                                           | Consumidor                                       |
+| ----------------------------------------------------- | ------------------------------------------------ |
+| `createAppointmentRequest(cmd)`                       | Motor conversacional (3.3) y tests               |
 | `resolveAppointmentRequest(tenantId, id, resolution)` | Bandeja del simulador (3.2); `PUT` FHIR (Fase 4) |
-| `expireDueRequests(tenantId)` | Lecturas y creación; barrido (Fase 6) |
-| `listAppointmentRequests`, `getAppointmentRequest` | Bandeja del simulador; búsquedas FHIR (Fase 4) |
+| `expireDueRequests(tenantId)`                         | Lecturas y creación; barrido (Fase 6)            |
+| `listAppointmentRequests`, `getAppointmentRequest`    | Bandeja del simulador; búsquedas FHIR (Fase 4)   |
 
 `cmd` es una unión discriminada por `kind`, con `tenantId`, `medicalRecordId`, `actor` y
 `slotId` y/o `appointmentId` según el `kind`. Devuelve la solicitud creada.
@@ -158,26 +158,26 @@ Dentro de `PreAgendaUnitOfWork.run` (paciente bloqueado):
 `resolveAppointmentRequest` bloquea la solicitud (`getRequestForUpdate`); si no está viva ⇒
 `request_not_pending` (si venció, se marca `expired` antes de responder).
 
-| Solicitud | `approved` | `rejected` |
-| --- | --- | --- |
-| `book` | cupo → `busy`; cita nueva `booked` con el identificador de Hermes | cupo → `free` |
+| Solicitud    | `approved`                                                                            | `rejected`                              |
+| ------------ | ------------------------------------------------------------------------------------- | --------------------------------------- |
+| `book`       | cupo → `busy`; cita nueva `booked` con el identificador de Hermes                     | cupo → `free`                           |
 | `reschedule` | cita vieja → `cancelled` y su cupo → `free`; cupo nuevo → `busy`; cita nueva `booked` | cupo nuevo → `free`; cita vieja intacta |
-| `cancel` | cita → `cancelled`; su cupo → `free` | sin cambios |
+| `cancel`     | cita → `cancelled`; su cupo → `free`                                                  | sin cambios                             |
 
 Vencida equivale a `rejected` en efectos. Auditoría del hecho (`appointment_request.approved` /
 `.rejected`), con el rol y el `sub` de quien resuelve.
 
 ## 6. Errores
 
-| Situación | Respuesta |
-| --- | --- |
-| Cupo ya apartado, ocupado o tomado en la carrera | `409 conflict`, `details.reason = slot_unavailable` |
-| Tope de pendientes alcanzado | `409 conflict`, `details.reason = pending_limit_reached` |
-| La cita ya tiene una solicitud viva | `409 conflict`, `details.reason = appointment_change_pending` |
-| Resolver una solicitud resuelta o vencida | `409 conflict`, `details.reason = request_not_pending` |
-| Aprobar con un paciente que el simulador no conoce | `409 conflict`, `details.reason = patient_not_in_hermes` |
-| Cupo pasado o de agenda inactiva; reprogramar al mismo cupo; cita no futura o no `booked` | `422 validation_failed` |
-| Paciente, cupo, cita o solicitud de otro tenant | `404 not_found` |
+| Situación                                                                                 | Respuesta                                                     |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Cupo ya apartado, ocupado o tomado en la carrera                                          | `409 conflict`, `details.reason = slot_unavailable`           |
+| Tope de pendientes alcanzado                                                              | `409 conflict`, `details.reason = pending_limit_reached`      |
+| La cita ya tiene una solicitud viva                                                       | `409 conflict`, `details.reason = appointment_change_pending` |
+| Resolver una solicitud resuelta o vencida                                                 | `409 conflict`, `details.reason = request_not_pending`        |
+| Aprobar con un paciente que el simulador no conoce                                        | `409 conflict`, `details.reason = patient_not_in_hermes`      |
+| Cupo pasado o de agenda inactiva; reprogramar al mismo cupo; cita no futura o no `booked` | `422 validation_failed`                                       |
+| Paciente, cupo, cita o solicitud de otro tenant                                           | `404 not_found`                                               |
 
 ## 7. Bandeja del simulador (`hermes-simulator`)
 
@@ -205,11 +205,11 @@ intercambia identificadores de Hermes (paciente, cupo, cita), nunca ids de `publ
 
 ### 7.3 Rutas (`/api/sim/v1`, solo `admin`, `404` con el simulador apagado)
 
-| Método y ruta | Notas |
-| --- | --- |
-| `GET /inbox?cursor=&limit=` | Pendientes vivas; cursor, 50 por defecto, 200 máximo |
-| `POST /inbox/{id}/approve` | `Idempotency-Key`; devuelve la solicitud resuelta (`approved` o `rejected` con motivo) |
-| `POST /inbox/{id}/reject` | `Idempotency-Key`; devuelve la solicitud `rejected` (`declined`) |
+| Método y ruta               | Notas                                                                                  |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| `GET /inbox?cursor=&limit=` | Pendientes vivas; cursor, 50 por defecto, 200 máximo                                   |
+| `POST /inbox/{id}/approve`  | `Idempotency-Key`; devuelve la solicitud resuelta (`approved` o `rejected` con motivo) |
+| `POST /inbox/{id}/reject`   | `Idempotency-Key`; devuelve la solicitud `rejected` (`declined`)                       |
 
 Cada elemento: `id`, `kind`, `status`, `created_at`, `expires_at`; paciente (identificador,
 tipo y número de documento, nombre); cupo (identificador, `start_at`, `end_at`); cita afectada
@@ -221,10 +221,10 @@ de figurar libre en la disponibilidad.
 
 ## 8. Parámetros de `bot-config`
 
-| Clave | Predeterminado | Rango |
-| --- | --- | --- |
-| `request_hold_minutes` | 240 | 15–4320 |
-| `max_pending_requests_per_patient` | 2 | 1–5 |
+| Clave                              | Predeterminado | Rango   |
+| ---------------------------------- | -------------- | ------- |
+| `request_hold_minutes`             | 240            | 15–4320 |
+| `max_pending_requests_per_patient` | 2              | 1–5     |
 
 Se añaden a `PARAM_SPECS`; no requieren migración (JSONB).
 
@@ -236,16 +236,16 @@ aceptación 5 de la Fase 3).
 
 ## 10. Pruebas
 
-| Suite | Cobertura |
-| --- | --- |
-| `dominio` | `computeExpiresAt` (con recorte), `isLive`, validaciones de cupo, cita y tope, `resolutionEffects` por `kind` y resultado |
+| Suite                   | Cobertura                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dominio`               | `computeExpiresAt` (con recorte), `isLive`, validaciones de cupo, cita y tope, `resolutionEffects` por `kind` y resultado                                                                                                                                                                                                                                                                                                                |
 | `pre-agenda` (Postgres) | 10 creaciones paralelas sobre el mismo cupo ⇒ exactamente 1; 5 del mismo paciente sobre cupos distintos con tope 2 ⇒ exactamente 2; vencimiento al leer con reloj falso (el cupo reaparece libre; resolver una vencida ⇒ `request_not_pending`); efectos de cada resolución; bandeja por HTTP con coherencia `public` ↔ `hermes_sim` tras aprobar, rechazar y `slot_unavailable`; vencimiento durante la aprobación deshace `hermes_sim` |
-| `aislamiento-tenant` | La bandeja de A no ve solicitudes de B; aprobar o rechazar una de B con token de A ⇒ `404` |
-| `idempotencia` | `approve`/`reject` repetidos ⇒ misma respuesta y una sola cita; misma clave con otro cuerpo ⇒ `409` |
-| `roles` | Bandeja solo `admin` (`operator`/`widget` ⇒ `403`); simulador apagado ⇒ `404` |
-| `conocimiento-config` | Rangos de los dos parámetros nuevos |
-| `fronteras` | `hermes-simulator` no importa módulos del chatbot |
-| `contrato-api` | Rutas de la bandeja declaradas; `openapi.json` regenerado |
+| `aislamiento-tenant`    | La bandeja de A no ve solicitudes de B; aprobar o rechazar una de B con token de A ⇒ `404`                                                                                                                                                                                                                                                                                                                                               |
+| `idempotencia`          | `approve`/`reject` repetidos ⇒ misma respuesta y una sola cita; misma clave con otro cuerpo ⇒ `409`                                                                                                                                                                                                                                                                                                                                      |
+| `roles`                 | Bandeja solo `admin` (`operator`/`widget` ⇒ `403`); simulador apagado ⇒ `404`                                                                                                                                                                                                                                                                                                                                                            |
+| `conocimiento-config`   | Rangos de los dos parámetros nuevos                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `fronteras`             | `hermes-simulator` no importa módulos del chatbot                                                                                                                                                                                                                                                                                                                                                                                        |
+| `contrato-api`          | Rutas de la bandeja declaradas; `openapi.json` regenerado                                                                                                                                                                                                                                                                                                                                                                                |
 
 ## 11. Frontend
 

@@ -43,27 +43,27 @@ debe ser **solo de configuración** (rutas de claims y equivalencias de roles), 
 
 ## 2. Decisiones tomadas
 
-Las de la columna «Quién» marcadas *usuario* se acordaron en el brainstorming; las marcadas
-*diseño* son decisiones del redactor, revisables.
+Las de la columna «Quién» marcadas _usuario_ se acordaron en el brainstorming; las marcadas
+_diseño_ son decisiones del redactor, revisables.
 
-| Tema | Decisión | Quién | Razón |
-| --- | --- | --- | --- |
-| Transición | Corte de golpe. Se borran emisor HS256, `JWT_SECRET`, `PLATFORM_SECRET`, `token:dev` y la ruta de emisión | usuario | Un único emisor de identidad |
-| Proveedor | OIDC genérico: issuer, audiencia, JWKS por discovery. Keycloak es el del laboratorio | usuario | Cambiar de proveedor = cambiar configuración |
-| Contrato de claims | Lo define este repo (§4). Rutas de claim y equivalencia de roles **configurables** | usuario | Hermes se adapta; aún no se conoce su modelo |
-| Paciente | Sigue anónimo ante el proveedor. El pre-registro queda como está (3.3 / 4.4) | usuario | El paciente no tiene cuenta |
-| Widget | Camino 1: el proveedor acredita *quién* (widget de la clínica X, `client_credentials`); el backend ata *qué conversación* con un identificador secreto propio | usuario | Sin usuarios desechables ni extensiones del proveedor |
-| Frontend propio | Herramienta de referencia y pruebas. No se despliega al conectar con Hermes. Login OIDC estándar (Authorization Code + PKCE) | usuario | El panel real lo construye Hermes |
-| Alta de clínica | Explícita, por `/api/platform/v1`, idempotente. Nunca auto-alta al ver un `tenant_id` desconocido | usuario | Un error de configuración debe dar `404`, no crear estado |
-| Rol `platform` | Rol nuevo, **sin** `tenant_id`. Solo alcanza `/api/platform/v1` | usuario | Opera sobre las clínicas, no dentro de una |
-| Contrato publicado | Swagger UI + Postman, ambos con autenticación OAuth2 real contra el proveedor | usuario | Que Hermes pueda autenticarse y probar cada endpoint |
-| Pruebas sin red | Las suites firman con un par de claves propio y sirven un JWKS local | diseño | CI sin Keycloak; además prueba lo agnóstico |
-| Laboratorio | Script versionado que crea realm, clientes, roles, mappers y usuarios. El MCP solo explora/verifica | usuario | Reconstruible y revisable en la PR |
-| Sesión cerrada | Back-channel logout OIDC: el proveedor avisa del `sid` cerrado; el backend lo rechaza hasta que su token expire | diseño | Estándar OIDC; criterio 3 del roadmap sin introspección por petición |
-| Vida de los tokens | Acceso corto (5 min por defecto, configurable en el proveedor) | diseño | Acota la ventana de un token robado |
+| Tema                    | Decisión                                                                                                                                                                                                                                                                         | Quién   | Razón                                                                             |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------- |
+| Transición              | Corte de golpe. Se borran emisor HS256, `JWT_SECRET`, `PLATFORM_SECRET`, `token:dev` y la ruta de emisión                                                                                                                                                                        | usuario | Un único emisor de identidad                                                      |
+| Proveedor               | OIDC genérico: issuer, audiencia, JWKS por discovery. Keycloak es el del laboratorio                                                                                                                                                                                             | usuario | Cambiar de proveedor = cambiar configuración                                      |
+| Contrato de claims      | Lo define este repo (§4). Rutas de claim y equivalencia de roles **configurables**                                                                                                                                                                                               | usuario | Hermes se adapta; aún no se conoce su modelo                                      |
+| Paciente                | Sigue anónimo ante el proveedor. El pre-registro queda como está (3.3 / 4.4)                                                                                                                                                                                                     | usuario | El paciente no tiene cuenta                                                       |
+| Widget                  | Camino 1: el proveedor acredita _quién_ (widget de la clínica X, `client_credentials`); el backend ata _qué conversación_ con un identificador secreto propio                                                                                                                    | usuario | Sin usuarios desechables ni extensiones del proveedor                             |
+| Frontend propio         | Herramienta de referencia y pruebas. No se despliega al conectar con Hermes. Login OIDC estándar (Authorization Code + PKCE)                                                                                                                                                     | usuario | El panel real lo construye Hermes                                                 |
+| Alta de clínica         | Explícita, por `/api/platform/v1`, idempotente. Nunca auto-alta al ver un `tenant_id` desconocido                                                                                                                                                                                | usuario | Un error de configuración debe dar `404`, no crear estado                         |
+| Rol `platform`          | Rol nuevo, **sin** `tenant_id`. Solo alcanza `/api/platform/v1`                                                                                                                                                                                                                  | usuario | Opera sobre las clínicas, no dentro de una                                        |
+| Contrato publicado      | Swagger UI + Postman, ambos con autenticación OAuth2 real contra el proveedor                                                                                                                                                                                                    | usuario | Que Hermes pueda autenticarse y probar cada endpoint                              |
+| Pruebas sin red         | Las suites firman con un par de claves propio y sirven un JWKS local                                                                                                                                                                                                             | diseño  | CI sin Keycloak; además prueba lo agnóstico                                       |
+| Laboratorio             | Script versionado que crea realm, clientes, roles, mappers y usuarios. El MCP solo explora/verifica                                                                                                                                                                              | usuario | Reconstruible y revisable en la PR                                                |
+| Sesión cerrada          | Back-channel logout OIDC: el proveedor avisa del `sid` cerrado; el backend lo rechaza hasta que su token expire                                                                                                                                                                  | diseño  | Estándar OIDC; criterio 3 del roadmap sin introspección por petición              |
+| Vida de los tokens      | Acceso corto (5 min por defecto, configurable en el proveedor)                                                                                                                                                                                                                   | diseño  | Acota la ventana de un token robado                                               |
 | Credenciales del widget | Hermes crea en su proveedor un cliente de widget por clínica y nos entrega `client_id` y `client_secret` por `/api/platform/v1`. Las guardamos cifradas en base de datos con una clave maestra de configuración. Nuestro código nunca usa la API de administración del proveedor | usuario | Agnóstico y coherente con «Hermes manda»; el alta sigue siendo automática por API |
-| Credenciales `service` | En producción el token `service` lo obtiene Hermes en su propio proveedor; nunca vemos ese secreto. Solo el simulador (laboratorio) necesita las suyas, y las lee de configuración | diseño | El simulador se apaga en producción |
-| Renovación del widget | `refresh` se autentica con el `conversation_secret` + clave pública + `Origin`, sin bearer vigente | diseño | Un paciente inactivo más que la vida del token no pierde su conversación |
+| Credenciales `service`  | En producción el token `service` lo obtiene Hermes en su propio proveedor; nunca vemos ese secreto. Solo el simulador (laboratorio) necesita las suyas, y las lee de configuración                                                                                               | diseño  | El simulador se apaga en producción                                               |
+| Renovación del widget   | `refresh` se autentica con el `conversation_secret` + clave pública + `Origin`, sin bearer vigente                                                                                                                                                                               | diseño  | Un paciente inactivo más que la vida del token no pierde su conversación          |
 
 ## 3. Corte en sub-proyectos
 
@@ -72,11 +72,11 @@ con su PR en `main`. El corte total es indivisible: el widget y el servicio depe
 emisor que se retira, así que van en el mismo sub-proyecto que el verificador. Partirlo dejaría
 `main` en rojo o exigiría el modo dual prohibido.
 
-| Sub-proyecto | Contenido | Entregables del roadmap | Criterios |
-| --- | --- | --- | --- |
-| **5.1 Corte de identidad** | Verificador OIDC, mapper configurable, rol `platform`, credenciales de widget cifradas, sesión del widget por el proveedor, `service` del simulador por `client_credentials`, back-channel logout, laboratorio, retiro del emisor HS256 y de `token:dev` | 2, 3, 4, 5, 6, 7 | 1, 2, 3, 4, 5, 6 |
-| **5.2 Frontend de referencia** | Login OIDC con PKCE en `/panel`, `/simulador` y `/chat`; adiós al token pegado a mano; widget de referencia con `conversation_secret` | 1, 4 | 1, 3 (manual en navegador) |
-| **5.3 Contrato publicado** | Swagger UI, colección Postman regenerada, suite de rutas ↔ OpenAPI | 8, 9, 10 | 7, 8 |
+| Sub-proyecto                   | Contenido                                                                                                                                                                                                                                                | Entregables del roadmap | Criterios                  |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | -------------------------- |
+| **5.1 Corte de identidad**     | Verificador OIDC, mapper configurable, rol `platform`, credenciales de widget cifradas, sesión del widget por el proveedor, `service` del simulador por `client_credentials`, back-channel logout, laboratorio, retiro del emisor HS256 y de `token:dev` | 2, 3, 4, 5, 6, 7        | 1, 2, 3, 4, 5, 6           |
+| **5.2 Frontend de referencia** | Login OIDC con PKCE en `/panel`, `/simulador` y `/chat`; adiós al token pegado a mano; widget de referencia con `conversation_secret`                                                                                                                    | 1, 4                    | 1, 3 (manual en navegador) |
+| **5.3 Contrato publicado**     | Swagger UI, colección Postman regenerada, suite de rutas ↔ OpenAPI                                                                                                                                                                                       | 8, 9, 10                | 7, 8                       |
 
 Orden: 5.1 → 5.2 → 5.3. Entre la 5.1 y la 5.2 el frontend de referencia se usa pegando tokens
 obtenidos del laboratorio (Postman o `curl`), y el widget de referencia se actualiza en la 5.1
@@ -97,23 +97,23 @@ Un token es válido si:
 
 ### 4.1 Contrato por defecto (el que emite el laboratorio)
 
-| Claim | Contenido |
-| --- | --- |
-| `sub` | Identidad de quien llama |
-| `tenant_id` | Identificador de la clínica (ausente solo en `platform`) |
-| `roles` | Arreglo con uno de `widget` · `operator` · `admin` · `service` · `platform` |
-| `sid` | Sesión del proveedor (solo en login interactivo) |
+| Claim       | Contenido                                                                   |
+| ----------- | --------------------------------------------------------------------------- |
+| `sub`       | Identidad de quien llama                                                    |
+| `tenant_id` | Identificador de la clínica (ausente solo en `platform`)                    |
+| `roles`     | Arreglo con uno de `widget` · `operator` · `admin` · `service` · `platform` |
+| `sid`       | Sesión del proveedor (solo en login interactivo)                            |
 
 ### 4.2 Adaptación sin código
 
-| Variable | Por defecto | Ejemplo para otro modelo |
-| --- | --- | --- |
-| `OIDC_ISSUER` | — (obligatoria) | `https://idp.hermes.example/realms/hermes` |
-| `OIDC_AUDIENCE` | — (obligatoria) | `chatbot-api` |
-| `OIDC_TENANT_CLAIM` | `tenant_id` | `org.tenant_id` (ruta con puntos), `organization[]`, `organization{}` |
-| `OIDC_ROLES_CLAIM` | `roles` | `realm_access.roles` |
-| `OIDC_ROLE_MAP` | identidad | `clinic-staff=operator,clinic-admin=admin` |
-| `OIDC_CLOCK_TOLERANCE_SECONDS` | `30` | — |
+| Variable                       | Por defecto     | Ejemplo para otro modelo                                              |
+| ------------------------------ | --------------- | --------------------------------------------------------------------- |
+| `OIDC_ISSUER`                  | — (obligatoria) | `https://idp.hermes.example/realms/hermes`                            |
+| `OIDC_AUDIENCE`                | — (obligatoria) | `chatbot-api`                                                         |
+| `OIDC_TENANT_CLAIM`            | `tenant_id`     | `org.tenant_id` (ruta con puntos), `organization[]`, `organization{}` |
+| `OIDC_ROLES_CLAIM`             | `roles`         | `realm_access.roles`                                                  |
+| `OIDC_ROLE_MAP`                | identidad       | `clinic-staff=operator,clinic-admin=admin`                            |
+| `OIDC_CLOCK_TOLERANCE_SECONDS` | `30`            | —                                                                     |
 
 Reglas del mapeo: los roles externos que no aparecen en el mapa ni coinciden con uno del
 producto se ignoran; si tras el mapeo quedan cero o más de uno, el token es inválido (`401`).
@@ -184,10 +184,10 @@ administración.
   - en el cuerpo del alta (`POST /api/platform/v1/tenants`, campo opcional `widget_client`), y
   - por `PUT /api/platform/v1/tenants/{id}/widget-client` para darlas después o rotarlas
     (idempotente; reemplaza las anteriores).
-  Se guardan en una tabla nueva (`machine_credentials`: tenant, tipo, `client_id`, secreto
-  cifrado, fechas). El secreto se cifra con AES-256-GCM detrás de un puerto `SecretBox`; la
-  clave sale de `CREDENTIALS_ENCRYPTION_KEY` (32 bytes en base64, obligatoria). Nunca se
-  devuelve el secreto en ninguna respuesta, auditoría ni log.
+    Se guardan en una tabla nueva (`machine_credentials`: tenant, tipo, `client_id`, secreto
+    cifrado, fechas). El secreto se cifra con AES-256-GCM detrás de un puerto `SecretBox`; la
+    clave sale de `CREDENTIALS_ENCRYPTION_KEY` (32 bytes en base64, obligatoria). Nunca se
+    devuelve el secreto en ninguna respuesta, auditoría ni log.
 - Una clínica sin credenciales de widget puede existir: abrir sesión de widget responde `409`
   `widget_not_configured`.
 - **Service (solo simulador).** `HERMES_SIM_SERVICE_CLIENTS` en configuración: JSON

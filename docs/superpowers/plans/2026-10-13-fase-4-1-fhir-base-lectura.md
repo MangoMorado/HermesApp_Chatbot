@@ -59,6 +59,7 @@ La Tarea 1 los deja escritos en la spec (§8). Salen de leer el código al plani
 ### Task 1: Base del dominio FHIR y mappers
 
 **Files:**
+
 - Modify: `backend/src/modules/shared/domain/pagination.ts` (añadir al final)
 - Create: `backend/src/modules/fhir/domain/profiles.ts`
 - Create: `backend/src/modules/fhir/domain/resources/types.ts`
@@ -74,6 +75,7 @@ La Tarea 1 los deja escritos en la spec (§8). Salen de leer el código al plani
 - Modify: `docs/superpowers/specs/2026-10-13-fase-4-1-fhir-base-lectura-design.md` (§8 nueva)
 
 **Interfaces:**
+
 - Produces:
   - `OffsetPage<T> = { data: readonly T[]; total: number }` y `OffsetWindow = { offset: number; limit: number }` en `shared/domain/pagination.ts`.
   - De `profiles.ts`: `FHIR_VERSION`, `FHIR_MIME`, `CAPABILITY_DATE`, `SOFTWARE_NAME`, `RESOURCE_TYPES`, `type ResourceType`, `isResourceType(value: string): value is ResourceType`, `reference(type, id): { reference: string }`, `DOCUMENT_CODES`, `type DocumentCode`, `documentSystem(code): string`, `documentCodeOf(system): DocumentCode | null`, `PRE_REGISTERED_TAG`, `SLOT_STATUS`, `type SlotStatusKey`, `type FhirSlotStatus`, `slotStatusKeyOf(code: string): SlotStatusKey | null`, `APPOINTMENT_STATUSES`, `type AppointmentStatusCode`.
@@ -86,7 +88,6 @@ La Tarea 1 los deja escritos en la spec (§8). Salen de leer el código al plani
 Al final de `docs/superpowers/specs/2026-10-13-fase-4-1-fhir-base-lectura-design.md` añade:
 
 ```markdown
-
 ## 8. Refinamientos al planificar
 
 1. **Ruta `[[...path]]` (comodín opcional)** en vez de `[...path]`: `GET /fhir` sin segmentos
@@ -196,20 +197,25 @@ describe("fhir-conformance: Patient", () => {
 
 describe("fhir-conformance: maestros", () => {
   it("Practitioner", () => {
-    expect(toPractitioner({ id: "p-1", identifier: IDENTIFIER, name: "Dra. Ruiz", active: true })).toEqual(
-      {
-        resourceType: "Practitioner",
-        id: "p-1",
-        identifier: [IDENTIFIER],
-        active: true,
-        name: [{ text: "Dra. Ruiz" }],
-      },
-    );
+    expect(
+      toPractitioner({ id: "p-1", identifier: IDENTIFIER, name: "Dra. Ruiz", active: true }),
+    ).toEqual({
+      resourceType: "Practitioner",
+      id: "p-1",
+      identifier: [IDENTIFIER],
+      active: true,
+      name: [{ text: "Dra. Ruiz" }],
+    });
   });
 
   it("HealthcareService", () => {
     expect(
-      toHealthcareService({ id: "s-1", identifier: IDENTIFIER, name: "Odontologia", active: false }),
+      toHealthcareService({
+        id: "s-1",
+        identifier: IDENTIFIER,
+        name: "Odontologia",
+        active: false,
+      }),
     ).toEqual({
       resourceType: "HealthcareService",
       id: "s-1",
@@ -304,7 +310,6 @@ Expected: FAIL, no resuelve `@/modules/fhir/domain/mappers/appointment`.
 Al final de `backend/src/modules/shared/domain/pagination.ts` añade:
 
 ```ts
-
 /** Ventana por desplazamiento (FHIR `_count`/`_offset`). REST sigue paginando por cursor. */
 export type OffsetWindow = { readonly offset: number; readonly limit: number };
 
@@ -678,9 +683,7 @@ export function toPatient(record: PatientRecord): FhirPatient {
       { system: documentSystem(record.documentType), value: record.documentNumber },
     ],
     active: true,
-    name: [
-      { family: record.familyNames, given: record.givenNames.split(/\s+/).filter(Boolean) },
-    ],
+    name: [{ family: record.familyNames, given: record.givenNames.split(/\s+/).filter(Boolean) }],
     birthDate: record.birthDate,
     ...(telecom ? { telecom } : {}),
   };
@@ -797,27 +800,26 @@ Expected: PASS, 12 tests.
 En `backend/tests/fronteras.test.ts`, dentro del `describe("fronteras de capas", …)` y después del último `it`, añade:
 
 ```ts
-
-  it("fhir solo importa shared y auth, y ningun modulo importa fhir", () => {
-    const allowed = new Set(["fhir", "shared", "auth"]);
-    const outgoing = listFiles(join(MODULES_DIR, "fhir")).flatMap((file) =>
+it("fhir solo importa shared y auth, y ningun modulo importa fhir", () => {
+  const allowed = new Set(["fhir", "shared", "auth"]);
+  const outgoing = listFiles(join(MODULES_DIR, "fhir")).flatMap((file) =>
+    importsOf(file)
+      .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
+      .filter(({ module }) => module !== undefined && !allowed.has(module))
+      .map(({ specifier }) => `${file} -> ${specifier}`),
+  );
+  const incoming = readdirSync(MODULES_DIR)
+    .filter((entry) => entry !== "fhir" && statSync(join(MODULES_DIR, entry)).isDirectory())
+    .flatMap((mod) => listFiles(join(MODULES_DIR, mod)))
+    .flatMap((file) =>
       importsOf(file)
-        .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
-        .filter(({ module }) => module !== undefined && !allowed.has(module))
-        .map(({ specifier }) => `${file} -> ${specifier}`),
+        .filter((specifier) => /(^|\/)modules\/fhir(\/|$)/.test(specifier))
+        .map((specifier) => `${file} -> ${specifier}`),
     );
-    const incoming = readdirSync(MODULES_DIR)
-      .filter((entry) => entry !== "fhir" && statSync(join(MODULES_DIR, entry)).isDirectory())
-      .flatMap((mod) => listFiles(join(MODULES_DIR, mod)))
-      .flatMap((file) =>
-        importsOf(file)
-          .filter((specifier) => /(^|\/)modules\/fhir(\/|$)/.test(specifier))
-          .map((specifier) => `${file} -> ${specifier}`),
-      );
 
-    expect(listFiles(join(MODULES_DIR, "fhir")).length).toBeGreaterThan(0);
-    expect([...outgoing, ...incoming]).toEqual([]);
-  });
+  expect(listFiles(join(MODULES_DIR, "fhir")).length).toBeGreaterThan(0);
+  expect([...outgoing, ...incoming]).toEqual([]);
+});
 ```
 
 - [ ] **Step 11: Fronteras, typecheck y lint**
@@ -843,12 +845,14 @@ git commit -m "feat(fhir): perfiles, tipos R4, puertos de lectura y mappers"
 ### Task 2: Errores FHIR y parseo de búsqueda
 
 **Files:**
+
 - Create: `backend/src/modules/fhir/domain/fhir-error.ts`
 - Create: `backend/src/modules/fhir/domain/operation-outcome.ts`
 - Create: `backend/src/modules/fhir/domain/search.ts`
 - Test: `backend/tests/fhir/busqueda.test.ts`
 
 **Interfaces:**
+
 - Consumes: `IssueCode`, `OperationOutcome`, `FhirIdentifier` de `resources/types.ts`; `ResourceType` de `profiles.ts`; `DateBound` de `ports/sources.ts`; `OffsetWindow`, `DEFAULT_PAGE_LIMIT`, `MAX_PAGE_LIMIT` de `shared/domain/pagination.ts`; `startOfDayInZone(date: string, timeZone: string): Date` de `shared/domain/date-range.ts`.
 - Produces:
   - `class FhirError extends Error { status: number; code: IssueCode }` y las fábricas `fhirLogin()`, `fhirForbidden()`, `fhirNotFound()`, `fhirInvalid(message)`, `fhirNotSupported(message)`, `fhirMethodNotAllowed()`, `fhirException()`.
@@ -906,7 +910,9 @@ describe("fhir-conformance: OperationOutcome", () => {
 
 describe("fhir-conformance: parametros soportados", () => {
   it("admite los declarados y los de control", () => {
-    expect(() => assertSupported(params("active=true&_count=5&_offset=0"), ["active"])).not.toThrow();
+    expect(() =>
+      assertSupported(params("active=true&_count=5&_offset=0"), ["active"]),
+    ).not.toThrow();
   });
 
   it("rechaza uno no declarado con not-supported", () => {
@@ -1324,6 +1330,7 @@ git commit -m "feat(fhir): errores OperationOutcome y parseo de busqueda"
 ### Task 3: Registro, Bundle, CapabilityStatement y casos de uso
 
 **Files:**
+
 - Create: `backend/src/modules/fhir/domain/registry.ts`
 - Create: `backend/src/modules/fhir/domain/bundle.ts`
 - Create: `backend/src/modules/fhir/domain/capability-statement.ts`
@@ -1334,6 +1341,7 @@ git commit -m "feat(fhir): errores OperationOutcome y parseo de busqueda"
 - Test: `backend/tests/fhir/registro.test.ts`
 
 **Interfaces:**
+
 - Consumes: todo lo de las Tareas 1 y 2.
 - Produces:
   - De `registry.ts`: `type SearchParamDef = { name: string; type: SearchParamType }`, `type SearchContext = { params: SearchParams; timeZone: string }`, `type ResourceDefinition<R, Q> = { type: ResourceType; searchParams: readonly SearchParamDef[]; buildQuery(context: SearchContext): Q; toResource(record: R): FhirResource }`, `DEFINITIONS` (objeto con una definición por `ResourceType`), `type DeclaredResource = { type: ResourceType; searchParams: readonly SearchParamDef[] }`, `DECLARED_RESOURCES: readonly DeclaredResource[]`.
@@ -1390,7 +1398,11 @@ type Seen = {
   appointment: AppointmentQuery[];
 };
 
-function source<R extends { id: string }, Q>(rows: R[], seen: Q[], total = rows.length): FhirSource<R, Q> {
+function source<R extends { id: string }, Q>(
+  rows: R[],
+  seen: Q[],
+  total = rows.length,
+): FhirSource<R, Q> {
   return {
     read: async (_tenantId, id) => rows.find((row) => row.id === id) ?? null,
     search: async (_tenantId, query) => {
@@ -1459,7 +1471,9 @@ describe("fhir-conformance: search arma la consulta del puerto", () => {
     await search({
       tenantId: TENANT,
       type: "Slot",
-      entries: entries("schedule=Schedule/sch-1&status=busy-tentative&start=ge2026-06-15&_count=10"),
+      entries: entries(
+        "schedule=Schedule/sch-1&status=busy-tentative&start=ge2026-06-15&_count=10",
+      ),
       baseUrl: BASE,
     });
     expect(seen.slot).toEqual([
@@ -1510,14 +1524,21 @@ describe("fhir-conformance: search arma la consulta del puerto", () => {
 
   it("Schedule: actor acepta profesional o servicio", async () => {
     const { search, seen } = world();
-    await search({ tenantId: TENANT, type: "Schedule", entries: entries("actor=Practitioner/p-1"), baseUrl: BASE });
+    await search({
+      tenantId: TENANT,
+      type: "Schedule",
+      entries: entries("actor=Practitioner/p-1"),
+      baseUrl: BASE,
+    });
     await search({
       tenantId: TENANT,
       type: "Schedule",
       entries: entries("actor=HealthcareService/s-1&active=true"),
       baseUrl: BASE,
     });
-    expect(seen.schedule.map((query) => [query.practitionerId, query.healthcareServiceId, query.active])).toEqual([
+    expect(
+      seen.schedule.map((query) => [query.practitionerId, query.healthcareServiceId, query.active]),
+    ).toEqual([
       ["p-1", null, null],
       [null, "s-1", true],
     ]);
@@ -1543,7 +1564,10 @@ describe("fhir-conformance: search arma la consulta del puerto", () => {
     const { search } = world();
     const run = (type: string, query: string) => () =>
       search({ tenantId: TENANT, type, entries: entries(query), baseUrl: BASE });
-    expect(await failure(run("Slot", "patient=Patient/x"))).toEqual({ status: 400, code: "not-supported" });
+    expect(await failure(run("Slot", "patient=Patient/x"))).toEqual({
+      status: 400,
+      code: "not-supported",
+    });
     expect(await failure(run("Patient", `_tag=${encodeURIComponent("urn:x|otro")}`))).toEqual({
       status: 400,
       code: "invalid",
@@ -1555,7 +1579,12 @@ describe("fhir-conformance: search arma la consulta del puerto", () => {
 
 describe("fhir-conformance: Bundle", () => {
   it("es un searchset con total, fullUrl y enlace self", async () => {
-    const bundle = await world().search({ tenantId: TENANT, type: "Slot", entries: [], baseUrl: BASE });
+    const bundle = await world().search({
+      tenantId: TENANT,
+      type: "Slot",
+      entries: [],
+      baseUrl: BASE,
+    });
     expect(bundle).toMatchObject({ resourceType: "Bundle", type: "searchset", total: 1 });
     expect(bundle.entry).toEqual([
       {
@@ -1585,7 +1614,10 @@ describe("fhir-conformance: Bundle", () => {
     expect(bundle.link).toEqual([
       { relation: "self", url: `${BASE}/Slot?status=free&start=ge2026-06-15&_count=2&_offset=2` },
       { relation: "next", url: `${BASE}/Slot?status=free&start=ge2026-06-15&_count=2&_offset=4` },
-      { relation: "previous", url: `${BASE}/Slot?status=free&start=ge2026-06-15&_count=2&_offset=0` },
+      {
+        relation: "previous",
+        url: `${BASE}/Slot?status=free&start=ge2026-06-15&_count=2&_offset=0`,
+      },
     ]);
   });
 
@@ -1632,7 +1664,10 @@ describe("fhir-conformance: CapabilityStatement", () => {
 
   it("los parametros por recurso son los de la spec", () => {
     const names = Object.fromEntries(
-      DECLARED_RESOURCES.map((entry) => [entry.type, entry.searchParams.map((param) => param.name)]),
+      DECLARED_RESOURCES.map((entry) => [
+        entry.type,
+        entry.searchParams.map((param) => param.name),
+      ]),
     );
     expect(names).toEqual({
       Patient: ["identifier", "_tag"],
@@ -2129,6 +2164,7 @@ git commit -m "feat(fhir): registro de recursos, Bundle, CapabilityStatement y c
 ### Task 4: Lecturas por desplazamiento en `scheduling`
 
 **Files:**
+
 - Create: `backend/src/modules/scheduling/domain/ports/directory.ts`
 - Create: `backend/src/modules/scheduling/infrastructure/prisma-scheduling-directory.ts`
 - Modify: `backend/src/modules/scheduling/infrastructure/prisma-practitioner-repository.ts:6` (exportar `mapPractitioner`)
@@ -2136,6 +2172,7 @@ git commit -m "feat(fhir): registro de recursos, Bundle, CapabilityStatement y c
 - Test: `backend/tests/db/fhir-directorio.test.ts`
 
 **Interfaces:**
+
 - Consumes: `OffsetPage`, `OffsetWindow` de `shared/domain/pagination.ts`; entidades `Practitioner`, `HealthcareService`, `Schedule`, `Slot`, `Appointment`, `HermesIdentifier`, `SlotStatus`, `AppointmentStatus` de `scheduling/domain/entities.ts`; `mapSchedule`, `mapSlot`, `mapAppointment` ya exportados; `PrismaExecutor`.
 - Produces (de `scheduling/domain/ports/directory.ts`):
   - `type TimeBound = { op: "ge" | "gt" | "le" | "lt"; at: Date }`
@@ -2665,12 +2702,14 @@ git commit -m "feat(scheduling): lecturas por id y por desplazamiento con total"
 ### Task 5: Búsqueda por desplazamiento en `patients`
 
 **Files:**
+
 - Modify: `backend/src/modules/patients/domain/ports/repositories.ts` (añadir al final)
 - Modify: `backend/src/modules/patients/infrastructure/prisma-medical-record-repository.ts:7` (exportar `mapRecord`)
 - Create: `backend/src/modules/patients/infrastructure/prisma-medical-record-directory.ts`
 - Test: `backend/tests/db/fhir-directorio-pacientes.test.ts`
 
 **Interfaces:**
+
 - Consumes: `OffsetPage`, `OffsetWindow`; `MedicalRecord`, `DocumentType` de `patients/domain/entities.ts`; `PrismaExecutor`.
 - Produces:
   - `type MedicalRecordSearch = OffsetWindow & { tenantId: TenantId; identifier: { system: string; value: string } | null; document: { type: DocumentType; number: string } | null; preRegistered: boolean | null }`
@@ -2772,7 +2811,10 @@ describe("fhir-conformance: busqueda de historias clinicas por desplazamiento", 
     const own = await directory.search({ ...base(), document: { type: "TI", number: "555" } });
     expect(own.data.map((row) => row.id)).toEqual([preRegisteredId]);
 
-    const wrongType = await directory.search({ ...base(), document: { type: "CC", number: "555" } });
+    const wrongType = await directory.search({
+      ...base(),
+      document: { type: "CC", number: "555" },
+    });
     expect(wrongType.total).toBe(0);
 
     const foreign = await directory.search({
@@ -2809,7 +2851,6 @@ import type { OffsetPage, OffsetWindow, Page } from "@/modules/shared/domain/pag
 y añade al final del archivo:
 
 ```ts
-
 /** Un filtro en `null` no restringe. `identifier` es el identificador Hermes. */
 export type MedicalRecordSearch = OffsetWindow & {
   readonly tenantId: TenantId;
@@ -2901,6 +2942,7 @@ git commit -m "feat(patients): busqueda de historias clinicas por desplazamiento
 ### Task 6: Superficie HTTP `/fhir` y cableado
 
 **Files:**
+
 - Modify: `backend/src/config/env.ts` (campo `fhirBaseUrl`)
 - Create: `backend/src/http/fhir-route.ts`
 - Create: `backend/src/http/fhir-dispatch.ts`
@@ -2912,6 +2954,7 @@ git commit -m "feat(patients): busqueda de historias clinicas por desplazamiento
 - Test: `backend/tests/db/fhir-conformance-http.test.ts`
 
 **Interfaces:**
+
 - Consumes: `createResourceHandlers`, `createReadResource`, `createSearchResources`, `createGetCapabilityStatement` (Tarea 3); `createPrismaSchedulingDirectory` (Tarea 4); `createPrismaMedicalRecordDirectory` (Tarea 5); `createPrismaMedicalRecordRepository` (existente, `get(tenantId, id)`); `ExpireDueRequests = (tenantId: TenantId) => Promise<void>` de `scheduling/application/appointment-request-queries.ts`; `getContainer().authenticate`, `requireRole`, `AuthError`, `NotFoundError`, `ValidationError`, `REQUEST_ID_HEADER`, `resolveRequestId`.
 - Produces:
   - `AppConfig.fhirBaseUrl: string | null`.
@@ -2976,7 +3019,6 @@ import { fhirGet, fhirSend, serviceToken } from "./helpers/fhir";
 y al final del archivo:
 
 ```ts
-
 describe("roles: /fhir", () => {
   const FHIR_MIME = "application/fhir+json";
 
@@ -3160,11 +3202,7 @@ async function respond(request: Request, run: () => Promise<unknown>): Promise<N
     return fhirResponse(await run(), 200, requestId);
   } catch (error) {
     const failure = toFhirError(error);
-    return fhirResponse(
-      operationOutcome(failure.code, failure.message),
-      failure.status,
-      requestId,
-    );
+    return fhirResponse(operationOutcome(failure.code, failure.message), failure.status, requestId);
   }
 }
 
@@ -3491,7 +3529,9 @@ describe("fhir-conformance: lectura por HTTP", () => {
       expect(response.status).toBe(200);
       expect(body).toMatchObject({ resourceType: "Bundle", type: "searchset" });
       expect(body.total).toBe(body.entry.length);
-      expect(body.entry[0].fullUrl).toBe(`http://localhost/fhir/${type}/${body.entry[0].resource.id}`);
+      expect(body.entry[0].fullUrl).toBe(
+        `http://localhost/fhir/${type}/${body.entry[0].resource.id}`,
+      );
     }
   });
 
@@ -3601,9 +3641,7 @@ describe("fhir-conformance: lectura por HTTP", () => {
       expect([path, response.status]).toEqual([path, status]);
       expect(response.headers.get("Content-Type")).toBe(FHIR_MIME);
       expect(body.resourceType).toBe("OperationOutcome");
-      expect(body.issue).toEqual([
-        { severity: "error", code, diagnostics: expect.any(String) },
-      ]);
+      expect(body.issue).toEqual([{ severity: "error", code, diagnostics: expect.any(String) }]);
       expect(body.error).toBeUndefined();
     }
   });
@@ -3677,10 +3715,12 @@ git commit -m "feat(fhir): superficie /fhir de lectura con metadata y OperationO
 Estas pruebas fijan dos garantías que el código de las Tareas 4 a 6 ya debe cumplir. Si alguna falla, el defecto está en el archivo que se indica en cada paso y se corrige ahí, no en la prueba.
 
 **Files:**
+
 - Test: `backend/tests/db/aislamiento-tenant-fhir.test.ts`
 - Test: `backend/tests/db/fhir-vencimiento.test.ts`
 
 **Interfaces:**
+
 - Consumes: `fhirGet`, `serviceToken` de `tests/helpers/fhir.ts`; `seedTenantDomain`, `testPrisma`, `truncateAll`, `HERMES_SYSTEM` de `tests/db/support.ts`; `seedWorld`, `slotAt`, `createRequest`, `clockAt`, `ACTOR`, `HOUR_MS` de `tests/db/pre-agenda-support.ts`.
 
 - [ ] **Step 1: Test de aislamiento**
@@ -3750,7 +3790,9 @@ describe("aislamiento-tenant: /fhir no filtra datos ajenos", () => {
   it("cada busqueda devuelve solo los recursos del tenant del token", async () => {
     for (const [type, ids] of Object.entries(idsByType(a))) {
       const { body } = await fhirGet(type, tokenA);
-      const found: string[] = body.entry.map((entry: { resource: { id: string } }) => entry.resource.id);
+      const found: string[] = body.entry.map(
+        (entry: { resource: { id: string } }) => entry.resource.id,
+      );
       expect([type, found.sort()]).toEqual([type, [...ids].sort()]);
       expect(body.total).toBe(ids.length);
     }
@@ -3879,7 +3921,9 @@ describe("fhir-conformance: vencimiento al leer en Slot", () => {
   });
 
   it("parte de dos cupos apartados en la base", async () => {
-    const slots = await prisma.slot.findMany({ where: { id: { in: [expiredSlotId, liveSlotId] } } });
+    const slots = await prisma.slot.findMany({
+      where: { id: { in: [expiredSlotId, liveSlotId] } },
+    });
     expect(slots.map((slot) => slot.status)).toEqual(["busy_tentative", "busy_tentative"]);
   });
 
@@ -3898,9 +3942,9 @@ describe("fhir-conformance: vencimiento al leer en Slot", () => {
 
   it("buscar cupos tambien vence antes de responder", async () => {
     const tentative = await fhirGet("Slot?status=busy-tentative", token);
-    expect(tentative.body.entry.map((entry: { resource: { id: string } }) => entry.resource.id)).toEqual([
-      liveSlotId,
-    ]);
+    expect(
+      tentative.body.entry.map((entry: { resource: { id: string } }) => entry.resource.id),
+    ).toEqual([liveSlotId]);
 
     const free = await fhirGet(`Slot?status=free&schedule=Schedule/${world.scheduleId}`, token);
     expect(
@@ -3935,6 +3979,7 @@ git commit -m "test(fhir): aislamiento por tenant y vencimiento al leer sobre /f
 ### Task 8: Documentación, política y puertas de cierre
 
 **Files:**
+
 - Modify: `GOBERNANZA.md` (§2.2 y §3)
 - Modify: `README.md` (estado, variables, mapa del código, suites)
 - Modify: `backend/AGENTS.md` (mapa, «Las dos superficies», sección FHIR nueva)
@@ -3948,7 +3993,6 @@ No se tocan `CLAUDE.md`, `ROADMAP.md`, `PRODUCT.md` ni `docs/brief.md`.
 Después del párrafo que empieza con «`conversation` solo importa `shared`, `auth` y `verification/domain`» añade un párrafo nuevo:
 
 ```markdown
-
 `fhir` solo importa `shared` y `auth`, y ningún módulo importa `fhir`. Declara sus propios
 puertos de lectura (`fhir/domain/ports/sources.ts`) y `composition/fhir-wiring.ts` los cumple
 con `scheduling` y `patients`. No tiene `infrastructure/`: no hace I/O propio.
@@ -4069,7 +4113,7 @@ FHIR_BASE_URL=
 En `docker-compose.yml`, en el `environment` del backend, después de la línea `TRUST_PROXY: ${TRUST_PROXY:-false}`, añade con la misma sangría:
 
 ```yaml
-      FHIR_BASE_URL: ${FHIR_BASE_URL:-}
+FHIR_BASE_URL: ${FHIR_BASE_URL:-}
 ```
 
 - [ ] **Step 6: Estado de la spec**

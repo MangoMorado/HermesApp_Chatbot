@@ -53,6 +53,7 @@ La Tarea 1 los deja escritos en la spec (§13). Salen de leer el código al plan
 ### Task 1: Esquema, migración y refinamientos de la spec
 
 **Files:**
+
 - Modify: `backend/prisma/schema.prisma`
 - Create: `backend/prisma/migrations/<timestamp>_fase3_2_pre_agenda/migration.sql` (generada y ampliada)
 - Modify: `backend/prisma/seed/write-chatbot.ts:17-24` (borrar solicitudes antes que citas y cupos)
@@ -61,6 +62,7 @@ La Tarea 1 los deja escritos en la spec (§13). Salen de leer el código al plan
 - Modify: `docs/superpowers/specs/2026-09-25-fase-3-2-pre-agenda-design.md` (§13 nueva)
 
 **Interfaces:**
+
 - Produces: modelo Prisma `AppointmentRequest` (`db.appointmentRequest`), enums `AppointmentRequestKind`, `AppointmentRequestStatus`, `ResolutionReason`; helpers de prueba `seedWorld(prisma, slug, start, options?) → World`, `slotAt(world, i) → string`, `extraPatients(prisma, world, n) → string[]`, `HOUR_MS`.
 
 - [ ] **Step 1: Añadir enums y modelo al esquema**
@@ -130,6 +132,7 @@ model AppointmentRequest {
 ```
 
 Relaciones inversas:
+
 - `model Tenant`: añade `appointmentRequests AppointmentRequest[]` junto a `appointments Appointment[]`.
 - `model Slot`: añade `appointmentRequests AppointmentRequest[]` después de `appointments Appointment[]`.
 - `model MedicalRecord`: añade `appointmentRequests AppointmentRequest[]` después de `appointments Appointment[]`.
@@ -140,7 +143,7 @@ Relaciones inversas:
   originRequests AppointmentRequest[] @relation("RequestResult")
 ```
 
-  y, antes de `@@unique([tenantId, identifierSystem, identifierValue])`, `@@unique([tenantId, id])`.
+y, antes de `@@unique([tenantId, identifierSystem, identifierValue])`, `@@unique([tenantId, id])`.
 
 - [ ] **Step 2: Validar y generar la migración**
 
@@ -176,7 +179,7 @@ Run: `npm --prefix backend exec prisma migrate dev` → Expected: aplica la migr
 En `backend/prisma/seed/write-chatbot.ts`, dentro de `deleteExisting`, antes de `await tx.appointment.deleteMany(...)`:
 
 ```ts
-  await tx.appointmentRequest.deleteMany({ where: { tenantId: { in: tenantIds } } });
+await tx.appointmentRequest.deleteMany({ where: { tenantId: { in: tenantIds } } });
 ```
 
 y en el comentario de la función cambia `Orden de FK: citas -> cupos` por `Orden de FK: solicitudes -> citas -> cupos`.
@@ -218,27 +221,83 @@ function slotTimes(start: Date, index: number) {
 async function seedChatbot(prisma: PrismaClient, world: World, freeSlots: number): Promise<void> {
   const { tenantId, slug, start } = world;
   await prisma.practitioner.create({
-    data: { id: `${tenantId}-prac`, tenantId, identifierSystem: HERMES_SYSTEM.practitioner, identifierValue: `P-${slug}`, name: `Prof ${slug}` },
+    data: {
+      id: `${tenantId}-prac`,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.practitioner,
+      identifierValue: `P-${slug}`,
+      name: `Prof ${slug}`,
+    },
   });
   await prisma.healthcareService.create({
-    data: { id: `${tenantId}-svc`, tenantId, identifierSystem: HERMES_SYSTEM.service, identifierValue: `S-${slug}`, name: `Serv ${slug}` },
+    data: {
+      id: `${tenantId}-svc`,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.service,
+      identifierValue: `S-${slug}`,
+      name: `Serv ${slug}`,
+    },
   });
   await prisma.schedule.create({
-    data: { id: world.scheduleId, tenantId, identifierSystem: HERMES_SYSTEM.schedule, identifierValue: `SCH-${slug}`, practitionerId: `${tenantId}-prac`, healthcareServiceId: `${tenantId}-svc` },
+    data: {
+      id: world.scheduleId,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.schedule,
+      identifierValue: `SCH-${slug}`,
+      practitionerId: `${tenantId}-prac`,
+      healthcareServiceId: `${tenantId}-svc`,
+    },
   });
   for (let i = 0; i < freeSlots; i++) {
     await prisma.slot.create({
-      data: { id: `${tenantId}-slot-${i}`, tenantId, identifierSystem: HERMES_SYSTEM.slot, identifierValue: `SL-${slug}-${i}`, scheduleId: world.scheduleId, status: "free", ...slotTimes(start, i) },
+      data: {
+        id: `${tenantId}-slot-${i}`,
+        tenantId,
+        identifierSystem: HERMES_SYSTEM.slot,
+        identifierValue: `SL-${slug}-${i}`,
+        scheduleId: world.scheduleId,
+        status: "free",
+        ...slotTimes(start, i),
+      },
     });
   }
   await prisma.slot.create({
-    data: { id: world.bookedSlotId, tenantId, identifierSystem: HERMES_SYSTEM.slot, identifierValue: `SL-${slug}-booked`, scheduleId: world.scheduleId, status: "busy", ...slotTimes(start, freeSlots) },
+    data: {
+      id: world.bookedSlotId,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.slot,
+      identifierValue: `SL-${slug}-booked`,
+      scheduleId: world.scheduleId,
+      status: "busy",
+      ...slotTimes(start, freeSlots),
+    },
   });
   await prisma.medicalRecord.create({
-    data: { id: world.medicalRecordId, tenantId, identifierSystem: HERMES_SYSTEM.patient, identifierValue: `MR-${slug}`, documentType: "CC", documentNumber: `1000${slug}`, givenNames: `Nombre ${slug}`, familyNames: `Apellido ${slug}`, birthDate: new Date("1990-01-15"), status: "active" },
+    data: {
+      id: world.medicalRecordId,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.patient,
+      identifierValue: `MR-${slug}`,
+      documentType: "CC",
+      documentNumber: `1000${slug}`,
+      givenNames: `Nombre ${slug}`,
+      familyNames: `Apellido ${slug}`,
+      birthDate: new Date("1990-01-15"),
+      status: "active",
+    },
   });
   await prisma.appointment.create({
-    data: { id: world.appointmentId, tenantId, identifierSystem: HERMES_SYSTEM.appointment, identifierValue: `AP-${slug}`, medicalRecordId: world.medicalRecordId, scheduleId: world.scheduleId, slotId: world.bookedSlotId, status: "booked", ...slotTimes(start, freeSlots) },
+    data: {
+      id: world.appointmentId,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.appointment,
+      identifierValue: `AP-${slug}`,
+      medicalRecordId: world.medicalRecordId,
+      scheduleId: world.scheduleId,
+      slotId: world.bookedSlotId,
+      status: "booked",
+      ...slotTimes(start, freeSlots),
+    },
   });
 }
 
@@ -246,27 +305,83 @@ async function seedSimulator(prisma: PrismaClient, world: World, freeSlots: numb
   const { tenantId, slug, start } = world;
   const sim = `sim-${tenantId}`;
   await prisma.simPractitioner.create({
-    data: { id: `${sim}-prac`, tenantId, identifierSystem: HERMES_SYSTEM.practitioner, identifierValue: `P-${slug}`, name: `Prof ${slug}` },
+    data: {
+      id: `${sim}-prac`,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.practitioner,
+      identifierValue: `P-${slug}`,
+      name: `Prof ${slug}`,
+    },
   });
   await prisma.simHealthcareService.create({
-    data: { id: `${sim}-svc`, tenantId, identifierSystem: HERMES_SYSTEM.service, identifierValue: `S-${slug}`, name: `Serv ${slug}` },
+    data: {
+      id: `${sim}-svc`,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.service,
+      identifierValue: `S-${slug}`,
+      name: `Serv ${slug}`,
+    },
   });
   await prisma.simSchedule.create({
-    data: { id: `${sim}-sched`, tenantId, identifierSystem: HERMES_SYSTEM.schedule, identifierValue: `SCH-${slug}`, practitionerId: `${sim}-prac`, healthcareServiceId: `${sim}-svc` },
+    data: {
+      id: `${sim}-sched`,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.schedule,
+      identifierValue: `SCH-${slug}`,
+      practitionerId: `${sim}-prac`,
+      healthcareServiceId: `${sim}-svc`,
+    },
   });
   for (let i = 0; i < freeSlots; i++) {
     await prisma.simSlot.create({
-      data: { id: `${sim}-slot-${i}`, tenantId, identifierSystem: HERMES_SYSTEM.slot, identifierValue: `SL-${slug}-${i}`, scheduleId: `${sim}-sched`, status: "free", ...slotTimes(start, i) },
+      data: {
+        id: `${sim}-slot-${i}`,
+        tenantId,
+        identifierSystem: HERMES_SYSTEM.slot,
+        identifierValue: `SL-${slug}-${i}`,
+        scheduleId: `${sim}-sched`,
+        status: "free",
+        ...slotTimes(start, i),
+      },
     });
   }
   await prisma.simSlot.create({
-    data: { id: `${sim}-slot-booked`, tenantId, identifierSystem: HERMES_SYSTEM.slot, identifierValue: `SL-${slug}-booked`, scheduleId: `${sim}-sched`, status: "busy", ...slotTimes(start, freeSlots) },
+    data: {
+      id: `${sim}-slot-booked`,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.slot,
+      identifierValue: `SL-${slug}-booked`,
+      scheduleId: `${sim}-sched`,
+      status: "busy",
+      ...slotTimes(start, freeSlots),
+    },
   });
   await prisma.simPatient.create({
-    data: { id: `${sim}-pat`, tenantId, identifierSystem: HERMES_SYSTEM.patient, identifierValue: `MR-${slug}`, documentType: "CC", documentNumber: `1000${slug}`, givenNames: `Nombre ${slug}`, familyNames: `Apellido ${slug}`, birthDate: new Date("1990-01-15"), status: "active" },
+    data: {
+      id: `${sim}-pat`,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.patient,
+      identifierValue: `MR-${slug}`,
+      documentType: "CC",
+      documentNumber: `1000${slug}`,
+      givenNames: `Nombre ${slug}`,
+      familyNames: `Apellido ${slug}`,
+      birthDate: new Date("1990-01-15"),
+      status: "active",
+    },
   });
   await prisma.simAppointment.create({
-    data: { id: `${sim}-appt`, tenantId, identifierSystem: HERMES_SYSTEM.appointment, identifierValue: `AP-${slug}`, patientId: `${sim}-pat`, scheduleId: `${sim}-sched`, slotId: `${sim}-slot-booked`, status: "booked", ...slotTimes(start, freeSlots) },
+    data: {
+      id: `${sim}-appt`,
+      tenantId,
+      identifierSystem: HERMES_SYSTEM.appointment,
+      identifierValue: `AP-${slug}`,
+      patientId: `${sim}-pat`,
+      scheduleId: `${sim}-sched`,
+      slotId: `${sim}-slot-booked`,
+      status: "booked",
+      ...slotTimes(start, freeSlots),
+    },
   });
 }
 
@@ -304,12 +419,27 @@ export function slotAt(world: World, index: number): string {
 }
 
 /** Historias clinicas adicionales (solo en public) para pruebas de concurrencia. */
-export async function extraPatients(prisma: PrismaClient, world: World, count: number): Promise<string[]> {
+export async function extraPatients(
+  prisma: PrismaClient,
+  world: World,
+  count: number,
+): Promise<string[]> {
   const ids: string[] = [];
   for (let i = 0; i < count; i++) {
     const id = `${world.tenantId}-mr-x${i}`;
     await prisma.medicalRecord.create({
-      data: { id, tenantId: world.tenantId, identifierSystem: HERMES_SYSTEM.patient, identifierValue: `MR-${world.slug}-x${i}`, documentType: "CC", documentNumber: `2000${i}${world.slug}`, givenNames: `Extra ${i}`, familyNames: "Prueba", birthDate: new Date("1991-02-01"), status: "active" },
+      data: {
+        id,
+        tenantId: world.tenantId,
+        identifierSystem: HERMES_SYSTEM.patient,
+        identifierValue: `MR-${world.slug}-x${i}`,
+        documentType: "CC",
+        documentNumber: `2000${i}${world.slug}`,
+        givenNames: `Extra ${i}`,
+        familyNames: "Prueba",
+        birthDate: new Date("1991-02-01"),
+        status: "active",
+      },
     });
     ids.push(id);
   }
@@ -380,8 +510,12 @@ describe("pre-agenda: esquema de appointment_requests", () => {
   });
 
   it("rechaza formas invalidas por tipo", async () => {
-    await expect(request(world, "r1", { kind: "cancel", appointmentId: world.appointmentId })).rejects.toThrow();
-    await expect(request(world, "r2", { kind: "book", appointmentId: world.appointmentId })).rejects.toThrow();
+    await expect(
+      request(world, "r1", { kind: "cancel", appointmentId: world.appointmentId }),
+    ).rejects.toThrow();
+    await expect(
+      request(world, "r2", { kind: "book", appointmentId: world.appointmentId }),
+    ).rejects.toThrow();
     await expect(request(world, "r3", { kind: "reschedule" })).rejects.toThrow();
   });
 
@@ -389,7 +523,11 @@ describe("pre-agenda: esquema de appointment_requests", () => {
     await expect(request(world, "r1", { status: "rejected" })).rejects.toThrow();
     await expect(request(world, "r2", { resolutionReason: "declined" })).rejects.toThrow();
     await expect(
-      request(world, "r3", { status: "rejected", resolutionReason: "declined", resolvedAt: EXPIRES }),
+      request(world, "r3", {
+        status: "rejected",
+        resolutionReason: "declined",
+        resolvedAt: EXPIRES,
+      }),
     ).resolves.toMatchObject({ id: "r3" });
   });
 
@@ -446,12 +584,14 @@ git commit -m "feat(scheduling): tabla appointment_requests con apartado unico p
 ### Task 2: Dominio de la solicitud y parámetros de `bot-config`
 
 **Files:**
+
 - Create: `backend/src/modules/scheduling/domain/appointment-request.ts`
 - Modify: `backend/src/modules/bot-config/domain/bot-config.ts` (`PARAM_SPECS`)
 - Create: `backend/tests/dominio/pre-agenda.test.ts`
 - Modify: `backend/tests/dominio/bot-config.test.ts:21-26` y el test «los rangos de los params coinciden con la spec»
 
 **Interfaces:**
+
 - Consumes: `Slot`, `Schedule`, `Appointment`, `SlotStatus`, `AppointmentStatus`, `HermesIdentifier` de `scheduling/domain/entities.ts`.
 - Produces:
   - Tipos `AppointmentRequestKind`, `AppointmentRequestStatus`, `ResolutionReason`, `PreAgendaConflictReason`, `AppointmentRequest`, `Resolution`, `SlotChange`, `AppointmentChange`, `ResolutionEffects`.
@@ -548,7 +688,9 @@ describe("dominio: pre-agenda", () => {
 
   it("cupo de agenda inactiva o ya empezado es 422", () => {
     expect(() => assertSlotBookable(slot(), schedule(false), NOW)).toThrow(ValidationError);
-    expect(() => assertSlotBookable(slot({ startAt: NOW }), schedule(), NOW)).toThrow(ValidationError);
+    expect(() => assertSlotBookable(slot({ startAt: NOW }), schedule(), NOW)).toThrow(
+      ValidationError,
+    );
   });
 
   it("cupo no libre es 409 slot_unavailable", () => {
@@ -568,9 +710,9 @@ describe("dominio: pre-agenda", () => {
     expect(() =>
       assertAppointmentChangeable(appointment({ status: "cancelled" }), "mr-1", NOW),
     ).toThrow(ValidationError);
-    expect(() =>
-      assertAppointmentChangeable(appointment({ startAt: NOW }), "mr-1", NOW),
-    ).toThrow(ValidationError);
+    expect(() => assertAppointmentChangeable(appointment({ startAt: NOW }), "mr-1", NOW)).toThrow(
+      ValidationError,
+    );
   });
 
   it("el tope de pendientes es 409 pending_limit_reached", () => {
@@ -785,21 +927,21 @@ Expected: PASS (13 tests).
 En `backend/tests/dominio/bot-config.test.ts`, en «sin sobrescrituras devuelve los predeterminados», el objeto esperado de `config.params` pasa a ser:
 
 ```ts
-    expect(config.params).toEqual({
-      widget_session_ttl_minutes: 30,
-      widget_sessions_per_ip_per_minute: 10,
-      widget_key_grace_hours: 24,
-      kb_max_results: 3,
-      request_hold_minutes: 240,
-      max_pending_requests_per_patient: 2,
-    });
+expect(config.params).toEqual({
+  widget_session_ttl_minutes: 30,
+  widget_sessions_per_ip_per_minute: 10,
+  widget_key_grace_hours: 24,
+  kb_max_results: 3,
+  request_hold_minutes: 240,
+  max_pending_requests_per_patient: 2,
+});
 ```
 
 En «los rangos de los params coinciden con la spec», añade al final del cuerpo:
 
 ```ts
-    expect(PARAM_SPECS.request_hold_minutes).toEqual({ default: 240, min: 15, max: 4320 });
-    expect(PARAM_SPECS.max_pending_requests_per_patient).toEqual({ default: 2, min: 1, max: 5 });
+expect(PARAM_SPECS.request_hold_minutes).toEqual({ default: 240, min: 15, max: 4320 });
+expect(PARAM_SPECS.max_pending_requests_per_patient).toEqual({ default: 2, min: 1, max: 5 });
 ```
 
 y en la tabla de casos invalidos (la que contiene `[{ params: { kb_max_results: 11 } }, "params.kb_max_results"]`) añade:
@@ -842,6 +984,7 @@ git commit -m "feat(scheduling): reglas puras de la pre-agenda y parametros de a
 ### Task 3: Almacén Prisma y creación de solicitudes
 
 **Files:**
+
 - Create: `backend/src/modules/scheduling/domain/ports/pre-agenda.ts`
 - Create: `backend/src/modules/scheduling/infrastructure/prisma-pre-agenda-store.ts`
 - Modify: `backend/src/modules/scheduling/infrastructure/prisma-slot-repository.ts:6` (`export function mapSlot`)
@@ -852,6 +995,7 @@ git commit -m "feat(scheduling): reglas puras de la pre-agenda y parametros de a
 - Create: `backend/tests/db/pre-agenda-crear.test.ts`
 
 **Interfaces:**
+
 - Consumes: todo lo de la Tarea 2; `AuditActor` (`shared/domain/audit-event.ts`), `AuditLog`, `Clock`, `IdGenerator`, `TenantId`, `PrismaExecutor`, `isUniqueViolation`.
 - Produces:
   - Puertos (`domain/ports/pre-agenda.ts`): `NewAppointmentRequest`, `NewAppointment`, `RequestResolutionPatch`, `ExpiryScope`, `RequestExpirer`, `PreAgendaStore`, `PreAgendaPolicyValues`, `PreAgendaPolicy`, `RequestPartyRef`, `RequestPatient`, `AppointmentRequestView`, `AppointmentRequestFilter`, `AppointmentRequestReader`.
@@ -1129,7 +1273,11 @@ function preAgendaWrites(db: PrismaExecutor) {
       return result.count === 1;
     },
     insertRequest: (row: NewAppointmentRequest) => insertRequest(db, row),
-    async setSlotStatus(tenantId: TenantId, slotId: string, status: Parameters<PreAgendaStore["setSlotStatus"]>[2]) {
+    async setSlotStatus(
+      tenantId: TenantId,
+      slotId: string,
+      status: Parameters<PreAgendaStore["setSlotStatus"]>[2],
+    ) {
       await db.slot.updateMany({ where: { tenantId, id: slotId }, data: { status } });
     },
     async insertAppointment(row: Parameters<PreAgendaStore["insertAppointment"]>[0]) {
@@ -1148,10 +1296,18 @@ function preAgendaWrites(db: PrismaExecutor) {
         },
       });
     },
-    async setAppointmentStatus(tenantId: TenantId, id: string, status: Parameters<PreAgendaStore["setAppointmentStatus"]>[2]) {
+    async setAppointmentStatus(
+      tenantId: TenantId,
+      id: string,
+      status: Parameters<PreAgendaStore["setAppointmentStatus"]>[2],
+    ) {
       await db.appointment.updateMany({ where: { tenantId, id }, data: { status } });
     },
-    async markResolved(tenantId: TenantId, id: string, patch: Parameters<PreAgendaStore["markResolved"]>[2]) {
+    async markResolved(
+      tenantId: TenantId,
+      id: string,
+      patch: Parameters<PreAgendaStore["markResolved"]>[2],
+    ) {
       await db.appointmentRequest.updateMany({ where: { tenantId, id }, data: patch });
       return mapRequest(await db.appointmentRequest.findFirstOrThrow({ where: { tenantId, id } }));
     },
@@ -1424,7 +1580,9 @@ describe("pre-agenda: creacion de solicitudes", () => {
     expect(request).toMatchObject({ kind: "book", status: "pending", appointmentId: null });
     expect(request.expiresAt).toEqual(new Date("2026-06-15T12:00:00.000Z"));
     expect(await slotStatus(slotAt(world, 0))).toBe("busy_tentative");
-    expect(await prisma.auditEvent.count({ where: { action: "appointment_request.created" } })).toBe(1);
+    expect(
+      await prisma.auditEvent.count({ where: { action: "appointment_request.created" } }),
+    ).toBe(1);
   });
 
   it("el vencimiento se recorta al inicio del cupo", async () => {
@@ -1441,7 +1599,9 @@ describe("pre-agenda: creacion de solicitudes", () => {
       patients.map((mr) => createRequest(prisma, clock, book(world, slotAt(world, 0), mr))),
     );
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-    for (const failure of results.filter((r): r is PromiseRejectedResult => r.status === "rejected")) {
+    for (const failure of results.filter(
+      (r): r is PromiseRejectedResult => r.status === "rejected",
+    )) {
       expect(failure.reason).toMatchObject({ details: { reason: "slot_unavailable" } });
     }
     expect(await prisma.appointmentRequest.count()).toBe(1);
@@ -1453,7 +1613,9 @@ describe("pre-agenda: creacion de solicitudes", () => {
       world.freeSlotIds.map((slotId) => createRequest(prisma, clock, book(world, slotId))),
     );
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(2);
-    for (const failure of results.filter((r): r is PromiseRejectedResult => r.status === "rejected")) {
+    for (const failure of results.filter(
+      (r): r is PromiseRejectedResult => r.status === "rejected",
+    )) {
       expect(failure.reason).toMatchObject({ details: { reason: "pending_limit_reached" } });
     }
     expect(await prisma.slot.count({ where: { status: "busy_tentative" } })).toBe(2);
@@ -1465,7 +1627,13 @@ describe("pre-agenda: creacion de solicitudes", () => {
     const cancel = await createRequest(
       prisma,
       clock,
-      { kind: "cancel", tenantId: world.tenantId, medicalRecordId: world.medicalRecordId, appointmentId: world.appointmentId, actor: ACTOR },
+      {
+        kind: "cancel",
+        tenantId: world.tenantId,
+        medicalRecordId: world.medicalRecordId,
+        appointmentId: world.appointmentId,
+        actor: ACTOR,
+      },
       policy,
     );
     expect(cancel).toMatchObject({ kind: "cancel", slotId: null });
@@ -1507,8 +1675,12 @@ describe("pre-agenda: creacion de solicitudes", () => {
       actor: ACTOR,
     });
     await expect(attempt).rejects.toMatchObject({ details: { reason: "slot_unavailable" } });
-    expect(await prisma.appointmentRequest.count({ where: { appointmentId: world.appointmentId } })).toBe(0);
-    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: world.appointmentId } })).status).toBe("booked");
+    expect(
+      await prisma.appointmentRequest.count({ where: { appointmentId: world.appointmentId } }),
+    ).toBe(0);
+    expect(
+      (await prisma.appointment.findUniqueOrThrow({ where: { id: world.appointmentId } })).status,
+    ).toBe("booked");
   });
 
   it("reprogramar al mismo cupo de la cita es 422", async () => {
@@ -1539,14 +1711,16 @@ describe("pre-agenda: creacion de solicitudes", () => {
 
   it("cupo ya empezado es 422", async () => {
     clock.set(START);
-    await expect(createRequest(prisma, clock, book(world, slotAt(world, 0)))).rejects.toBeInstanceOf(
-      ValidationError,
-    );
+    await expect(
+      createRequest(prisma, clock, book(world, slotAt(world, 0))),
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it("cupo, paciente o cita de otro tenant es 404", async () => {
     const other = await seedWorld(prisma, "b", START);
-    await expect(createRequest(prisma, clock, book(world, slotAt(other, 0)))).rejects.toBeInstanceOf(NotFoundError);
+    await expect(
+      createRequest(prisma, clock, book(world, slotAt(other, 0))),
+    ).rejects.toBeInstanceOf(NotFoundError);
     await expect(
       createRequest(prisma, clock, book(world, slotAt(world, 0), other.medicalRecordId)),
     ).rejects.toBeInstanceOf(NotFoundError);
@@ -1595,6 +1769,7 @@ git commit -m "feat(scheduling): creacion de solicitudes con apartado atomico y 
 ### Task 4: Resolución, vencimiento al leer y lecturas
 
 **Files:**
+
 - Create: `backend/src/modules/scheduling/application/resolve-appointment-request.ts`
 - Create: `backend/src/modules/scheduling/application/appointment-request-queries.ts`
 - Create: `backend/src/modules/scheduling/infrastructure/prisma-appointment-request-reader.ts`
@@ -1607,6 +1782,7 @@ git commit -m "feat(scheduling): creacion de solicitudes con apartado atomico y 
 - Create: `backend/tests/db/pre-agenda-resolver.test.ts`
 
 **Interfaces:**
+
 - Consumes: Tareas 2 y 3.
 - Produces:
   - `ResolveAppointmentRequestInput = { tenantId: TenantId; requestId: string; resolution: Resolution; actor: AuditActor }`, `ResolveAppointmentRequestDeps = { store; ids; clock; audit }`, `ResolveAppointmentRequest`, `createResolveAppointmentRequest(deps)`.
@@ -1679,16 +1855,42 @@ describe("pre-agenda: resolucion y vencimiento", () => {
   let world: World;
   let clock: MutableClock;
 
-  const status = async (id: string) => (await prisma.slot.findUniqueOrThrow({ where: { id } })).status;
-  const appt = async (id: string) => (await prisma.appointment.findUniqueOrThrow({ where: { id } })).status;
+  const status = async (id: string) =>
+    (await prisma.slot.findUniqueOrThrow({ where: { id } })).status;
+  const appt = async (id: string) =>
+    (await prisma.appointment.findUniqueOrThrow({ where: { id } })).status;
   const book = (slotId: string) =>
-    createRequest(prisma, clock, { kind: "book", tenantId: world.tenantId, medicalRecordId: world.medicalRecordId, slotId, actor: ACTOR });
+    createRequest(prisma, clock, {
+      kind: "book",
+      tenantId: world.tenantId,
+      medicalRecordId: world.medicalRecordId,
+      slotId,
+      actor: ACTOR,
+    });
   const reschedule = (slotId: string) =>
-    createRequest(prisma, clock, { kind: "reschedule", tenantId: world.tenantId, medicalRecordId: world.medicalRecordId, appointmentId: world.appointmentId, slotId, actor: ACTOR });
+    createRequest(prisma, clock, {
+      kind: "reschedule",
+      tenantId: world.tenantId,
+      medicalRecordId: world.medicalRecordId,
+      appointmentId: world.appointmentId,
+      slotId,
+      actor: ACTOR,
+    });
   const cancel = () =>
-    createRequest(prisma, clock, { kind: "cancel", tenantId: world.tenantId, medicalRecordId: world.medicalRecordId, appointmentId: world.appointmentId, actor: ACTOR });
+    createRequest(prisma, clock, {
+      kind: "cancel",
+      tenantId: world.tenantId,
+      medicalRecordId: world.medicalRecordId,
+      appointmentId: world.appointmentId,
+      actor: ACTOR,
+    });
   const resolve = (requestId: string, resolution: typeof APPROVE | typeof DECLINE) =>
-    resolveRequest(prisma, clock, { tenantId: world.tenantId, requestId, resolution, actor: ACTOR });
+    resolveRequest(prisma, clock, {
+      tenantId: world.tenantId,
+      requestId,
+      resolution,
+      actor: ACTOR,
+    });
 
   beforeEach(async () => {
     await truncateAll(prisma);
@@ -1707,14 +1909,24 @@ describe("pre-agenda: resolucion y vencimiento", () => {
     const resolved = await resolve(request.id, APPROVE);
     expect(resolved.status).toBe("approved");
     expect(await status(slotAt(world, 0))).toBe("busy");
-    const created = await prisma.appointment.findUniqueOrThrow({ where: { id: resolved.resultingAppointmentId ?? "" } });
-    expect(created).toMatchObject({ status: "booked", slotId: slotAt(world, 0), identifierValue: "AP-hermes-1" });
+    const created = await prisma.appointment.findUniqueOrThrow({
+      where: { id: resolved.resultingAppointmentId ?? "" },
+    });
+    expect(created).toMatchObject({
+      status: "booked",
+      slotId: slotAt(world, 0),
+      identifierValue: "AP-hermes-1",
+    });
   });
 
   it("book rechazado: cupo libre y motivo guardado", async () => {
     const request = await book(slotAt(world, 0));
     const resolved = await resolve(request.id, DECLINE);
-    expect(resolved).toMatchObject({ status: "rejected", resolutionReason: "declined", resultingAppointmentId: null });
+    expect(resolved).toMatchObject({
+      status: "rejected",
+      resolutionReason: "declined",
+      resultingAppointmentId: null,
+    });
     expect(await status(slotAt(world, 0))).toBe("free");
   });
 
@@ -1769,7 +1981,10 @@ describe("pre-agenda: resolucion y vencimiento", () => {
 
   it("dos resoluciones simultaneas: una gana y se crea una sola cita", async () => {
     const request = await book(slotAt(world, 0));
-    const results = await Promise.allSettled([resolve(request.id, APPROVE), resolve(request.id, APPROVE)]);
+    const results = await Promise.allSettled([
+      resolve(request.id, APPROVE),
+      resolve(request.id, APPROVE),
+    ]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(await prisma.appointment.count()).toBe(2);
   });
@@ -1778,14 +1993,21 @@ describe("pre-agenda: resolucion y vencimiento", () => {
     const other = await seedWorld(prisma, "b", START);
     const request = await book(slotAt(world, 0));
     await expect(
-      resolveRequest(prisma, clock, { tenantId: other.tenantId, requestId: request.id, resolution: APPROVE, actor: ACTOR }),
+      resolveRequest(prisma, clock, {
+        tenantId: other.tenantId,
+        requestId: request.id,
+        resolution: APPROVE,
+        actor: ACTOR,
+      }),
     ).rejects.toMatchObject({ name: "NotFoundError" });
   });
 
   it("el vencimiento por conjunto marca expired y libera solo apartados", async () => {
     const request = await book(slotAt(world, 0));
     clock.set(new Date("2026-06-15T12:00:00.000Z"));
-    await createExpireDueRequests({ expirer: createPrismaRequestExpirer(prisma), clock })(world.tenantId);
+    await createExpireDueRequests({ expirer: createPrismaRequestExpirer(prisma), clock })(
+      world.tenantId,
+    );
     const row = await prisma.appointmentRequest.findUniqueOrThrow({ where: { id: request.id } });
     expect(row).toMatchObject({ status: "expired" });
     expect(row.resolvedAt).toEqual(new Date("2026-06-15T12:00:00.000Z"));
@@ -1808,8 +2030,16 @@ describe("pre-agenda: resolucion y vencimiento", () => {
       slot: { identifier: { value: "SL-a-0" } },
       appointment: null,
     });
-    const second = await list({ tenantId: world.tenantId, status: "pending", limit: 1, cursor: first.nextCursor });
-    expect(second.data[0]).toMatchObject({ kind: "cancel", appointment: { identifier: { value: "AP-a" } } });
+    const second = await list({
+      tenantId: world.tenantId,
+      status: "pending",
+      limit: 1,
+      cursor: first.nextCursor,
+    });
+    expect(second.data[0]).toMatchObject({
+      kind: "cancel",
+      appointment: { identifier: { value: "AP-a" } },
+    });
     expect(second.nextCursor).toBeNull();
   });
 
@@ -1921,18 +2151,30 @@ export function createResolveAppointmentRequest(
     }
     if (!isLive(request, now)) {
       const status = request.status === "pending" ? "expired" : request.status;
-      throw preAgendaConflict("request_not_pending", "La solicitud ya no esta pendiente", { status });
+      throw preAgendaConflict("request_not_pending", "La solicitud ya no esta pendiente", {
+        status,
+      });
     }
     const { resolution } = input;
     const target = request.appointmentId
       ? await deps.store.getAppointment(input.tenantId, request.appointmentId)
       : null;
     const approved = resolution.outcome === "approved";
-    const effects = resolutionEffects(request, target?.slotId ?? null, approved ? "approved" : "released");
+    const effects = resolutionEffects(
+      request,
+      target?.slotId ?? null,
+      approved ? "approved" : "released",
+    );
     await applyEffects(deps.store, input.tenantId, effects);
     const resultingAppointmentId =
       resolution.outcome === "approved" && effects.bookedSlotId
-        ? await bookAppointment(deps, request, input.tenantId, effects.bookedSlotId, resolution.appointmentIdentifier)
+        ? await bookAppointment(
+            deps,
+            request,
+            input.tenantId,
+            effects.bookedSlotId,
+            resolution.appointmentIdentifier,
+          )
         : null;
     const resolved = await deps.store.markResolved(input.tenantId, request.id, {
       status: approved ? "approved" : "rejected",
@@ -2045,7 +2287,9 @@ function identifierOf(row: IdentifiedRow) {
   return { system: row.identifierSystem, value: row.identifierValue };
 }
 
-function partyRef(row: (IdentifiedRow & { startAt: Date; endAt: Date }) | null): RequestPartyRef | null {
+function partyRef(
+  row: (IdentifiedRow & { startAt: Date; endAt: Date }) | null,
+): RequestPartyRef | null {
   return row ? { identifier: identifierOf(row), startAt: row.startAt, endAt: row.endAt } : null;
 }
 
@@ -2096,7 +2340,10 @@ export function createPrismaAppointmentRequestReader(db: PrismaExecutor): Appoin
       }));
     },
     async get(tenantId, id) {
-      const row = await db.appointmentRequest.findFirst({ where: { tenantId, id }, include: VIEW_INCLUDE });
+      const row = await db.appointmentRequest.findFirst({
+        where: { tenantId, id },
+        include: VIEW_INCLUDE,
+      });
       return row ? mapView(row) : null;
     },
   };
@@ -2149,6 +2396,7 @@ export type PreAgendaReads = ReturnType<typeof preAgendaReads>;
 ```
 
 En `backend/src/composition-root.ts`:
+
 - Import: `import { type PreAgendaReads, preAgendaReads } from "./composition/pre-agenda-wiring";` y `import type { ExpireDueRequests } from "./modules/scheduling/application/appointment-request-queries";`.
 - `Container` gana `readonly expireDueRequests: PreAgendaReads["expireDueRequests"];`.
 - `schedulingReads(prisma: PrismaClient, expire: ExpireDueRequests)`: pasa `expire` como último argumento de `createListAvailability(slots, tenantSettings, expire)` y `createListScheduleSlots(schedules, slots, tenantSettings, expire)`.
@@ -2173,6 +2421,7 @@ git commit -m "feat(scheduling): resolucion por Hermes, vencimiento al leer y le
 ### Task 5: Bandeja del simulador
 
 **Files:**
+
 - Create: `backend/src/modules/hermes-simulator/domain/inbox.ts`
 - Create: `backend/src/modules/hermes-simulator/domain/ports/inbox.ts`
 - Create: `backend/src/modules/hermes-simulator/application/inbox.ts`
@@ -2188,6 +2437,7 @@ git commit -m "feat(scheduling): resolucion por Hermes, vencimiento al leer y le
 - Modify: `backend/tests/db/pre-agenda-support.ts` (`inboxPost`)
 
 **Interfaces:**
+
 - Consumes: Tareas 3 y 4 (`createCreateAppointmentRequest`, `createResolveAppointmentRequest`, `createListAppointmentRequests`, `createGetAppointmentRequest`, `createExpireDueRequests`, `createPrismaPreAgendaStore`, `createPrismaRequestExpirer`, `createPrismaAppointmentRequestReader`, `AppointmentRequestView`, `PreAgendaPolicy`), `createReadBotParams` de `bot-config`.
 - Produces:
   - `InboxIdentifier`, `InboxRequest`, `InboxResolution` (simulador).
@@ -2306,7 +2556,10 @@ Create `backend/tests/dominio/bandeja-simulador.test.ts`:
 import { describe, expect, it, vi } from "vitest";
 import { createApproveInboxRequest } from "@/modules/hermes-simulator/application/inbox";
 import type { InboxRequest } from "@/modules/hermes-simulator/domain/inbox";
-import type { ChatbotRequestsGateway, SimInboxStore } from "@/modules/hermes-simulator/domain/ports/inbox";
+import type {
+  ChatbotRequestsGateway,
+  SimInboxStore,
+} from "@/modules/hermes-simulator/domain/ports/inbox";
 import { ConflictError } from "@/modules/shared/domain/conflict-error";
 
 const ACTOR = { actorSubject: "admin", actorRole: "admin", requestId: "r" };
@@ -2320,7 +2573,13 @@ const request = (overrides: Partial<InboxRequest> = {}): InboxRequest => ({
   createdAt: new Date("2026-06-15T08:00:00Z"),
   expiresAt: new Date("2026-06-15T12:00:00Z"),
   resolutionReason: null,
-  patient: { identifier: ID("MR"), documentType: "CC", documentNumber: "1", givenNames: "A", familyNames: "B" },
+  patient: {
+    identifier: ID("MR"),
+    documentType: "CC",
+    documentNumber: "1",
+    givenNames: "A",
+    familyNames: "B",
+  },
   slot: { identifier: ID("SL"), ...WHEN },
   appointment: null,
   resultingAppointment: null,
@@ -2333,12 +2592,19 @@ function fakes(pending: InboxRequest, slotStatus: "free" | "busy" = "free") {
     get: vi.fn(async () => pending),
     resolve: vi.fn(async ({ resolution }) => ({
       ...pending,
-      status: (resolution.outcome === "approved" ? "approved" : "rejected") as InboxRequest["status"],
+      status: (resolution.outcome === "approved"
+        ? "approved"
+        : "rejected") as InboxRequest["status"],
     })),
   };
   const store: SimInboxStore = {
     findPatientId: vi.fn(async () => "sim-pat"),
-    lockSlot: vi.fn(async () => ({ id: "sim-slot", scheduleId: "sim-sched", status: slotStatus, ...WHEN })),
+    lockSlot: vi.fn(async () => ({
+      id: "sim-slot",
+      scheduleId: "sim-sched",
+      status: slotStatus,
+      ...WHEN,
+    })),
     findAppointment: vi.fn(async () => ({ id: "sim-appt", slotId: "sim-old" })),
     setSlotStatus: vi.fn(async () => {}),
     cancelAppointment: vi.fn(async () => {}),
@@ -2358,7 +2624,12 @@ describe("hermes-simulador: decision de la bandeja", () => {
     expect(store.setSlotStatus).toHaveBeenCalledWith("t", "sim-slot", "busy");
     expect(store.createAppointment).toHaveBeenCalledOnce();
     expect(gateway.resolve).toHaveBeenCalledWith(
-      expect.objectContaining({ resolution: { outcome: "approved", appointmentIdentifier: { system: "urn:hermes:appointment", value: "AP-id-0" } } }),
+      expect.objectContaining({
+        resolution: {
+          outcome: "approved",
+          appointmentIdentifier: { system: "urn:hermes:appointment", value: "AP-id-0" },
+        },
+      }),
     );
   });
 
@@ -2375,17 +2646,23 @@ describe("hermes-simulador: decision de la bandeja", () => {
   it("paciente desconocido para Hermes: 409 antes de escribir", async () => {
     const { store, approve } = fakes(request());
     vi.mocked(store.findPatientId).mockResolvedValue(null);
-    await expect(approve(command)).rejects.toMatchObject({ details: { reason: "patient_not_in_hermes" } });
+    await expect(approve(command)).rejects.toMatchObject({
+      details: { reason: "patient_not_in_hermes" },
+    });
     expect(store.setSlotStatus).not.toHaveBeenCalled();
   });
 
   it("solicitud no pendiente: 409 request_not_pending", async () => {
     const { approve } = fakes(request({ status: "expired" }));
-    await expect(approve(command)).rejects.toMatchObject({ details: { reason: "request_not_pending", status: "expired" } });
+    await expect(approve(command)).rejects.toMatchObject({
+      details: { reason: "request_not_pending", status: "expired" },
+    });
   });
 
   it("reschedule: cancela la cita vieja de Hermes y reserva el cupo nuevo", async () => {
-    const { store, approve } = fakes(request({ kind: "reschedule", appointment: { identifier: ID("AP"), ...WHEN } }));
+    const { store, approve } = fakes(
+      request({ kind: "reschedule", appointment: { identifier: ID("AP"), ...WHEN } }),
+    );
     await approve(command);
     expect(store.cancelAppointment).toHaveBeenCalledWith("t", "sim-appt");
     expect(store.setSlotStatus).toHaveBeenCalledWith("t", "sim-old", "free");
@@ -2393,15 +2670,21 @@ describe("hermes-simulador: decision de la bandeja", () => {
   });
 
   it("cita desconocida para Hermes: 409 appointment_not_in_hermes", async () => {
-    const { store, approve } = fakes(request({ kind: "cancel", slot: null, appointment: { identifier: ID("AP"), ...WHEN } }));
+    const { store, approve } = fakes(
+      request({ kind: "cancel", slot: null, appointment: { identifier: ID("AP"), ...WHEN } }),
+    );
     vi.mocked(store.findAppointment).mockResolvedValue(null);
     await expect(approve(command)).rejects.toBeInstanceOf(ConflictError);
   });
 
   it("si el chatbot rechaza la resolucion, el error se propaga (la transaccion revierte)", async () => {
     const { gateway, approve } = fakes(request());
-    vi.mocked(gateway.resolve).mockRejectedValue(new ConflictError("vencida", { reason: "request_not_pending" }));
-    await expect(approve(command)).rejects.toMatchObject({ details: { reason: "request_not_pending" } });
+    vi.mocked(gateway.resolve).mockRejectedValue(
+      new ConflictError("vencida", { reason: "request_not_pending" }),
+    );
+    await expect(approve(command)).rejects.toMatchObject({
+      details: { reason: "request_not_pending" },
+    });
   });
 });
 ```
@@ -2477,7 +2760,12 @@ async function bookInHermes(
   return { outcome: "approved", appointmentIdentifier: identifier };
 }
 
-async function decide(deps: ApproveDeps, tenantId: string, request: InboxRequest, patientId: string) {
+async function decide(
+  deps: ApproveDeps,
+  tenantId: string,
+  request: InboxRequest,
+  patientId: string,
+) {
   if (request.kind !== "cancel") {
     return bookInHermes(deps, tenantId, request, patientId);
   }
@@ -2551,7 +2839,13 @@ export function createPrismaSimInboxStore(db: PrismaExecutor): SimInboxStore {
         return null;
       }
       const row = await db.simSlot.findFirstOrThrow({ where: { tenantId, id } });
-      return { id: row.id, scheduleId: row.scheduleId, startAt: row.startAt, endAt: row.endAt, status: row.status };
+      return {
+        id: row.id,
+        scheduleId: row.scheduleId,
+        startAt: row.startAt,
+        endAt: row.endAt,
+        status: row.status,
+      };
     },
     async findAppointment(tenantId, identifier) {
       const row = await db.simAppointment.findFirst({
@@ -2564,7 +2858,10 @@ export function createPrismaSimInboxStore(db: PrismaExecutor): SimInboxStore {
       await db.simSlot.updateMany({ where: { tenantId, id }, data: { status } });
     },
     async cancelAppointment(tenantId, id) {
-      await db.simAppointment.updateMany({ where: { tenantId, id }, data: { status: "cancelled" } });
+      await db.simAppointment.updateMany({
+        where: { tenantId, id },
+        data: { status: "cancelled" },
+      });
     },
     async createAppointment(row) {
       await db.simAppointment.create({
@@ -2662,15 +2959,26 @@ function toInboxRequest(view: AppointmentRequestView): InboxRequest {
 }
 
 /** Adaptador en proceso del puerto del simulador. En la Fase 4 lo reemplaza un cliente FHIR. */
-function chatbotRequestsGateway(db: PrismaExecutor, resolve: ResolveAppointmentRequest): ChatbotRequestsGateway {
+function chatbotRequestsGateway(
+  db: PrismaExecutor,
+  resolve: ResolveAppointmentRequest,
+): ChatbotRequestsGateway {
   const reader = createPrismaAppointmentRequestReader(db);
-  const expire = createExpireDueRequests({ expirer: createPrismaRequestExpirer(db), clock: systemClock });
+  const expire = createExpireDueRequests({
+    expirer: createPrismaRequestExpirer(db),
+    clock: systemClock,
+  });
   const list = createListAppointmentRequests({ reader, expire });
   const get = createGetAppointmentRequest({ reader, expire });
   return {
     async listPending(filter) {
       const tenantId = toTenantId(filter.tenantId);
-      const page = await list({ tenantId, status: "pending", cursor: filter.cursor, limit: filter.limit });
+      const page = await list({
+        tenantId,
+        status: "pending",
+        cursor: filter.cursor,
+        limit: filter.limit,
+      });
       return { data: page.data.map(toInboxRequest), nextCursor: page.nextCursor };
     },
     async get(tenantId, id) {
@@ -2678,7 +2986,12 @@ function chatbotRequestsGateway(db: PrismaExecutor, resolve: ResolveAppointmentR
     },
     async resolve(input) {
       const tenantId = toTenantId(input.tenantId);
-      await resolve({ tenantId, requestId: input.requestId, resolution: input.resolution, actor: input.actor });
+      await resolve({
+        tenantId,
+        requestId: input.requestId,
+        resolution: input.resolution,
+        actor: input.actor,
+      });
       return toInboxRequest(await get(tenantId, input.requestId));
     },
   };
@@ -2729,6 +3042,7 @@ export function preAgendaWritePorts(db: PrismaExecutor, auditLog: AuditLog) {
 ```
 
 En `backend/src/composition-root.ts`:
+
 - El import pasa a `import { type PreAgendaReads, preAgendaReads, preAgendaWritePorts } from "./composition/pre-agenda-wiring";`.
 - Junto a `type WidgetWritePorts = …`: `type PreAgendaWritePorts = ReturnType<typeof preAgendaWritePorts>;` y `WritePorts` gana `& PreAgendaWritePorts`.
 - `Container` gana `readonly listInbox: PreAgendaReads["listInbox"];`.
@@ -2739,18 +3053,24 @@ En `backend/src/composition-root.ts`:
 Create `backend/src/http/serializers-sim-inbox.ts`:
 
 ```ts
-import type { InboxIdentifier, InboxRef, InboxRequest } from "@/modules/hermes-simulator/domain/inbox";
+import type {
+  InboxIdentifier,
+  InboxRef,
+  InboxRequest,
+} from "@/modules/hermes-simulator/domain/inbox";
 
 function identifierJson(identifier: InboxIdentifier) {
   return { system: identifier.system, value: identifier.value };
 }
 
 function refJson(ref: InboxRef | null) {
-  return ref && {
-    identifier: identifierJson(ref.identifier),
-    start_at: ref.startAt.toISOString(),
-    end_at: ref.endAt.toISOString(),
-  };
+  return (
+    ref && {
+      identifier: identifierJson(ref.identifier),
+      start_at: ref.startAt.toISOString(),
+      end_at: ref.endAt.toISOString(),
+    }
+  );
 }
 
 /** Datos de identificacion para la bandeja; ningun dato clinico. */
@@ -2892,8 +3212,17 @@ describe("pre-agenda: bandeja del simulador", () => {
   const clock = clockAt(new Date());
 
   const book = (slotIndex: number) =>
-    createRequest(prisma, clock, { kind: "book", tenantId: world.tenantId, medicalRecordId: world.medicalRecordId, slotId: slotAt(world, slotIndex), actor: ACTOR });
-  const simSlot = (value: string) => prisma.simSlot.findFirstOrThrow({ where: { tenantId: world.tenantId, identifierValue: value } });
+    createRequest(prisma, clock, {
+      kind: "book",
+      tenantId: world.tenantId,
+      medicalRecordId: world.medicalRecordId,
+      slotId: slotAt(world, slotIndex),
+      actor: ACTOR,
+    });
+  const simSlot = (value: string) =>
+    prisma.simSlot.findFirstOrThrow({
+      where: { tenantId: world.tenantId, identifierValue: value },
+    });
   const slot = (id: string) => prisma.slot.findUniqueOrThrow({ where: { id } });
 
   beforeEach(async () => {
@@ -2912,7 +3241,10 @@ describe("pre-agenda: bandeja del simulador", () => {
   it("lista solo las pendientes vivas, con identificadores de Hermes", async () => {
     const live = await book(0);
     const stale = await book(1);
-    await prisma.appointmentRequest.update({ where: { id: stale.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
+    await prisma.appointmentRequest.update({
+      where: { id: stale.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
     const response = await listInbox(authedRequest("http://localhost/api/sim/v1/inbox", token));
     const body = await response.json();
     expect(response.status).toBe(200);
@@ -2922,7 +3254,9 @@ describe("pre-agenda: bandeja del simulador", () => {
       patient: { identifier: { value: "MR-a" }, document_number: "1000a" },
       slot: { identifier: { value: "SL-a-0" } },
     });
-    expect((await prisma.appointmentRequest.findUniqueOrThrow({ where: { id: stale.id } })).status).toBe("expired");
+    expect(
+      (await prisma.appointmentRequest.findUniqueOrThrow({ where: { id: stale.id } })).status,
+    ).toBe("expired");
     expect((await slot(slotAt(world, 1))).status).toBe("free");
   });
 
@@ -2935,8 +3269,12 @@ describe("pre-agenda: bandeja del simulador", () => {
     const identifier = body.resulting_appointment.identifier.value as string;
     expect((await slot(slotAt(world, 0))).status).toBe("busy");
     expect((await simSlot("SL-a-0")).status).toBe("busy");
-    const chatbotAppt = await prisma.appointment.findFirstOrThrow({ where: { identifierValue: identifier } });
-    const hermesAppt = await prisma.simAppointment.findFirstOrThrow({ where: { identifierValue: identifier } });
+    const chatbotAppt = await prisma.appointment.findFirstOrThrow({
+      where: { identifierValue: identifier },
+    });
+    const hermesAppt = await prisma.simAppointment.findFirstOrThrow({
+      where: { identifierValue: identifier },
+    });
     expect(chatbotAppt.status).toBe("booked");
     expect(hermesAppt.status).toBe("booked");
     expect(chatbotAppt.startAt).toEqual(hermesAppt.startAt);
@@ -2944,23 +3282,37 @@ describe("pre-agenda: bandeja del simulador", () => {
 
   it("cupo ocupado en Hermes: 200 rechazada por slot_unavailable y cupo liberado", async () => {
     const request = await book(0);
-    await prisma.simSlot.updateMany({ where: { identifierValue: "SL-a-0" }, data: { status: "busy" } });
+    await prisma.simSlot.updateMany({
+      where: { identifierValue: "SL-a-0" },
+      data: { status: "busy" },
+    });
     const response = await approve(inboxPost(`${request.id}/approve`, token), params(request.id));
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ status: "rejected", resolution_reason: "slot_unavailable" });
+    expect(await response.json()).toMatchObject({
+      status: "rejected",
+      resolution_reason: "slot_unavailable",
+    });
     expect((await slot(slotAt(world, 0))).status).toBe("free");
     expect(await prisma.simAppointment.count()).toBe(1);
   });
 
   it("aprobar reschedule mueve la cita en ambos lados", async () => {
     const request = await createRequest(prisma, clock, {
-      kind: "reschedule", tenantId: world.tenantId, medicalRecordId: world.medicalRecordId,
-      appointmentId: world.appointmentId, slotId: slotAt(world, 1), actor: ACTOR,
+      kind: "reschedule",
+      tenantId: world.tenantId,
+      medicalRecordId: world.medicalRecordId,
+      appointmentId: world.appointmentId,
+      slotId: slotAt(world, 1),
+      actor: ACTOR,
     });
     const response = await approve(inboxPost(`${request.id}/approve`, token), params(request.id));
     expect(response.status).toBe(200);
-    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: world.appointmentId } })).status).toBe("cancelled");
-    expect((await prisma.simAppointment.findFirstOrThrow({ where: { identifierValue: "AP-a" } })).status).toBe("cancelled");
+    expect(
+      (await prisma.appointment.findUniqueOrThrow({ where: { id: world.appointmentId } })).status,
+    ).toBe("cancelled");
+    expect(
+      (await prisma.simAppointment.findFirstOrThrow({ where: { identifierValue: "AP-a" } })).status,
+    ).toBe("cancelled");
     expect((await simSlot("SL-a-booked")).status).toBe("free");
     expect((await slot(world.bookedSlotId)).status).toBe("free");
     expect((await simSlot("SL-a-1")).status).toBe("busy");
@@ -2969,13 +3321,20 @@ describe("pre-agenda: bandeja del simulador", () => {
 
   it("aprobar cancel cancela en ambos lados", async () => {
     const request = await createRequest(prisma, clock, {
-      kind: "cancel", tenantId: world.tenantId, medicalRecordId: world.medicalRecordId,
-      appointmentId: world.appointmentId, actor: ACTOR,
+      kind: "cancel",
+      tenantId: world.tenantId,
+      medicalRecordId: world.medicalRecordId,
+      appointmentId: world.appointmentId,
+      actor: ACTOR,
     });
     const response = await approve(inboxPost(`${request.id}/approve`, token), params(request.id));
     expect(response.status).toBe(200);
-    expect((await prisma.appointment.findUniqueOrThrow({ where: { id: world.appointmentId } })).status).toBe("cancelled");
-    expect((await prisma.simAppointment.findFirstOrThrow({ where: { identifierValue: "AP-a" } })).status).toBe("cancelled");
+    expect(
+      (await prisma.appointment.findUniqueOrThrow({ where: { id: world.appointmentId } })).status,
+    ).toBe("cancelled");
+    expect(
+      (await prisma.simAppointment.findFirstOrThrow({ where: { identifierValue: "AP-a" } })).status,
+    ).toBe("cancelled");
     expect((await simSlot("SL-a-booked")).status).toBe("free");
   });
 
@@ -2983,24 +3342,37 @@ describe("pre-agenda: bandeja del simulador", () => {
     const request = await book(0);
     const response = await reject(inboxPost(`${request.id}/reject`, token), params(request.id));
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ status: "rejected", resolution_reason: "declined" });
+    expect(await response.json()).toMatchObject({
+      status: "rejected",
+      resolution_reason: "declined",
+    });
     expect((await slot(slotAt(world, 0))).status).toBe("free");
     expect((await simSlot("SL-a-0")).status).toBe("free");
   });
 
   it("paciente desconocido para Hermes: 409 y nada escrito en ningun lado", async () => {
     const request = await book(0);
-    await prisma.simPatient.updateMany({ where: { identifierValue: "MR-a" }, data: { identifierValue: "MR-otro" } });
+    await prisma.simPatient.updateMany({
+      where: { identifierValue: "MR-a" },
+      data: { identifierValue: "MR-otro" },
+    });
     const response = await approve(inboxPost(`${request.id}/approve`, token), params(request.id));
     expect(response.status).toBe(409);
-    expect((await response.json()).error.details).toMatchObject({ reason: "patient_not_in_hermes" });
+    expect((await response.json()).error.details).toMatchObject({
+      reason: "patient_not_in_hermes",
+    });
     expect((await simSlot("SL-a-0")).status).toBe("free");
-    expect((await prisma.appointmentRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("pending");
+    expect(
+      (await prisma.appointmentRequest.findUniqueOrThrow({ where: { id: request.id } })).status,
+    ).toBe("pending");
   });
 
   it("aprobar una vencida: 409 request_not_pending", async () => {
     const request = await book(0);
-    await prisma.appointmentRequest.update({ where: { id: request.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
+    await prisma.appointmentRequest.update({
+      where: { id: request.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
     const response = await approve(inboxPost(`${request.id}/approve`, token), params(request.id));
     expect(response.status).toBe(409);
     expect((await response.json()).error.details).toMatchObject({ reason: "request_not_pending" });
@@ -3041,6 +3413,7 @@ git commit -m "feat(simulador): bandeja de Hermes que aprueba y rechaza solicitu
 ### Task 6: Contrato, cliente, roles, aislamiento, idempotencia y fronteras
 
 **Files:**
+
 - Modify: `backend/src/http/openapi-sim.ts` (paths de la bandeja)
 - Regenerate: `backend/openapi-sim.json`, `backend/openapi.json`, `backend/openapi-platform.json`
 - Regenerate: `frontend/src/sim/**` (orval)
@@ -3050,6 +3423,7 @@ git commit -m "feat(simulador): bandeja de Hermes que aprueba y rechaza solicitu
 - Modify: `backend/tests/fronteras.test.ts`
 
 **Interfaces:**
+
 - Consumes: rutas de la Tarea 5; `seedWorld`, `slotAt`, `createRequest`, `clockAt`, `ACTOR`, `HOUR_MS`, `inboxPost` del soporte.
 - Produces: operationIds `listSimInbox`, `approveSimInboxRequest`, `rejectSimInboxRequest`.
 
@@ -3081,7 +3455,18 @@ const REF_SCHEMA = {
 
 const INBOX_REQUEST_SCHEMA = {
   type: "object",
-  required: ["id", "kind", "status", "created_at", "expires_at", "resolution_reason", "patient", "slot", "appointment", "resulting_appointment"],
+  required: [
+    "id",
+    "kind",
+    "status",
+    "created_at",
+    "expires_at",
+    "resolution_reason",
+    "patient",
+    "slot",
+    "appointment",
+    "resulting_appointment",
+  ],
   properties: {
     id: { type: "string" },
     kind: { type: "string", enum: ["book", "reschedule", "cancel"] },
@@ -3125,7 +3510,9 @@ function inboxDecision(operationId: string, summary: string) {
         "200": {
           description: "Solicitud resuelta",
           headers: REQUEST_ID_RESPONSE_HEADER,
-          content: { "application/json": { schema: { $ref: "#/components/schemas/InboxRequest" } } },
+          content: {
+            "application/json": { schema: { $ref: "#/components/schemas/InboxRequest" } },
+          },
         },
         ...writeErrors,
       },
@@ -3142,7 +3529,12 @@ const INBOX_PATHS = {
       parameters: [
         REQUEST_ID_PARAMETER,
         { name: "cursor", in: "query", required: false, schema: { type: "string" } },
-        { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200 } },
+        {
+          name: "limit",
+          in: "query",
+          required: false,
+          schema: { type: "integer", minimum: 1, maximum: 200 },
+        },
       ],
       responses: {
         "200": {
@@ -3192,7 +3584,11 @@ En `backend/tests/roles.test.ts`, importa `import { GET as getSimInbox } from "@
 describe("roles: bandeja del simulador", () => {
   it("operator y widget reciben 403", async () => {
     for (const role of ["operator", "widget"] as const) {
-      const token = await signToken({ role, tenantId: "tenant-a", sessionId: role === "widget" ? "s-1" : undefined });
+      const token = await signToken({
+        role,
+        tenantId: "tenant-a",
+        sessionId: role === "widget" ? "s-1" : undefined,
+      });
       const response = await getSimInbox(authorized(token));
       expect(response.status).toBe(403);
     }
@@ -3219,7 +3615,15 @@ En `backend/tests/db/aislamiento-tenant.test.ts`, añade imports:
 import { POST as approveInbox } from "@/app/api/sim/v1/inbox/[id]/approve/route";
 import { POST as rejectInbox } from "@/app/api/sim/v1/inbox/[id]/reject/route";
 import { GET as listSimInbox } from "@/app/api/sim/v1/inbox/route";
-import { ACTOR, clockAt, createRequest, HOUR_MS, inboxPost, seedWorld, slotAt } from "./pre-agenda-support";
+import {
+  ACTOR,
+  clockAt,
+  createRequest,
+  HOUR_MS,
+  inboxPost,
+  seedWorld,
+  slotAt,
+} from "./pre-agenda-support";
 ```
 
 y al final del archivo:
@@ -3237,7 +3641,11 @@ describe("aislamiento-tenant: bandeja del simulador", () => {
     const a = await seedWorld(prisma, "a", start);
     const b = await seedWorld(prisma, "b", start);
     const request = await createRequest(prisma, clockAt(new Date()), {
-      kind: "book", tenantId: a.tenantId, medicalRecordId: a.medicalRecordId, slotId: slotAt(a, 0), actor: ACTOR,
+      kind: "book",
+      tenantId: a.tenantId,
+      medicalRecordId: a.medicalRecordId,
+      slotId: slotAt(a, 0),
+      actor: ACTOR,
     });
     const tokenB = await signToken({ role: "admin", tenantId: b.tenantId });
 
@@ -3245,10 +3653,16 @@ describe("aislamiento-tenant: bandeja del simulador", () => {
     expect((await list.json()).data).toEqual([]);
 
     const context = { params: Promise.resolve({ id: request.id }) };
-    expect((await approveInbox(inboxPost(`${request.id}/approve`, tokenB), context)).status).toBe(404);
+    expect((await approveInbox(inboxPost(`${request.id}/approve`, tokenB), context)).status).toBe(
+      404,
+    );
     const context2 = { params: Promise.resolve({ id: request.id }) };
-    expect((await rejectInbox(inboxPost(`${request.id}/reject`, tokenB), context2)).status).toBe(404);
-    expect((await prisma.appointmentRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("pending");
+    expect((await rejectInbox(inboxPost(`${request.id}/reject`, tokenB), context2)).status).toBe(
+      404,
+    );
+    expect(
+      (await prisma.appointmentRequest.findUniqueOrThrow({ where: { id: request.id } })).status,
+    ).toBe("pending");
   });
 });
 ```
@@ -3263,7 +3677,15 @@ En `backend/tests/db/idempotencia-http.test.ts`, añade imports:
 import { POST as approveInbox } from "@/app/api/sim/v1/inbox/[id]/approve/route";
 import { POST as rejectInbox } from "@/app/api/sim/v1/inbox/[id]/reject/route";
 import { GET as listSimInbox } from "@/app/api/sim/v1/inbox/route";
-import { ACTOR, clockAt, createRequest, HOUR_MS, inboxPost, seedWorld, slotAt } from "./pre-agenda-support";
+import {
+  ACTOR,
+  clockAt,
+  createRequest,
+  HOUR_MS,
+  inboxPost,
+  seedWorld,
+  slotAt,
+} from "./pre-agenda-support";
 ```
 
 y al final:
@@ -3280,7 +3702,11 @@ describe("idempotencia: bandeja del simulador", () => {
     start.setUTCMinutes(0, 0, 0);
     const world = await seedWorld(prisma, "a", start);
     const request = await createRequest(prisma, clockAt(new Date()), {
-      kind: "book", tenantId: world.tenantId, medicalRecordId: world.medicalRecordId, slotId: slotAt(world, 0), actor: ACTOR,
+      kind: "book",
+      tenantId: world.tenantId,
+      medicalRecordId: world.medicalRecordId,
+      slotId: slotAt(world, 0),
+      actor: ACTOR,
     });
     const token = await signToken({ role: "admin", tenantId: world.tenantId, subject: "admin-a" });
     return { request, token };
@@ -3290,7 +3716,10 @@ describe("idempotencia: bandeja del simulador", () => {
     const { request, token } = await pendingBook();
     const ctx = () => ({ params: Promise.resolve({ id: request.id }) });
     const first = await approveInbox(inboxPost(`${request.id}/approve`, token, "k-approve"), ctx());
-    const second = await approveInbox(inboxPost(`${request.id}/approve`, token, "k-approve"), ctx());
+    const second = await approveInbox(
+      inboxPost(`${request.id}/approve`, token, "k-approve"),
+      ctx(),
+    );
     expect(second.status).toBe(200);
     expect(await second.json()).toEqual(await first.json());
     expect(await prisma.appointment.count()).toBe(2);
@@ -3323,15 +3752,15 @@ describe("idempotencia: bandeja del simulador", () => {
 En `backend/tests/fronteras.test.ts`, añade al final del `describe`:
 
 ```ts
-  it("scheduling no importa bot-config ni hermes-simulator", () => {
-    const offenders = listFiles(join(MODULES_DIR, "scheduling")).flatMap((file) =>
-      importsOf(file)
-        .filter((specifier) => /modules\/(bot-config|hermes-simulator)(\/|$)/.test(specifier))
-        .map((specifier) => `${file} -> ${specifier}`),
-    );
+it("scheduling no importa bot-config ni hermes-simulator", () => {
+  const offenders = listFiles(join(MODULES_DIR, "scheduling")).flatMap((file) =>
+    importsOf(file)
+      .filter((specifier) => /modules\/(bot-config|hermes-simulator)(\/|$)/.test(specifier))
+      .map((specifier) => `${file} -> ${specifier}`),
+  );
 
-    expect(offenders).toEqual([]);
-  });
+  expect(offenders).toEqual([]);
+});
 ```
 
 (La regla «hermes-simulator solo importa shared y auth» ya existe y cubre el puerto del simulador.)
@@ -3354,6 +3783,7 @@ git commit -m "feat(simulador): contrato de la bandeja, cliente orval y suites d
 ### Task 7: Gobernanza, documentación y verificación final
 
 **Files:**
+
 - Modify: `GOBERNANZA.md` (§1.2)
 - Modify: `CLAUDE.md` (estado de la Fase 3)
 - Modify: `docs/superpowers/specs/2026-09-25-fase-3-2-pre-agenda-design.md` (línea de estado)
@@ -3363,7 +3793,6 @@ git commit -m "feat(simulador): contrato de la bandeja, cliente orval y suites d
 En `GOBERNANZA.md`, al final de §1.2 (después de «Cualquier estado propio es provisional hasta que Hermes lo resuelva.»), añade:
 
 ```markdown
-
 **Política de apartado (pre-agenda, Fase 3.2).** Una solicitud `book` o `reschedule` pasa el
 cupo de `free` a `busy_tentative` en la misma transacción que la crea; dos solicitudes
 concurrentes nunca apartan el mismo cupo. El apartado vence a los `request_hold_minutes` del
@@ -3387,6 +3816,7 @@ En la spec, la línea de estado pasa a `> Estado: **implementada** en la rama \`
 - [ ] **Step 3: Verificación completa**
 
 Run, desde la raíz, y confirma cada salida antes de seguir:
+
 - `npm run ci` → Biome sin errores.
 - `npm run typecheck` → sin errores en backend y frontend.
 - `npm test` → verde.

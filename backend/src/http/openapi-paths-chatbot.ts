@@ -1,3 +1,4 @@
+import { USER } from "./openapi-security";
 import {
   authErrors,
   CONVERSATION_SECRET_PARAMETER,
@@ -13,7 +14,6 @@ import {
 } from "./openapi-shared";
 
 /** Rutas de /api/v1 de la Fase 3 (config del bot, KB y sesiones del widget). */
-const bearer = [{ bearerAuth: [] }];
 const nullableKey = { oneOf: [{ $ref: "#/components/schemas/WidgetKey" }, { type: "null" }] };
 const ID_PARAMETER = {
   name: "id",
@@ -166,14 +166,14 @@ export const CHATBOT_PATHS = {
   "/bot-config": {
     get: {
       operationId: "getBotConfig",
-      security: bearer,
+      security: USER,
       parameters: [REQUEST_ID_PARAMETER],
       responses: { ...botConfigOk, ...authErrors },
     },
     patch: {
       operationId: "updateBotConfig",
       description: "Parche parcial. Un texto o param en null vuelve al predeterminado.",
-      security: bearer,
+      security: USER,
       parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
       requestBody: {
         required: true,
@@ -190,7 +190,7 @@ export const CHATBOT_PATHS = {
       description:
         "Crea una clave vigente; la anterior queda en gracia widget_key_grace_hours y la que ya " +
         "estaba en gracia deja de valer.",
-      security: bearer,
+      security: USER,
       parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
       responses: { ...botConfigOk, ...writeErrors },
     },
@@ -198,7 +198,7 @@ export const CHATBOT_PATHS = {
   "/knowledge-entries": {
     get: {
       operationId: "listKnowledgeEntries",
-      security: bearer,
+      security: USER,
       parameters: [
         REQUEST_ID_PARAMETER,
         ...pageParams,
@@ -210,7 +210,7 @@ export const CHATBOT_PATHS = {
     post: {
       operationId: "createKnowledgeEntry",
       description: "category, question y answer son obligatorios. Maximo 500 entradas por tenant.",
-      security: bearer,
+      security: USER,
       parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
       requestBody: {
         required: true,
@@ -227,13 +227,13 @@ export const CHATBOT_PATHS = {
   "/knowledge-entries/{id}": {
     get: {
       operationId: "getKnowledgeEntry",
-      security: bearer,
+      security: USER,
       parameters: [REQUEST_ID_PARAMETER, ID_PARAMETER],
       responses: { ...okJson({ $ref: "#/components/schemas/KnowledgeEntry" }), ...authErrors },
     },
     patch: {
       operationId: "updateKnowledgeEntry",
-      security: bearer,
+      security: USER,
       parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER, ID_PARAMETER],
       requestBody: {
         required: true,
@@ -245,7 +245,7 @@ export const CHATBOT_PATHS = {
     },
     delete: {
       operationId: "deleteKnowledgeEntry",
-      security: bearer,
+      security: USER,
       parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER, ID_PARAMETER],
       responses: {
         ...okJson({ type: "object", properties: { deleted: { type: "boolean" } } }),

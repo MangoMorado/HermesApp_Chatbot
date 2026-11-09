@@ -7,6 +7,7 @@ import { ERROR_CODES } from "@/http/error-codes";
 import { errorResponse, toApiError } from "@/http/errors";
 import { buildOpenApiDocument } from "@/http/openapi";
 import { buildPlatformOpenApiDocument } from "@/http/openapi-platform";
+import { ANY_IDENTITY, withProviderUrls } from "@/http/openapi-security";
 import { buildSimOpenApiDocument } from "@/http/openapi-sim";
 import { REQUEST_ID_HEADER } from "@/http/request-id";
 import {
@@ -15,6 +16,10 @@ import {
 } from "@/modules/auth/domain/machine-credential-error";
 import { createCheckHealth } from "@/modules/health/application/check-health";
 import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
+import { buildPostmanCollection } from "../scripts/postman/build-collection";
+import { buildEnvironmentTemplate } from "../scripts/postman/environment";
+import { FRAGMENTS } from "../scripts/postman/fragments";
+import { COLLECTION_PATH, ENVIRONMENT_TEMPLATE_PATH, serialized } from "../scripts/postman/paths";
 import { signToken } from "./helpers/idp";
 
 const API_DIR = join(process.cwd(), "src", "app", "api", "v1");
@@ -154,6 +159,18 @@ describe("contrato-api: OpenAPI", () => {
   });
 });
 
+describe("contrato-api: coleccion Postman", () => {
+  it("la coleccion Postman esta al dia con el generador", () => {
+    const onDisk = readFileSync(COLLECTION_PATH, "utf8");
+    expect(onDisk).toBe(serialized(buildPostmanCollection(FRAGMENTS)));
+  });
+
+  it("la plantilla de entorno esta al dia", () => {
+    const onDisk = readFileSync(ENVIRONMENT_TEMPLATE_PATH, "utf8");
+    expect(onDisk).toBe(serialized(buildEnvironmentTemplate()));
+  });
+});
+
 describe("contrato-api: OpenAPI de plataforma", () => {
   it("openapi-platform.json esta al dia con el generador", () => {
     const onDisk = readFileSync(join(process.cwd(), "openapi-platform.json"), "utf8");
@@ -210,5 +227,90 @@ describe("contrato-api: credenciales de cliente maquina", () => {
       expect(body.error.code).toBe("identity_unavailable");
       expect(body.error.message).not.toMatch(/widget/i);
     });
+  });
+});
+
+type SecurityDoc = {
+  components: { securitySchemes: Record<string, Record<string, unknown>> };
+  paths: Record<string, Record<string, { security?: Record<string, unknown>[] }>>;
+};
+
+function operations(doc: SecurityDoc) {
+  return Object.values(doc.paths).flatMap((item) => Object.values(item));
+}
+
+describe("contrato-api: seguridad OAuth2", () => {
+  const docs = [
+    buildOpenApiDocument(),
+    buildPlatformOpenApiDocument(),
+    buildSimOpenApiDocument(),
+  ] as unknown as SecurityDoc[];
+
+  it("ningun contrato declara bearerAuth ni platformBearer", () => {
+    for (const doc of docs) {
+      const names = Object.keys(doc.components.securitySchemes);
+      expect(names).not.toContain("bearerAuth");
+      expect(names).not.toContain("platformBearer");
+      expect(["oidcClient", "oidcUser", "widgetSession"]).toEqual(expect.arrayContaining(names));
+    }
+    const [chatbot] = docs;
+    expect(Object.keys(chatbot?.components.securitySchemes ?? {}).sort()).toEqual([
+      "oidcClient",
+      "oidcUser",
+      "widgetSession",
+    ]);
+  });
+
+  it("los flujos llevan los marcadores, nunca una URL real", () => {
+    for (const doc of docs) {
+      const flows = doc.components.securitySchemes.oidcUser?.flows as Record<
+        string,
+        Record<string, string>
+      >;
+      expect(flows.authorizationCode?.authorizationUrl).toBe("https://oidc.invalid/authorize");
+      expect(flows.authorizationCode?.tokenUrl).toBe("https://oidc.invalid/token");
+    }
+  });
+
+  it("el simulador exige usuario", () => {
+    const sim = buildSimOpenApiDocument() as unknown as SecurityDoc;
+    for (const operation of operations(sim)) {
+      expect(operation.security).toEqual([{ oidcUser: [] }]);
+    }
+  });
+
+  it("GET /me admite widget, usuario y cliente", () => {
+    const doc = buildOpenApiDocument() as unknown as SecurityDoc;
+    expect(doc.paths["/me"]?.get?.security).toEqual(ANY_IDENTITY);
+  });
+
+  it("withProviderUrls sustituye sin mutar", () => {
+    const original = buildOpenApiDocument() as unknown as SecurityDoc;
+    const served = withProviderUrls(original, {
+      authorizationEndpoint: "https://idp.test/auth",
+      tokenEndpoint: "https://idp.test/token",
+    });
+    const flows = served.components.securitySchemes.oidcUser?.flows as Record<
+      string,
+      Record<string, string>
+    >;
+    expect(flows.authorizationCode?.authorizationUrl).toBe("https://idp.test/auth");
+    expect(flows.authorizationCode?.tokenUrl).toBe("https://idp.test/token");
+    expect(JSON.stringify(original)).toContain("https://oidc.invalid/authorize");
+    expect(JSON.stringify(served)).not.toContain("oidc.invalid");
+  });
+
+  it("withProviderUrls sin authorization_endpoint quita el flujo de usuario", () => {
+    const served = withProviderUrls(buildOpenApiDocument() as unknown as SecurityDoc, {
+      authorizationEndpoint: null,
+      tokenEndpoint: "https://idp.test/token",
+    });
+    expect(served.components.securitySchemes.oidcUser).toBeUndefined();
+    expect(JSON.stringify(served.paths)).not.toContain("oidcUser");
+    const client = served.components.securitySchemes.oidcClient?.flows as Record<
+      string,
+      Record<string, string>
+    >;
+    expect(client.clientCredentials?.tokenUrl).toBe("https://idp.test/token");
   });
 });

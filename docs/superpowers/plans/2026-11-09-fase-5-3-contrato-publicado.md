@@ -38,33 +38,35 @@
 
 ## File Structure
 
-| Archivo | Responsabilidad |
-| --- | --- |
-| `backend/src/http/openapi-security.ts` (nuevo) | Constantes de esquemas de seguridad, marcadores y `withProviderUrls` |
-| `backend/src/http/openapi*.ts` (modificar) | Usar los esquemas nuevos por operación |
-| `backend/src/modules/auth/infrastructure/oidc-discovery.ts` (modificar) | Exponer `authorizationEndpoint` (nullable) |
-| `backend/src/config/env.ts` (modificar) | `docs: { enabled, oidcClientId }` |
-| `backend/src/composition/docs-wiring.ts` (nuevo) | Ensamblar lo que necesitan las rutas de `/docs` |
-| `backend/src/http/docs/` (nuevo) | Página HTML, lectura de activos, documentos servidos |
-| `backend/src/app/docs/**/route.ts` (nuevo) | Adaptadores de entrada de `/docs` |
-| `backend/scripts/idp-lab/{plan,apply,index}.ts` (modificar) | Cliente `chatbot-newman` y salida para Postman |
-| `backend/tests/db/contrato-rutas/` (nuevo) | Arnés, validador, mundo sembrado, tablas de casos y exenciones |
-| `backend/tests/db/contrato-rutas-*.test.ts` (nuevo) | Ejecutar las tablas y el meta-test de cobertura |
-| `backend/scripts/postman/` (nuevo) | Generador, fragmentos fuente, script de auth, ejecutor Newman |
-| `docs/chatbot-ingenius-360.postman_collection.json` (regenerado) | Colección |
-| `docs/lab.postman_environment.template.json` (nuevo) | Plantilla de entorno sin secretos |
+| Archivo                                                                 | Responsabilidad                                                      |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `backend/src/http/openapi-security.ts` (nuevo)                          | Constantes de esquemas de seguridad, marcadores y `withProviderUrls` |
+| `backend/src/http/openapi*.ts` (modificar)                              | Usar los esquemas nuevos por operación                               |
+| `backend/src/modules/auth/infrastructure/oidc-discovery.ts` (modificar) | Exponer `authorizationEndpoint` (nullable)                           |
+| `backend/src/config/env.ts` (modificar)                                 | `docs: { enabled, oidcClientId }`                                    |
+| `backend/src/composition/docs-wiring.ts` (nuevo)                        | Ensamblar lo que necesitan las rutas de `/docs`                      |
+| `backend/src/http/docs/` (nuevo)                                        | Página HTML, lectura de activos, documentos servidos                 |
+| `backend/src/app/docs/**/route.ts` (nuevo)                              | Adaptadores de entrada de `/docs`                                    |
+| `backend/scripts/idp-lab/{plan,apply,index}.ts` (modificar)             | Cliente `chatbot-newman` y salida para Postman                       |
+| `backend/tests/db/contrato-rutas/` (nuevo)                              | Arnés, validador, mundo sembrado, tablas de casos y exenciones       |
+| `backend/tests/db/contrato-rutas-*.test.ts` (nuevo)                     | Ejecutar las tablas y el meta-test de cobertura                      |
+| `backend/scripts/postman/` (nuevo)                                      | Generador, fragmentos fuente, script de auth, ejecutor Newman        |
+| `docs/chatbot-ingenius-360.postman_collection.json` (regenerado)        | Colección                                                            |
+| `docs/lab.postman_environment.template.json` (nuevo)                    | Plantilla de entorno sin secretos                                    |
 
 ---
 
 ### Task 1: esquemas de seguridad OAuth2 en los tres contratos
 
 **Files:**
+
 - Create: `backend/src/http/openapi-security.ts`
 - Modify: `backend/src/http/openapi.ts`, `backend/src/http/openapi-paths-chatbot.ts`, `backend/src/http/openapi-paths-conversation.ts`, `backend/src/http/openapi-platform.ts`, `backend/src/http/openapi-sim.ts`
 - Regenerate: `backend/openapi.json`, `backend/openapi-platform.json`, `backend/openapi-sim.json`
 - Test: `backend/tests/contrato-api.test.ts`
 
 **Interfaces:**
+
 - Produces (en `openapi-security.ts`):
   - `export const OAUTH_PLACEHOLDERS = { authorizationUrl: "https://oidc.invalid/authorize", tokenUrl: "https://oidc.invalid/token" } as const;`
   - `export const SECURITY_SCHEMES: Record<"oidcUser" | "oidcClient" | "widgetSession", unknown>`: `oidcUser` = `{ type: "oauth2", flows: { authorizationCode: { authorizationUrl, tokenUrl, scopes: { openid: "Identidad OIDC" } } } }`; `oidcClient` = `{ type: "oauth2", flows: { clientCredentials: { tokenUrl, scopes: {} } } }`; `widgetSession` = `{ type: "http", scheme: "bearer", bearerFormat: "JWT", description: "Token devuelto por POST /widget/sessions" }`.
@@ -73,6 +75,7 @@
   - `export function withProviderUrls<T>(document: T, endpoints: ProviderEndpoints): T`: copia profunda que sustituye los marcadores en `components.securitySchemes`. Si `authorizationEndpoint` es `null`, elimina el flujo `authorizationCode` de `oidcUser` (y el esquema si se queda sin flujos, junto con sus usos en `security`). No muta la entrada.
 
 Asignación por operación (lo que el código ya exige; ver `privateRoute([...])` de cada `route.ts`):
+
 - `/api/v1`: `operator`/`admin` → `USER`; `GET /widget/conversation` y `POST /widget/conversation/messages` → `WIDGET`; `GET /me` → `ANY_IDENTITY`; `/health`, `/auth/backchannel-logout`, `/widget/sessions`, `/widget/sessions/refresh` → `[]`.
 - `/api/sim/v1`: las 24 → `USER`.
 - `/api/platform/v1`: las 4 → `USER_OR_CLIENT` (`platform-lab` por PKCE o `chatbot-platform` por `client_credentials`).
@@ -93,12 +96,14 @@ Asignación por operación (lo que el código ya exige; ver `privateRoute([...])
 ### Task 2: discovery con `authorization_endpoint` y configuración de `/docs`
 
 **Files:**
+
 - Modify: `backend/src/modules/auth/infrastructure/oidc-discovery.ts`, `backend/src/config/env.ts`
 - Create: `backend/src/composition/docs-wiring.ts`
 - Modify: el composition root para exponer `docs` (mismo patrón que `authWiring`)
 - Test: `backend/tests/config-oidc.test.ts` (o un `tests/docs-config.test.ts` nuevo), `backend/tests/oidc-verificador.test.ts` si cubre el discovery, `backend/tests/docs-wiring.test.ts`
 
 **Interfaces:**
+
 - Consumes: `ProviderEndpoints`, `withProviderUrls` (tarea 1).
 - Produces:
   - `OidcDiscovery` gana `authorizationEndpoint: string | null` (opcional en el documento del proveedor; `jwksUri` y `tokenEndpoint` siguen obligatorios).
@@ -118,12 +123,14 @@ Asignación por operación (lo que el código ya exige; ver `privateRoute([...])
 ### Task 3: rutas de `/docs` con Swagger UI
 
 **Files:**
+
 - Create: `backend/src/http/docs/page.ts` (HTML), `backend/src/http/docs/assets.ts` (lectura de `swagger-ui-dist`), `backend/src/http/docs/guard.ts` (404 si apagado + CSP)
 - Create: `backend/src/app/docs/route.ts` (`GET /docs`), `backend/src/app/docs/openapi/[name]/route.ts` (`GET /docs/openapi/{name}` con `name` = `chatbot.json` | `platform.json` | `sim.json`), `backend/src/app/docs/assets/[file]/route.ts` (`GET /docs/assets/{file}`), `backend/src/app/docs/oauth2-redirect.html/route.ts` (página de retorno OAuth2 de Swagger UI)
 - Modify: `backend/package.json` (dependencia `swagger-ui-dist`), `backend/next.config.ts` (`outputFileTracingIncludes` para que los activos entren en `standalone`)
 - Test: `backend/tests/http/docs.test.ts`
 
 **Interfaces:**
+
 - Consumes: `DocsWiring` vía `getContainer().docs` (tarea 2).
 - Produces:
   - `export function docsPage(input: { contracts: readonly DocsContract[]; oidcClientId: string }): string`: HTML con `<link>`/`<script>` solo a `/docs/assets/...`, `SwaggerUIBundle({ urls: [{ url: "/docs/openapi/<name>.json", name: <title> }...], oauth2RedirectUrl: <origen>/docs/oauth2-redirect.html })` y `ui.initOAuth({ clientId, usePkceWithAuthorizationCodeGrant: true })`. El script de arranque va en un activo propio (`/docs/assets/init.js`) que lee la configuración de un `<script type="application/json" id="docs-config">`, para que la CSP no necesite `unsafe-inline` en scripts.
@@ -149,10 +156,12 @@ Asignación por operación (lo que el código ya exige; ver `privateRoute([...])
 ### Task 4: cliente `chatbot-newman` en el laboratorio
 
 **Files:**
+
 - Modify: `backend/scripts/idp-lab/plan.ts`, `backend/scripts/idp-lab/apply.ts`, `backend/scripts/idp-lab/index.ts`
 - Test: `backend/tests/idp-lab-plan.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `ClientPlan` gana `directAccessGrants?: true`. `clientBody` usa `directAccessGrantsEnabled: plan.directAccessGrants === true`.
   - En `interactiveClients`: `{ clientId: "chatbot-newman", public: false, redirectUris: [], directAccessGrants: true, mappers: [] }` (recibe el client scope por defecto, como los demás).
@@ -171,12 +180,15 @@ Asignación por operación (lo que el código ya exige; ver `privateRoute([...])
 ### Task 5: arnés de `contrato-rutas` (validador, mundo, tablas)
 
 **Files:**
+
 - Create: `backend/tests/db/contrato-rutas/validator.ts`, `backend/tests/db/contrato-rutas/world.ts`, `backend/tests/db/contrato-rutas/types.ts`, `backend/tests/db/contrato-rutas/exemptions.ts`
 - Create: `backend/tests/db/contrato-rutas-cobertura.test.ts`
 - Modify: `backend/package.json` (devDependencies `ajv`, `ajv-formats`)
 
 **Interfaces:**
+
 - Produces (`types.ts`):
+
   ```ts
   export type Surface = "chatbot" | "platform" | "sim";
   export type HttpMethod = "get" | "post" | "put" | "patch" | "delete";
@@ -211,15 +223,18 @@ Asignación por operación (lo que el código ya exige; ver `privateRoute([...])
 ### Task 6: casos de `contrato-rutas` del chatbot
 
 **Files:**
+
 - Create: `backend/tests/db/contrato-rutas/cases-chatbot-panel.ts`, `backend/tests/db/contrato-rutas/cases-chatbot-widget.ts` (si alguno pasa de 400 líneas, partir por recurso)
 - Create: `backend/tests/db/contrato-rutas-chatbot.test.ts`
 - Modify: `backend/tests/db/contrato-rutas/exemptions.ts`, `backend/tests/db/contrato-rutas-cobertura.test.ts`
 
 **Interfaces:**
+
 - Consumes: `ContractCase`, `ContractWorld`, `seedContractWorld`, `createContractValidator`, `EXEMPTIONS`, `CHECKED_STATUSES` (tarea 5).
 - Produces: `export const CHATBOT_PANEL_CASES: readonly ContractCase[]` y `export const CHATBOT_WIDGET_CASES: readonly ContractCase[]`.
 
 Reglas de los casos:
+
 - Por cada una de las 28 operaciones de `buildOpenApiDocument()`: un caso del 2xx declarado y uno por cada status de `CHECKED_STATUSES` declarado que sea reproducible. Cómo reproducir los habituales: `401` sin `Authorization`; `403` con un token de rol no admitido (p. ej. `operator` en una escritura de `admin`, `widget` en el panel); `404` con un id de la clínica B usando token de la A; `422` con cuerpo o query inválidos; `409` con la misma `Idempotency-Key` y otro cuerpo, o el conflicto de dominio que la operación declare; `429` en `POST /widget/sessions` con `widget_sessions_per_ip_per_minute` = 1 en la clínica del caso; `400` donde se declare.
 - Lo no reproducible va a `EXEMPTIONS` con motivo.
 - Cada caso abre su propio estado si lo muta (crea antes lo que borra); el `beforeAll` del archivo siembra el mundo una vez y `beforeEach` no trunca (los casos no dependen entre sí salvo por lo que crean ellos mismos).
@@ -234,11 +249,13 @@ Reglas de los casos:
 ### Task 7: casos de `contrato-rutas` de plataforma y simulador
 
 **Files:**
+
 - Create: `backend/tests/db/contrato-rutas/cases-platform.ts`, `backend/tests/db/contrato-rutas/cases-sim.ts` (partir por recurso si pasa de 400 líneas)
 - Create: `backend/tests/db/contrato-rutas-platform.test.ts`, `backend/tests/db/contrato-rutas-sim.test.ts`
 - Modify: `exemptions.ts`, `contrato-rutas-cobertura.test.ts`
 
 **Interfaces:**
+
 - Consumes: lo de la tarea 5 y el patrón de la tarea 6.
 - Produces: `PLATFORM_CASES`, `SIM_CASES` (mismo tipo).
 
@@ -253,6 +270,7 @@ Notas: las 4 de plataforma usan `world.tokens.platform` (y `403` con un token `a
 ### Task 8: generador de la colección Postman
 
 **Files:**
+
 - Create: `backend/scripts/postman/generate.ts` (CLI), `backend/scripts/postman/build-collection.ts`, `backend/scripts/postman/examples.ts`, `backend/scripts/postman/auth.ts`, `backend/scripts/postman/environment.ts`
 - Create: `backend/scripts/postman/fragments/` (vacío salvo un `index.ts` que exporta `[]` por ahora; la tarea 9 lo llena)
 - Generate: `docs/chatbot-ingenius-360.postman_collection.json`, `docs/lab.postman_environment.template.json`
@@ -260,6 +278,7 @@ Notas: las 4 de plataforma usan `world.tokens.platform` (y `403` con un token `a
 - Test: `backend/tests/postman-generador.test.ts`; `backend/tests/contrato-api.test.ts`
 
 **Interfaces:**
+
 - Consumes: los tres builders OpenAPI.
 - Produces:
   - `export type AuthProfile = "none" | "widget" | { user: "admin_a" | "operator_a" | "admin_b" | "operator_b" | "platform_lab" } | { client: "service_a" | "service_b" | "platform" };`
@@ -287,11 +306,13 @@ Notas: las 4 de plataforma usan `world.tokens.platform` (y `403` con un token `a
 ### Task 9: fragmentos — widget E2E, ciclo FHIR, maestros y limpieza
 
 **Files:**
+
 - Create: `backend/scripts/postman/fragments/setup.ts`, `widget-e2e.ts`, `fhir.ts`, `sim-crud.ts`, `platform.ts`, `cleanup.ts`, y `fragments/index.ts` (orden)
 - Regenerate: la colección
 - Test: `backend/tests/postman-fragmentos.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Fragment`, `authPrerequest` (tarea 8).
 - Produces: `export const FRAGMENTS: readonly Fragment[]` en este orden y con estos nombres de carpeta:
   1. `setup`: con `admin_a`/`admin_b`, `GET /api/v1/bot-config` fija `widget_key_a`/`_b`, `widget_origin_a`/`_b` (primer origen permitido) y guarda la configuración en `bot_config_a_before`; `GET /fhir/Slot?status=free&_count=1` (token `service_a`/`_b`) fija `free_slots_a_before`/`_b` desde `Bundle.total`.
@@ -319,11 +340,13 @@ Notas: las 4 de plataforma usan `world.tokens.platform` (y `403` con un token `a
 ### Task 10: ejecutor Newman, documentación y política
 
 **Files:**
+
 - Create: `backend/scripts/postman/run.ts`
 - Modify: `backend/package.json` (`"postman:run": "tsx scripts/postman/run.ts"`, devDependency `newman`)
 - Modify: `README.md`, `GOBERNANZA.md` (§5.1 y la regla de `/docs` y password grant, junto a §1.3), `ROADMAP.md` («dieciocho» → «diecinueve» suites), `CLAUDE.md` (lista de suites; el estado de la Fase 5 se actualiza en la tarea 11), `.gitignore`
 
 **Interfaces:**
+
 - Consumes: `newmanFolders`, `FRAGMENTS` (tareas 8 y 9).
 - Produces: `run.ts` acepta `--env <ruta>` (obligatorio; sin él, sale con código 1 y un mensaje en español) y llama a `newman.run({ collection, environment, folder: newmanFolders(FRAGMENTS), reporters: ["cli"] })`; sale con código 1 si hay fallos.
 
@@ -339,7 +362,7 @@ Notas: las 4 de plataforma usan `world.tokens.platform` (y `403` con un token `a
   - `npm test`
   - `npm --prefix backend run test:db`
   - `npm --prefix backend run build`
-  Expected: todo en verde.
+    Expected: todo en verde.
 - [ ] **Step 5: Commit** `docs: contrato publicado, Newman y politica de /docs`.
 
 ### Task 11: verificación en el laboratorio y cierre

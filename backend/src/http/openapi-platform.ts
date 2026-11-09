@@ -1,3 +1,4 @@
+import { SECURITY_SCHEMES, USER_OR_CLIENT } from "./openapi-security";
 import {
   createdJson,
   ERROR_SCHEMA,
@@ -11,10 +12,11 @@ import {
 
 /**
  * Contrato de /api/platform/v1. La plataforma no pertenece a ningun tenant: se autentica
- * con un bearer del proveedor de identidad con rol `platform` (OAuth2 llega en la 5.3). `npm run openapi:generate` lo vuelca
- * en `openapi-platform.json`.
+ * con el proveedor de identidad y rol `platform`: un usuario por PKCE (`oidcUser`) o un cliente
+ * de maquina por client_credentials (`oidcClient`). `npm run openapi:generate` lo vuelca en
+ * `openapi-platform.json`.
  */
-const platformAuth = [{ platformBearer: [] }];
+const platformAuth = USER_OR_CLIENT;
 const readErrors = errorResponses([
   "unauthorized",
   "forbidden",
@@ -116,18 +118,18 @@ export function buildPlatformOpenApiDocument(): Record<string, unknown> {
       version: "0.1.0",
       description:
         "Alta de tenants y credenciales del widget de cada clinica. Autenticada con un " +
-        "bearer JWT del proveedor de identidad con rol `platform`.",
+        "token OAuth2 del proveedor de identidad con rol `platform` (usuario o cliente de maquina).",
     },
     servers: [{ url: "/api/platform/v1" }],
     components: {
-      securitySchemes: { platformBearer: { type: "http", scheme: "bearer", bearerFormat: "JWT" } },
+      securitySchemes: SECURITY_SCHEMES,
       schemas: SCHEMAS,
     },
     paths: {
       "/me": {
         get: {
           operationId: "getPlatformIdentity",
-          description: "Identidad que el backend resolvio del bearer `platform`.",
+          description: "Identidad que el backend resolvio del token `platform`.",
           security: platformAuth,
           parameters: [REQUEST_ID_PARAMETER],
           responses: {

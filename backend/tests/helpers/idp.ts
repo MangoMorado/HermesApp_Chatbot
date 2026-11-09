@@ -234,6 +234,7 @@ async function handleIdp(request: Request): Promise<Response> {
       issuer: trailingSlash ? `${TEST_OIDC.issuer}/` : TEST_OIDC.issuer,
       jwks_uri: `${TEST_OIDC.issuer}/protocol/openid-connect/certs`,
       token_endpoint: `${TEST_OIDC.issuer}/protocol/openid-connect/token`,
+      authorization_endpoint: `${TEST_OIDC.issuer}/protocol/openid-connect/auth`,
     });
   }
   if (path === "/protocol/openid-connect/certs") {

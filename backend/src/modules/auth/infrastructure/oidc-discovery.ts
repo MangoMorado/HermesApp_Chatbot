@@ -1,6 +1,11 @@
 import { IdentityUnavailableError } from "../domain/machine-credential-error";
 
-export type OidcDiscovery = { jwksUri: string; tokenEndpoint: string };
+export type OidcDiscovery = {
+  jwksUri: string;
+  tokenEndpoint: string;
+  /** Opcional: un proveedor que solo hace client_credentials no lo publica. */
+  authorizationEndpoint: string | null;
+};
 
 export type OidcDiscoverySettings = { readonly issuer: string; readonly httpTimeoutMs: number };
 
@@ -10,6 +15,11 @@ function readUrl(document: Record<string, unknown>, field: string): string {
     throw new Error(`El discovery OIDC no trae ${field}`);
   }
   return value;
+}
+
+function optionalUrl(document: Record<string, unknown>, field: string): string | null {
+  const value = document[field];
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 /** Solo aqui se quita la barra final: el issuer se compara tal cual contra `iss`. */
@@ -34,6 +44,7 @@ async function fetchDiscovery(
   return {
     jwksUri: readUrl(document, "jwks_uri"),
     tokenEndpoint: readUrl(document, "token_endpoint"),
+    authorizationEndpoint: optionalUrl(document, "authorization_endpoint"),
   };
 }
 

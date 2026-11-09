@@ -30,3 +30,6 @@ frontend/public/widget.js
 
 # Documentos personales de prácticas (CUN): información sensible, no se versiona.
 docs/CUN/
+
+# Entornos de Postman con valores (la plantilla *.template.json si se versiona)
+*.postman_environment.json

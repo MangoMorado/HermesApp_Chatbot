@@ -102,6 +102,7 @@ frontend/tests/*.test.ts                         C  9 archivos
 ### Task 1: Contrato etiquetado, cliente orval del widget y `fetcher`
 
 **Files:**
+
 - Modify: `backend/src/http/openapi-paths-chatbot.ts` (operaciones `openWidgetSession`, `refreshWidgetSession`)
 - Modify: `backend/src/http/openapi-paths-conversation.ts` (operaciones `getWidgetConversation`, `sendWidgetMessage`)
 - Generated: `backend/openapi.json`, `frontend/src/api/**`, `frontend/src/widget/api/**`
@@ -110,6 +111,7 @@ frontend/tests/*.test.ts                         C  9 archivos
 - Test: `frontend/tests/widget-fetcher.test.ts`
 
 **Interfaces:**
+
 - Consumes: nada de tareas anteriores.
 - Produces:
   - `widgetFetcher<T>(url: string, options?: WidgetRequestInit): Promise<T>` y `type WidgetRequestInit = RequestInit & { apiBase?: string; token?: string }`.
@@ -314,7 +316,11 @@ export async function widgetFetcher<T>(url: string, options?: WidgetRequestInit)
   }
   const data = parseJson(await response.text());
   if (!response.ok) {
-    throw new WidgetApiError(response.status, isRecord(data) ? data : null, `HTTP ${response.status}`);
+    throw new WidgetApiError(
+      response.status,
+      isRecord(data) ? data : null,
+      `HTTP ${response.status}`,
+    );
   }
   if (data === undefined) {
     throw new WidgetApiError(response.status, null, "Respuesta sin JSON");
@@ -554,10 +560,12 @@ git commit -m "feat(widget): cliente orval propio del chat con mutator de URL ab
 ### Task 2: Sesión del paciente (`session.ts`)
 
 **Files:**
+
 - Create: `frontend/src/widget/session.ts`
 - Test: `frontend/tests/widget-session.test.ts`
 
 **Interfaces:**
+
 - Consumes: `WidgetApi`, `WidgetSession` de `./widget-api`; `WidgetApiError` de `./fetcher`.
 - Produces:
   - `type SessionStorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">`.
@@ -773,7 +781,8 @@ function parseStored(raw: string | null): StoredSession | null {
   }
   try {
     const value = JSON.parse(raw) as { token?: unknown; expires_at?: unknown } | null;
-    const expiresAt = typeof value?.expires_at === "string" ? Date.parse(value.expires_at) : Number.NaN;
+    const expiresAt =
+      typeof value?.expires_at === "string" ? Date.parse(value.expires_at) : Number.NaN;
     return typeof value?.token === "string" && Number.isFinite(expiresAt)
       ? { token: value.token, expiresAt }
       : null;
@@ -898,10 +907,12 @@ git commit -m "feat(widget): sesion del paciente con restauracion, renovacion y 
 ### Task 3: Cliente del chat (`chat-client.ts`)
 
 **Files:**
+
 - Create: `frontend/src/widget/chat-client.ts`
 - Test: `frontend/tests/widget-chat-client.test.ts`
 
 **Interfaces:**
+
 - Consumes: `WidgetApi`, `ConversationHistory`, `ConversationOption`, `ConversationMessageInput` de `./widget-api`; `SessionManager` de `./session`; `WidgetApiError` de `./fetcher`.
 - Produces:
   - `type ChatMessage = { id: string; author: "bot" | "patient"; text: string }`.
@@ -1323,10 +1334,12 @@ git commit -m "feat(widget): cliente del chat con reintento idempotente, eco del
 ### Task 4: Interfaz del widget (`failure`, `use-chat`, `styles`, `chat-widget`)
 
 **Files:**
+
 - Create: `frontend/src/widget/failure.ts`, `frontend/src/widget/use-chat.ts`, `frontend/src/widget/styles.ts`, `frontend/src/widget/chat-widget.tsx`
 - Test: `frontend/tests/widget-failure.test.ts`
 
 **Interfaces:**
+
 - Consumes: `createWidgetApi`, `WidgetConfig`, `ConversationOption` (`./widget-api`); `createSessionManager`, `browserStorage` (`./session`); `createChatClient`, `ChatClient`, `ChatView`, `ChatMessage`, `ChatInputMode`, `Outgoing`, `SendOutcome`, `EMPTY_VIEW` (`./chat-client`); `WidgetApiError` (`./fetcher`).
 - Produces:
   - `type Failure = { text: string; terminal: boolean; waitSeconds: number }` y `describeFailure(error: unknown): Failure`.
@@ -1964,12 +1977,14 @@ git commit -m "feat(widget): interfaz del chat con estados de fallo, aviso de tu
 ### Task 5: Grupos de rutas, `PUBLIC_BACKEND_URL` y página `/widget` (iframe)
 
 **Files:**
+
 - Modify: `frontend/src/app/layout.tsx`, `frontend/src/config/env.ts`, `frontend/src/app/globals.css`, `frontend/.env.example`, `docker-compose.yml`
 - Create: `frontend/src/app/(console)/layout.tsx`, `frontend/src/app/(embed)/widget/page.tsx`
 - Rename: `frontend/src/app/page.tsx`, `frontend/src/app/panel/`, `frontend/src/app/simulador/` → dentro de `frontend/src/app/(console)/`
 - Test: `frontend/tests/env.test.ts`
 
 **Interfaces:**
+
 - Consumes: `ChatWidget` de `@/widget/chat-widget` (Tarea 4).
 - Produces: `publicBackendUrl(): string` en `@/config/env` (sin barra final; por defecto `http://localhost:3001`). Grupo `(console)` con la cabecera del panel; grupo `(embed)` sin ella. Ruta `/widget?key=<clave>`.
 
@@ -2006,7 +2021,6 @@ Expected: FAIL — `publicBackendUrl` no está exportada.
 Añadir al final de `frontend/src/config/env.ts`:
 
 ```ts
-
 /**
  * URL del backend alcanzable **desde el navegador**: el widget habla directo con él por CORS.
  * Distinta de `BACKEND_URL`, que puede ser una dirección interna de la red de contenedores.
@@ -2104,7 +2118,6 @@ export default async function WidgetPage({ searchParams }: Props) {
 Añadir al final de `frontend/src/app/globals.css`:
 
 ```css
-
 /* ---------- Página incrustable (/widget) ---------- */
 
 .embed-frame {
@@ -2135,9 +2148,9 @@ PUBLIC_BACKEND_URL=http://localhost:3001
 En `docker-compose.yml`, servicio `frontend`, `environment` queda:
 
 ```yaml
-      NODE_ENV: production
-      BACKEND_URL: http://backend:3001
-      PUBLIC_BACKEND_URL: ${PUBLIC_BACKEND_URL:-http://localhost:3001}
+NODE_ENV: production
+BACKEND_URL: http://backend:3001
+PUBLIC_BACKEND_URL: ${PUBLIC_BACKEND_URL:-http://localhost:3001}
 ```
 
 - [ ] **Step 7: Verificar que las rutas siguen en su sitio**
@@ -2162,11 +2175,13 @@ git commit -m "feat(frontend): grupos de rutas consola/embebido y pagina /widget
 ### Task 6: Script incrustable (`widget.js`)
 
 **Files:**
+
 - Create: `frontend/src/widget/embed-config.ts`, `frontend/src/widget/embed.tsx`, `frontend/scripts/build-widget.mjs`, `frontend/scripts/serve-host.mjs`
 - Modify: `frontend/package.json` (+ `frontend/package-lock.json`), `.gitignore`
 - Test: `frontend/tests/widget-embed-config.test.ts`
 
 **Interfaces:**
+
 - Consumes: `ChatWidget` (Tarea 4), `WidgetConfig` (Tarea 1).
 - Produces:
   - `HOST_ID = "ingenius360-widget"`.
@@ -2289,7 +2304,9 @@ function mount(): void {
   const host = document.createElement("div");
   host.id = HOST_ID;
   document.body.appendChild(host);
-  createRoot(host.attachShadow({ mode: "open" })).render(<ChatWidget {...config} mode="floating" />);
+  createRoot(host.attachShadow({ mode: "open" })).render(
+    <ChatWidget {...config} mode="floating" />,
+  );
 }
 
 if (document.body) {
@@ -2415,10 +2432,12 @@ git commit -m "feat(widget): script incrustable con Shadow DOM empaquetado con e
 ### Task 7: Consola `/chat`
 
 **Files:**
+
 - Create: `frontend/src/lib/use-origin.ts`, `frontend/src/lib/use-bot-config.ts`, `frontend/src/components/chat/chat-console.tsx`, `frontend/src/app/(console)/chat/page.tsx`
 - Modify: `frontend/src/app/globals.css`
 
 **Interfaces:**
+
 - Consumes: `ChatWidget` (Tarea 4); `browserStorage`, `clearStoredSession` (Tarea 2); `publicBackendUrl` (Tarea 5); del cliente generado `getBotConfig`, `addAllowedOrigin` (`@/api/default/default`) y el tipo `BotConfig` (`@/api/models`); `useToken`, `useIdentity`, `useAction`, `idempotent`, `ErrorBox`, `Field` existentes.
 - Produces:
   - `useOrigin(): string` — `window.location.origin` en el cliente, `""` en el servidor.
@@ -2626,6 +2645,7 @@ export function ChatConsole({ apiBase }: { readonly apiBase: string }) {
 ```
 
 Notas para el implementador:
+
 - La clave escrita **no** se aplica tecla a tecla: cada cambio de `key` del widget abre una sesión, y la apertura tiene rate limit. Se aplica al enviar el formulario.
 - «Nueva sesión» borra la sesión guardada de esa clave y remonta el widget (`run`).
 
@@ -2650,8 +2670,8 @@ export default function ChatPage() {
         <div>
           <h1>Chat</h1>
           <p>
-            Consola de pruebas del widget. Habla directo con el backend por CORS, igual que el
-            sitio de un tenant: no usa el token del panel, sino una sesión de widget.
+            Consola de pruebas del widget. Habla directo con el backend por CORS, igual que el sitio
+            de un tenant: no usa el token del panel, sino una sesión de widget.
           </p>
         </div>
       </div>
@@ -2664,7 +2684,6 @@ export default function ChatPage() {
 Añadir al final de `frontend/src/app/globals.css`:
 
 ```css
-
 /* ---------- Consola del chat ---------- */
 
 .chat-stage {
@@ -2688,11 +2707,13 @@ git commit -m "feat(frontend): consola /chat sobre el widget con aviso de origen
 ### Task 8: Página `/panel/conocimiento`
 
 **Files:**
+
 - Create: `frontend/src/lib/knowledge-draft.ts`, `frontend/src/components/panel/use-knowledge.ts`, `frontend/src/components/panel/knowledge-form.tsx`, `frontend/src/components/panel/knowledge-board.tsx`, `frontend/src/app/(console)/panel/conocimiento/page.tsx`
 - Modify: `frontend/src/app/globals.css`
 - Test: `frontend/tests/knowledge-draft.test.ts`
 
 **Interfaces:**
+
 - Consumes: del cliente generado `listKnowledgeEntries`, `createKnowledgeEntry`, `updateKnowledgeEntry`, `deleteKnowledgeEntry` (`@/api/default/default`) y los tipos `KnowledgeEntry`, `KnowledgeEntryInput` (`@/api/models`); `Board`, `Column`, `Row`, `Flap`, `Field`, `ErrorBox`, `useAction`, `idempotent`, `text`, `useToken`, `useIdentity` existentes.
 - Produces:
   - `parseKeywords(raw: string): string[]`, `formatKeywords(list: readonly string[]): string`.
@@ -3209,7 +3230,6 @@ export default function ConocimientoPage() {
 Añadir al final de `frontend/src/app/globals.css`:
 
 ```css
-
 /* ---------- Formularios largos ---------- */
 
 .input-area {
@@ -3252,11 +3272,13 @@ git commit -m "feat(frontend): pagina de base de conocimiento con alta, edicion 
 ### Task 9: Página `/panel/bot`
 
 **Files:**
+
 - Create: `frontend/src/lib/embed-snippets.ts`, `frontend/src/components/panel/bot-texts.tsx`, `frontend/src/components/panel/bot-params.tsx`, `frontend/src/components/panel/bot-origins.tsx`, `frontend/src/components/panel/bot-keys.tsx`, `frontend/src/components/panel/bot-config-screen.tsx`, `frontend/src/app/(console)/panel/bot/page.tsx`
 - Modify: `frontend/src/app/globals.css`
 - Test: `frontend/tests/embed-snippets.test.ts`
 
 **Interfaces:**
+
 - Consumes: `useBotConfig`, `BotSectionProps` (`@/lib/use-bot-config`, Tarea 7); `useOrigin` (Tarea 7); `publicBackendUrl` (Tarea 5); del cliente generado `updateBotConfig`, `rotateWidgetKey`, `addAllowedOrigin`, `removeAllowedOrigin`; `When` de `@/components/ui/cells`; `Field`, `ErrorBox`, `useAction`, `idempotent`, `useIdentity`, `useToken`.
 - Produces: `embedSnippets(input: { frontendOrigin: string; apiBase: string; widgetKey: string }): { script: string; iframe: string }`. Ruta `/panel/bot`.
 
@@ -3283,9 +3305,10 @@ describe("fragmentos para incrustar el widget", () => {
 
   it("el iframe apunta a /widget con la clave codificada", () => {
     expect(snippets.iframe).toContain('src="https://chat.ingenius360.co/widget?key=wk_abc123"');
-    expect(embedSnippets({ frontendOrigin: "https://f", apiBase: "https://b", widgetKey: "a b&c" }).iframe).toContain(
-      "key=a%20b%26c",
-    );
+    expect(
+      embedSnippets({ frontendOrigin: "https://f", apiBase: "https://b", widgetKey: "a b&c" })
+        .iframe,
+    ).toContain("key=a%20b%26c");
   });
 });
 ```
@@ -3641,15 +3664,19 @@ function Snippet({ title, code }: { readonly title: string; readonly code: strin
   );
 }
 
-function Snippets({ widgetKey, apiBase }: { readonly widgetKey: string; readonly apiBase: string }) {
+function Snippets({
+  widgetKey,
+  apiBase,
+}: {
+  readonly widgetKey: string;
+  readonly apiBase: string;
+}) {
   const frontendOrigin = useOrigin();
   const snippets = embedSnippets({ frontendOrigin, apiBase, widgetKey });
   return (
     <>
       <Snippet title="Script (recomendado)" code={snippets.script} />
-      <p className="hint">
-        Añade el origen del sitio donde lo pegues a los orígenes permitidos.
-      </p>
+      <p className="hint">Añade el origen del sitio donde lo pegues a los orígenes permitidos.</p>
       <Snippet title="Iframe" code={snippets.iframe} />
       <p className="hint">
         El iframe habla con el backend desde <span className="data">{frontendOrigin}</span>: ese
@@ -3797,7 +3824,6 @@ export default function BotPage() {
 Añadir al final de `frontend/src/app/globals.css`:
 
 ```css
-
 /* ---------- Configuración del bot ---------- */
 
 .setting-row {
@@ -3857,10 +3883,12 @@ git commit -m "feat(frontend): pagina de configuracion del bot (clave, origenes,
 ### Task 10: Bandeja del simulador (`/simulador/bandeja`)
 
 **Files:**
+
 - Create: `frontend/src/components/simulador/inbox-board.tsx`, `frontend/src/app/(console)/simulador/bandeja/page.tsx`
 - Modify: `frontend/src/app/globals.css`
 
 **Interfaces:**
+
 - Consumes: del cliente generado del simulador `listSimInbox`, `approveSimInboxRequest`, `rejectSimInboxRequest` (`@/sim/default/default`) y el tipo `InboxRequest` (`@/sim/models`); `Board`, `Column`, `Row`, `When`, `ErrorBox`, `ApiClientError`, `useAction`, `idempotent`, `text`, `useToken`.
 - Produces: ruta `/simulador/bandeja`.
 
@@ -3882,11 +3910,7 @@ import { text } from "@/lib/format";
 import { idempotent } from "@/lib/idempotency";
 import { useAction } from "@/lib/use-action";
 import { useToken } from "@/lib/use-session";
-import {
-  approveSimInboxRequest,
-  listSimInbox,
-  rejectSimInboxRequest,
-} from "@/sim/default/default";
+import { approveSimInboxRequest, listSimInbox, rejectSimInboxRequest } from "@/sim/default/default";
 import type { InboxRequest } from "@/sim/models";
 
 const PAGE_SIZE = 50;
@@ -4054,8 +4078,8 @@ export default function BandejaPage() {
         <div>
           <h1>Bandeja del simulador</h1>
           <p>
-            Solicitudes de pre-agenda que el chat originó. Aprobar confirma la cita en el
-            simulador de Hermes; rechazar libera el cupo. Rol admin; se apaga en producción.
+            Solicitudes de pre-agenda que el chat originó. Aprobar confirma la cita en el simulador
+            de Hermes; rechazar libera el cupo. Rol admin; se apaga en producción.
           </p>
         </div>
       </div>
@@ -4068,7 +4092,6 @@ export default function BandejaPage() {
 Añadir al final de `frontend/src/app/globals.css`:
 
 ```css
-
 /* ---------- Acciones por fila ---------- */
 
 .row-actions {
@@ -4094,11 +4117,13 @@ git commit -m "feat(frontend): bandeja del simulador con aprobar y rechazar soli
 ### Task 11: Navegación de siete destinos
 
 **Files:**
+
 - Create: `frontend/src/components/shell/platforms.ts`
 - Modify: `frontend/src/components/shell/marquee.tsx`, `frontend/src/app/(console)/page.tsx`, `frontend/src/app/globals.css`
 - Test: `frontend/tests/platforms.test.ts`
 
 **Interfaces:**
+
 - Consumes: rutas creadas en las Tareas 5, 7, 8, 9 y 10.
 - Produces: `PLATFORMS` (7 destinos con `href`, `label`, `key`, `detail`, `roles`) y `SESSION_SHORTCUT = "0"`.
 
@@ -4242,16 +4267,18 @@ import { PLATFORMS, SESSION_SHORTCUT } from "@/components/shell/platforms";
 3. En `HomePage`, el `map` queda:
 
 ```tsx
-        {PLATFORMS.map((item) => (
-          <Link key={item.href} href={item.href} className="departure">
-            <span className="departure-key">{item.key}</span>
-            <div>
-              <strong>{item.label}</strong>
-              <span>{item.detail}</span>
-            </div>
-            <span className="departure-roles">{item.roles}</span>
-          </Link>
-        ))}
+{
+  PLATFORMS.map((item) => (
+    <Link key={item.href} href={item.href} className="departure">
+      <span className="departure-key">{item.key}</span>
+      <div>
+        <strong>{item.label}</strong>
+        <span>{item.detail}</span>
+      </div>
+      <span className="departure-roles">{item.roles}</span>
+    </Link>
+  ));
+}
 ```
 
 - [ ] **Step 5: Que siete destinos quepan en la cabecera**
@@ -4288,10 +4315,12 @@ git commit -m "feat(frontend): navegacion de siete destinos y sesion en la tecla
 ### Task 12: Revisión de UI, recorrido manual, documentación y puertas finales
 
 **Files:**
+
 - Modify: `docs/superpowers/specs/2026-10-13-fase-3-4-frontend-chat-design.md`, `README.md`, `CLAUDE.md`, `frontend/AGENTS.md`, `PRODUCT.md`
 - Modify (solo si la revisión o el recorrido encuentran defectos): archivos de las Tareas 4–11
 
 **Interfaces:**
+
 - Consumes: todo lo anterior.
 - Produces: rama lista para que el usuario abra la PR.
 
@@ -4355,20 +4384,21 @@ En `docs/superpowers/specs/2026-10-13-fase-3-4-frontend-chat-design.md`:
 - [ ] **Step 6: Actualizar la documentación del repo**
 
 `README.md`:
+
 - Línea de estado (cerca de la línea 9): Fases 1 y 2 cerradas; Fase 3: 3.1, 3.2 y 3.3 en `main`; 3.4 implementada en `fase-3-4-frontend-chat`.
 - Tabla de **Variables**: añadir la fila `| \`PUBLIC_BACKEND_URL\` | frontend | URL del backend alcanzable desde el navegador; la usa el widget del chat (CORS). Por defecto \`http://localhost:3001\` |`.
 - Sección nueva `## Widget del chat`, después de «Autenticación», con este contenido:
 
-````markdown
+```markdown
 ## Widget del chat
 
 Un solo widget con tres montajes; los tres hablan directo con el backend por CORS.
 
-| Montaje | Cómo se usa | Origen que ve el backend |
-| --- | --- | --- |
-| Script | `<script src="https://<frontend>/widget.js" data-key="<clave>" data-api="https://<backend>" async></script>` | El del sitio del tenant |
-| Iframe | `<iframe src="https://<frontend>/widget?key=<clave>"></iframe>` | El del frontend |
-| Consola | `/chat` en el frontend | El del frontend |
+| Montaje | Cómo se usa                                                                                                  | Origen que ve el backend |
+| ------- | ------------------------------------------------------------------------------------------------------------ | ------------------------ |
+| Script  | `<script src="https://<frontend>/widget.js" data-key="<clave>" data-api="https://<backend>" async></script>` | El del sitio del tenant  |
+| Iframe  | `<iframe src="https://<frontend>/widget?key=<clave>"></iframe>`                                              | El del frontend          |
+| Consola | `/chat` en el frontend                                                                                       | El del frontend          |
 
 El origen correspondiente debe estar en los orígenes permitidos del tenant (pantalla **Bot**).
 En modo iframe no se controla qué sitio lo incrusta: la protección por origen es del modo
@@ -4377,7 +4407,7 @@ script. Los fragmentos listos para copiar están en la pantalla **Bot**.
 `widget.js` es generado (`npm --prefix frontend run build:widget`; lo hacen `dev` y `build`).
 Para probar el script desde otro origen: `npm --prefix frontend run host:demo -- <clave>` y
 abrir `http://localhost:4000` (con ese origen añadido a los permitidos).
-````
+```
 
 - **Mapa del código**: añadir `frontend/src/widget/` (núcleo del chat: fetcher → widget-api → session → chat-client → interfaz) y los grupos de rutas `(console)` y `(embed)`.
 

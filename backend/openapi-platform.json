@@ -3,7 +3,7 @@
   "info": {
     "title": "Chatbot Ingenius 360 — API de plataforma",
     "version": "0.1.0",
-    "description": "Alta de tenants y credenciales del widget de cada clinica. Autenticada con un bearer JWT del proveedor de identidad con rol `platform`."
+    "description": "Alta de tenants y credenciales del widget de cada clinica. Autenticada con un token OAuth2 del proveedor de identidad con rol `platform` (usuario o cliente de maquina)."
   },
   "servers": [
     {
@@ -12,10 +12,34 @@
   ],
   "components": {
     "securitySchemes": {
-      "platformBearer": {
+      "oidcUser": {
+        "type": "oauth2",
+        "description": "Usuario de la clinica (admin u operator) o de plataforma, con PKCE.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://oidc.invalid/authorize",
+            "tokenUrl": "https://oidc.invalid/token",
+            "scopes": {
+              "openid": "Identidad OIDC"
+            }
+          }
+        }
+      },
+      "oidcClient": {
+        "type": "oauth2",
+        "description": "Cliente de maquina (service de una clinica o plataforma).",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://oidc.invalid/token",
+            "scopes": {}
+          }
+        }
+      },
+      "widgetSession": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "JWT",
+        "description": "Token devuelto por POST /widget/sessions"
       }
     },
     "schemas": {
@@ -231,10 +255,13 @@
     "/me": {
       "get": {
         "operationId": "getPlatformIdentity",
-        "description": "Identidad que el backend resolvio del bearer `platform`.",
+        "description": "Identidad que el backend resolvio del token `platform`.",
         "security": [
           {
-            "platformBearer": []
+            "oidcUser": []
+          },
+          {
+            "oidcClient": []
           }
         ],
         "parameters": [
@@ -384,7 +411,10 @@
         "operationId": "listTenants",
         "security": [
           {
-            "platformBearer": []
+            "oidcUser": []
+          },
+          {
+            "oidcClient": []
           }
         ],
         "parameters": [
@@ -551,7 +581,10 @@
         "description": "Alta con predeterminados: bot-config, KB de ejemplo y primera clave del widget. Una repeticion con la misma Idempotency-Key devuelve la respuesta original, con la widget_key emitida en el alta aunque despues se haya rotado.",
         "security": [
           {
-            "platformBearer": []
+            "oidcUser": []
+          },
+          {
+            "oidcClient": []
           }
         ],
         "parameters": [
@@ -739,7 +772,10 @@
         "description": "Registra o rota las credenciales del cliente OIDC del widget de la clinica. Una repeticion con la misma Idempotency-Key y el mismo cuerpo repite la respuesta.",
         "security": [
           {
-            "platformBearer": []
+            "oidcUser": []
+          },
+          {
+            "oidcClient": []
           }
         ],
         "parameters": [

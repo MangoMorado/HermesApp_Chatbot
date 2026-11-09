@@ -9,12 +9,12 @@
 La Fase 4 convierte `/fhir` en la integración con Hermes. Se parte en cuatro sub-proyectos, en
 orden estricto, cada uno con su spec, su plan y su PR:
 
-| Sub-proyecto | Contenido | Entregables del roadmap | Criterios |
-| --- | --- | --- | --- |
-| **4.1 Base y lectura** (esta spec) | Adaptador `/fhir`, `OperationOutcome`, módulo de perfiles, `metadata`, lectura y búsqueda de maestros y citas en firme | 1, 9, 11, 5 (lectura), 7 (`Slot`) | 7 (parcial), 5 (parcial) |
-| 4.2 Escritura de maestros | `PUT` condicional de `Patient`, `Practitioner`, `HealthcareService`, `Schedule`, `Slot`; idempotencia; auditoría; conflicto de cupo; confirmación del pre-registro | 2, 5 (escritura), 6, 8 | 2, 3, 4, 6 |
-| 4.3 Pre-agenda por FHIR | `Appointment` `proposed` con `replaces-appointment`, resolución por `PUT`, `Task` de cancelación, vencimiento al leer de ambos | 3, 4, 7 | 5 |
-| 4.4 Simulador por FHIR | Cliente FHIR con token `service` en lugar del gateway en proceso, sincronización de maestros, suite `hermes-simulador` | 10 | 1, 7 (cierre) |
+| Sub-proyecto                       | Contenido                                                                                                                                                          | Entregables del roadmap           | Criterios                |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | ------------------------ |
+| **4.1 Base y lectura** (esta spec) | Adaptador `/fhir`, `OperationOutcome`, módulo de perfiles, `metadata`, lectura y búsqueda de maestros y citas en firme                                             | 1, 9, 11, 5 (lectura), 7 (`Slot`) | 7 (parcial), 5 (parcial) |
+| 4.2 Escritura de maestros          | `PUT` condicional de `Patient`, `Practitioner`, `HealthcareService`, `Schedule`, `Slot`; idempotencia; auditoría; conflicto de cupo; confirmación del pre-registro | 2, 5 (escritura), 6, 8            | 2, 3, 4, 6               |
+| 4.3 Pre-agenda por FHIR            | `Appointment` `proposed` con `replaces-appointment`, resolución por `PUT`, `Task` de cancelación, vencimiento al leer de ambos                                     | 3, 4, 7                           | 5                        |
+| 4.4 Simulador por FHIR             | Cliente FHIR con token `service` en lugar del gateway en proceso, sincronización de maestros, suite `hermes-simulador`                                             | 10                                | 1, 7 (cierre)            |
 
 La 4.1 deja en pie la superficie `/fhir` en **solo lectura**: seis recursos con `read` y
 `search-type`, errores como `OperationOutcome` y un `CapabilityStatement` que declara
@@ -25,21 +25,21 @@ el contrato ejecutable (roadmap §4).
 
 ## 2. Decisiones tomadas
 
-| Tema | Decisión | Razón |
-| --- | --- | --- |
-| Roles en `/fhir` | Solo `service`, en lectura y en escritura. `operator`, `admin` y `widget` reciben `403` | Superficie exclusiva de Hermes; una sola regla de rol. El panel sigue en `/api/v1` |
-| `GET /fhir/metadata` | Pública, sin token | Lo espera FHIR R4 y no expone datos de ningún tenant; igual que `/api/v1/health` |
-| Ubicación del código | Módulo `modules/fhir/` con `domain` y `application` | Todo FHIR bajo un mismo módulo |
-| Cruce con el dominio | `fhir` declara sus puertos de lectura; el composition root los cumple con `scheduling` y `patients` | `fhir` no importa otros módulos de negocio; mismo patrón que `conversation` y `hermes-simulator` |
-| Enrutado | Una ruta comodín `app/fhir/[...path]/route.ts` que despacha contra un registro de recursos | `metadata` sale del mismo registro que enruta: no puede divergir. Un tipo desconocido responde `OperationOutcome`, no el 404 de Next |
-| `id` lógico | El id interno del recurso; el identificador Hermes va en `identifier` | Convención FHIR; el `PUT` condicional de la 4.2 busca por `identifier` |
-| Estados | Mapeo uno a uno de `Slot.status` y `Appointment.status` | El esquema ya usa el vocabulario R4 |
-| Pre-registro | `meta.tag` `pre-registered` y búsqueda `_tag` entran en la 4.1 | Si `Patient` se lee desde ya, un pre-registro sin marcar se confunde con un paciente confirmado |
-| Parámetros desconocidos | `400` `not-supported`, no se ignoran | Hermes nunca debe creer que filtró cuando no fue así |
-| Rango de fechas | Sin rango obligatorio ni `max_query_range_days` | Hermes sincroniza agendas completas; el tamaño lo acota `_count` |
-| Paginación | `_count` (50 por defecto, máximo 200, se recorta) y `_offset`; `Bundle.total` | Entregable 1 del roadmap |
-| Auditoría | La 4.1 no audita | Es solo lectura, como las lecturas REST; «escrito por Hermes» llega con la 4.2 |
-| Proveedor de identidad | `/fhir` autentica por el puerto `TokenVerifier` existente | La Fase 5 (Keycloak) cambia el adaptador sin tocar esta superficie |
+| Tema                    | Decisión                                                                                            | Razón                                                                                                                                |
+| ----------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Roles en `/fhir`        | Solo `service`, en lectura y en escritura. `operator`, `admin` y `widget` reciben `403`             | Superficie exclusiva de Hermes; una sola regla de rol. El panel sigue en `/api/v1`                                                   |
+| `GET /fhir/metadata`    | Pública, sin token                                                                                  | Lo espera FHIR R4 y no expone datos de ningún tenant; igual que `/api/v1/health`                                                     |
+| Ubicación del código    | Módulo `modules/fhir/` con `domain` y `application`                                                 | Todo FHIR bajo un mismo módulo                                                                                                       |
+| Cruce con el dominio    | `fhir` declara sus puertos de lectura; el composition root los cumple con `scheduling` y `patients` | `fhir` no importa otros módulos de negocio; mismo patrón que `conversation` y `hermes-simulator`                                     |
+| Enrutado                | Una ruta comodín `app/fhir/[...path]/route.ts` que despacha contra un registro de recursos          | `metadata` sale del mismo registro que enruta: no puede divergir. Un tipo desconocido responde `OperationOutcome`, no el 404 de Next |
+| `id` lógico             | El id interno del recurso; el identificador Hermes va en `identifier`                               | Convención FHIR; el `PUT` condicional de la 4.2 busca por `identifier`                                                               |
+| Estados                 | Mapeo uno a uno de `Slot.status` y `Appointment.status`                                             | El esquema ya usa el vocabulario R4                                                                                                  |
+| Pre-registro            | `meta.tag` `pre-registered` y búsqueda `_tag` entran en la 4.1                                      | Si `Patient` se lee desde ya, un pre-registro sin marcar se confunde con un paciente confirmado                                      |
+| Parámetros desconocidos | `400` `not-supported`, no se ignoran                                                                | Hermes nunca debe creer que filtró cuando no fue así                                                                                 |
+| Rango de fechas         | Sin rango obligatorio ni `max_query_range_days`                                                     | Hermes sincroniza agendas completas; el tamaño lo acota `_count`                                                                     |
+| Paginación              | `_count` (50 por defecto, máximo 200, se recorta) y `_offset`; `Bundle.total`                       | Entregable 1 del roadmap                                                                                                             |
+| Auditoría               | La 4.1 no audita                                                                                    | Es solo lectura, como las lecturas REST; «escrito por Hermes» llega con la 4.2                                                       |
+| Proveedor de identidad  | `/fhir` autentica por el puerto `TokenVerifier` existente                                           | La Fase 5 (Keycloak) cambia el adaptador sin tocar esta superficie                                                                   |
 
 ## 3. Arquitectura del backend
 
@@ -84,10 +84,10 @@ backend/src/app/fhir/
 Los repositorios actuales paginan por cursor y casi ninguno lee por id ni por identificador
 Hermes. Se añaden puertos y adaptadores Prisma nuevos, sin tocar los que usa REST:
 
-| Módulo | Lecturas nuevas |
-| --- | --- |
+| Módulo       | Lecturas nuevas                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `scheduling` | Por id y búsqueda con desplazamiento de `Practitioner`, `HealthcareService`, `Schedule`, `Slot` y `Appointment`, con los filtros de la §4.2 |
-| `patients` | Por id y búsqueda con desplazamiento de `MedicalRecord` por identificador (Hermes o documento) y por estado `pre_registered` |
+| `patients`   | Por id y búsqueda con desplazamiento de `MedicalRecord` por identificador (Hermes o documento) y por estado `pre_registered`                |
 
 - `shared/domain/pagination.ts` gana `OffsetPage<T> = { data, total }`.
 - La lectura de `Appointment` devuelve además `practitionerId` y `healthcareServiceId` de su
@@ -108,25 +108,25 @@ Base: `/fhir`. Versión R4 (`4.0.1`), solo JSON. Toda respuesta, también los er
 
 ### 4.1 Interacciones
 
-| Interacción | Ruta | Recursos |
-| --- | --- | --- |
-| `capabilities` | `GET /fhir/metadata` | — (pública) |
-| `read` | `GET /fhir/{Tipo}/{id}` | los seis |
-| `search-type` | `GET /fhir/{Tipo}?…` | los seis |
+| Interacción    | Ruta                    | Recursos    |
+| -------------- | ----------------------- | ----------- |
+| `capabilities` | `GET /fhir/metadata`    | — (pública) |
+| `read`         | `GET /fhir/{Tipo}/{id}` | los seis    |
+| `search-type`  | `GET /fhir/{Tipo}?…`    | los seis    |
 
 No hay `vread`, `history`, `_include`, `_revinclude`, `_sort`, `_summary` ni `POST _search`.
 `metadata` no los declara.
 
 ### 4.2 Recursos y parámetros de búsqueda
 
-| Recurso | Origen | Contenido | Parámetros |
-| --- | --- | --- | --- |
-| `Patient` | `medical_records` | `identifier` (Hermes y documento), `name`, `birthDate`, `telecom`; `meta.tag` `pre-registered` si `status = pre_registered` | `identifier`, `_tag` |
-| `Practitioner` | `practitioners` | `identifier`, `name`, `active` | `identifier`, `active` |
-| `HealthcareService` | `healthcare_services` | `identifier`, `name`, `active` | `identifier`, `active` |
-| `Schedule` | `schedules` | `identifier`, `active`, `actor` (profesional y servicio) | `identifier`, `actor`, `active` |
-| `Slot` | `slots` | `identifier`, `schedule`, `status`, `start`, `end` | `identifier`, `schedule`, `status`, `start` |
-| `Appointment` | `appointments` | `identifier`, `status`, `start`, `end`, `slot`, `participant` (paciente, profesional, servicio) | `identifier`, `patient`, `slot`, `status`, `date` |
+| Recurso             | Origen                | Contenido                                                                                                                   | Parámetros                                        |
+| ------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `Patient`           | `medical_records`     | `identifier` (Hermes y documento), `name`, `birthDate`, `telecom`; `meta.tag` `pre-registered` si `status = pre_registered` | `identifier`, `_tag`                              |
+| `Practitioner`      | `practitioners`       | `identifier`, `name`, `active`                                                                                              | `identifier`, `active`                            |
+| `HealthcareService` | `healthcare_services` | `identifier`, `name`, `active`                                                                                              | `identifier`, `active`                            |
+| `Schedule`          | `schedules`           | `identifier`, `active`, `actor` (profesional y servicio)                                                                    | `identifier`, `actor`, `active`                   |
+| `Slot`              | `slots`               | `identifier`, `schedule`, `status`, `start`, `end`                                                                          | `identifier`, `schedule`, `status`, `start`       |
+| `Appointment`       | `appointments`        | `identifier`, `status`, `start`, `end`, `slot`, `participant` (paciente, profesional, servicio)                             | `identifier`, `patient`, `slot`, `status`, `date` |
 
 - `Patient.identifier` lleva dos entradas: el identificador Hermes (`identifier_system` /
   `identifier_value`) y el documento, con un `system` por tipo de documento definido en
@@ -168,15 +168,15 @@ tenant, tampoco al filtrar por la referencia a un recurso ajeno (resultado vací
 
 ### 4.6 Errores
 
-| Situación | HTTP | `issue.code` |
-| --- | --- | --- |
-| Sin token, inválido o vencido | 401 | `login` |
-| Rol distinto de `service` | 403 | `forbidden` |
-| Id inexistente o de otro tenant; tipo de recurso desconocido | 404 | `not-found` |
-| Parámetro de búsqueda no soportado | 400 | `not-supported` |
-| Valor de parámetro mal formado | 400 | `invalid` |
-| Verbo no implementado sobre un recurso conocido | 405 | `not-supported` |
-| Error no previsto | 500 | `exception` |
+| Situación                                                    | HTTP | `issue.code`    |
+| ------------------------------------------------------------ | ---- | --------------- |
+| Sin token, inválido o vencido                                | 401  | `login`         |
+| Rol distinto de `service`                                    | 403  | `forbidden`     |
+| Id inexistente o de otro tenant; tipo de recurso desconocido | 404  | `not-found`     |
+| Parámetro de búsqueda no soportado                           | 400  | `not-supported` |
+| Valor de parámetro mal formado                               | 400  | `invalid`       |
+| Verbo no implementado sobre un recurso conocido              | 405  | `not-supported` |
+| Error no previsto                                            | 500  | `exception`     |
 
 - Cada `issue` lleva `severity: error` y un `diagnostics` en español, sin detalle interno. El
   `401` no revela la causa.
@@ -194,13 +194,13 @@ portador, sin SMART. Es idéntico para todos los tenants.
 
 ## 5. Pruebas
 
-| Suite | Proyecto | Qué prueba |
-| --- | --- | --- |
-| `fhir-conformance` (unitaria) | Vitest por defecto | Mappers contra la forma R4 (campos obligatorios, value sets de `status`, referencias relativas); parseo de búsqueda; `OperationOutcome` y `Bundle`; `CapabilityStatement` generado |
-| `fhir-conformance` (HTTP) | `test:db` | `read` y `search` de los seis recursos con el seed; paginación con `total` y enlaces; cada fila de la §4.6; `Content-Type` en éxito y error; ninguna respuesta con la envoltura REST |
-| `aislamiento-tenant` | `test:db` | Sobre `/fhir`: `read` de un id ajeno → 404; ninguna búsqueda devuelve recursos ajenos, tampoco por `identifier` ni por referencia a un recurso de otro tenant |
-| `roles` | Vitest por defecto | `operator`, `admin` y `widget` → 403 `OperationOutcome`; sin token → 401; `metadata` sin token → 200 |
-| `fronteras` | Vitest por defecto | `fhir` solo importa `shared` y `auth`; ningún módulo importa `fhir` |
+| Suite                         | Proyecto           | Qué prueba                                                                                                                                                                           |
+| ----------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `fhir-conformance` (unitaria) | Vitest por defecto | Mappers contra la forma R4 (campos obligatorios, value sets de `status`, referencias relativas); parseo de búsqueda; `OperationOutcome` y `Bundle`; `CapabilityStatement` generado   |
+| `fhir-conformance` (HTTP)     | `test:db`          | `read` y `search` de los seis recursos con el seed; paginación con `total` y enlaces; cada fila de la §4.6; `Content-Type` en éxito y error; ninguna respuesta con la envoltura REST |
+| `aislamiento-tenant`          | `test:db`          | Sobre `/fhir`: `read` de un id ajeno → 404; ninguna búsqueda devuelve recursos ajenos, tampoco por `identifier` ni por referencia a un recurso de otro tenant                        |
+| `roles`                       | Vitest por defecto | `operator`, `admin` y `widget` → 403 `OperationOutcome`; sin token → 401; `metadata` sin token → 200                                                                                 |
+| `fronteras`                   | Vitest por defecto | `fhir` solo importa `shared` y `auth`; ningún módulo importa `fhir`                                                                                                                  |
 
 Dos pruebas sostienen los criterios de la fase:
 
