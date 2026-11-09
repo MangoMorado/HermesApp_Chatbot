@@ -58,6 +58,8 @@ export const INIT_SCRIPT = `(() => {
     urls: config.urls,
     dom_id: "#swagger-ui",
     deepLinking: true,
+    // Sin la insignia del validador publico: /docs no habla con terceros.
+    validatorUrl: null,
     persistAuthorization: false,
     oauth2RedirectUrl: window.location.origin + "/docs/oauth2-redirect.html",
     presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
