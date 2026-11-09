@@ -1,6 +1,6 @@
 # Fase 5.2 — Frontend de referencia con login OIDC (diseño)
 
-> Estado: **abierta**.
+> Estado: **cerrada en `main`** mediante la [PR #14](https://github.com/MangoMorado/HermesApp_Chatbot/pull/14). Recorrido manual de la §6 verificado el 9 de noviembre de 2026 en Easypanel.
 > Fuente del alcance: `ROADMAP.md` §Fase 5, entregables 1 y 4, criterios 1 y 3 (manual en
 > navegador). Corte de sub-proyectos en la §3 de
 > `2026-10-27-fase-5-identidad-oidc-contrato-design.md` (en adelante, «spec de fase»). Manda

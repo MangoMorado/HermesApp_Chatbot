@@ -1,6 +1,6 @@
 # Fase 5.2 — Frontend de referencia con login OIDC: plan de implementación
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** La consola (`/panel`, `/simulador`) entra y sale por el proveedor OIDC con Authorization Code + PKCE, ya no hay campos para pegar tokens, y una persona `platform` da de alta clínicas con su propia sesión.
 
@@ -45,7 +45,7 @@
 **Interfaces:**
 - Produces: `GET /api/platform/v1/me` → `200 { subject: string, role: "platform" }`. `operationId: "getPlatformIdentity"`. Schema `PlatformIdentity` (`required: ["subject", "role"]`, `role: { type: "string", enum: ["platform"] }`). Responses `okJson(...)` + `readErrors`, `security: platformAuth`.
 
-- [ ] **Step 1: Write the failing tests** en `roles.test.ts`, dentro del `describe` HTTP que ya usa `signToken`/`authedRequest`:
+- [x] **Step 1: Write the failing tests** en `roles.test.ts`, dentro del `describe` HTTP que ya usa `signToken`/`authedRequest`:
 
 ```ts
 import { GET as getPlatformIdentity } from "@/app/api/platform/v1/me/route";
@@ -69,17 +69,17 @@ it("un rol de clinica no alcanza /api/platform/v1/me", async () => {
 });
 ```
 
-- [ ] **Step 2: Run** `npm --prefix backend exec vitest run tests/roles.test.ts`. Debe fallar porque no existe el módulo de la ruta.
+- [x] **Step 2: Run** `npm --prefix backend exec vitest run tests/roles.test.ts`. Debe fallar porque no existe el módulo de la ruta.
 
-- [ ] **Step 3: Implement the route** con `platformRoute(async ({ actor }) => ({ subject: actor.subject, role: actor.role }))` y `export const dynamic = "force-dynamic"`, igual que `tenants/route.ts`.
+- [x] **Step 3: Implement the route** con `platformRoute(async ({ actor }) => ({ subject: actor.subject, role: actor.role }))` y `export const dynamic = "force-dynamic"`, igual que `tenants/route.ts`.
 
-- [ ] **Step 4: Run** `roles.test.ts` (PASS) y `npm --prefix backend exec vitest run tests/contrato-api.test.ts`. Esta segunda debe fallar con «toda ruta de /api/platform/v1 esta declarada».
+- [x] **Step 4: Run** `roles.test.ts` (PASS) y `npm --prefix backend exec vitest run tests/contrato-api.test.ts`. Esta segunda debe fallar con «toda ruta de /api/platform/v1 esta declarada».
 
-- [ ] **Step 5: Declare** `"/me"` y el schema `PlatformIdentity` en `openapi-platform.ts`. Después corre `npm --prefix backend run openapi:generate`.
+- [x] **Step 5: Declare** `"/me"` y el schema `PlatformIdentity` en `openapi-platform.ts`. Después corre `npm --prefix backend run openapi:generate`.
 
-- [ ] **Step 6: Run** `contrato-api.test.ts` y `npm --prefix backend run typecheck`. Los dos deben pasar.
+- [x] **Step 6: Run** `contrato-api.test.ts` y `npm --prefix backend run typecheck`. Los dos deben pasar.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/src/app/api/platform/v1/me backend/src/http/openapi-platform.ts backend/openapi-platform.json backend/tests/roles.test.ts
@@ -97,7 +97,7 @@ git commit -m "feat(platform): GET /api/platform/v1/me para la identidad de plat
 **Interfaces:**
 - Produces: `UserPlan = { username: string; tenantId?: string; role: LabRole }`. `export function userAttributes(existing: Record<string, unknown> | undefined, plan: UserPlan): Record<string, unknown>` en `apply.ts`. La función es pura: con `tenantId` pone `tenant_id: [tenantId]`, y sin él **quita** `tenant_id` y conserva el resto.
 
-- [ ] **Step 1: Write the failing tests.** Actualiza el test «usuarios admin y operator por tenant» para que la lista termine en `"platform-lab"`, y añade estos:
+- [x] **Step 1: Write the failing tests.** Actualiza el test «usuarios admin y operator por tenant» para que la lista termine en `"platform-lab"`, y añade estos:
 
 ```ts
 it("platform-lab tiene rol platform y no lleva tenant", () => {
@@ -115,13 +115,13 @@ it("userAttributes fija tenant_id o lo quita", () => {
 });
 ```
 
-- [ ] **Step 2: Run** `npm --prefix backend exec vitest run tests/idp-lab-plan.test.ts`. Debe fallar.
+- [x] **Step 2: Run** `npm --prefix backend exec vitest run tests/idp-lab-plan.test.ts`. Debe fallar.
 
-- [ ] **Step 3: Implement.** `buildLabPlan` añade `{ username: "platform-lab", role: "platform" }` después de los usuarios por tenant. `createUser` usa `userAttributes(undefined, plan)` y `ensureUser` usa `userAttributes(user.attributes, plan)`. `printEnv` imprime `tenant_id=(sin clínica)` cuando falta.
+- [x] **Step 3: Implement.** `buildLabPlan` añade `{ username: "platform-lab", role: "platform" }` después de los usuarios por tenant. `createUser` usa `userAttributes(undefined, plan)` y `ensureUser` usa `userAttributes(user.attributes, plan)`. `printEnv` imprime `tenant_id=(sin clínica)` cuando falta.
 
-- [ ] **Step 4: Run** el test (PASS) y `npm --prefix backend run typecheck`.
+- [x] **Step 4: Run** el test (PASS) y `npm --prefix backend run typecheck`.
 
-- [ ] **Step 5: Commit** con `feat(idp-lab): usuario platform-lab sin tenant`.
+- [x] **Step 5: Commit** con `feat(idp-lab): usuario platform-lab sin tenant`.
 
 ### Task 3: almacén de sesión y fetchers
 
@@ -147,7 +147,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 - Produces (`lib/use-session.ts`): `useToken(): string | null`, `useSessionKey(): string | null`, `useAuthStatus(): AuthStatus`
 - Produces (`lib/api-fetcher.ts`): `apiFetcher` y `platformFetcher` mandan `Authorization: Bearer <getToken()>`. Ante un `401` llaman a `renewToken()`. Si devuelve token, reintentan **una** vez con él, el mismo cuerpo y la misma `Idempotency-Key`. Si no, lanzan el `ApiClientError` del `401`.
 
-- [ ] **Step 1: Write the failing tests** en `token.test.ts`:
+- [x] **Step 1: Write the failing tests** en `token.test.ts`:
   - `"sin sesión el estado es anonymous y no hay token"`: tras `setSession(null)`, `getSession()` es `{ status: "anonymous", accessToken: null, sessionKey: null }`.
   - `"setSession publica token y clave, y avisa"`: un suscriptor ve un cambio y `getToken()` es `"at-1"`.
   - `"getSession conserva la referencia si nada cambia"`: `getSession() === getSession()`.
@@ -162,13 +162,13 @@ it("userAttributes fija tenant_id o lo quita", () => {
 
   En `platform-fetcher.test.ts`, reescrito: `"usa el token de la sesión"` (`setSession({ accessToken: "at-p", sessionKey: "s" })`, y la petición lleva `Bearer at-p`).
 
-- [ ] **Step 2: Run** `npm --prefix frontend exec vitest run tests/token.test.ts tests/api-fetcher.test.ts tests/platform-fetcher.test.ts`. Deben fallar.
+- [x] **Step 2: Run** `npm --prefix frontend exec vitest run tests/token.test.ts tests/api-fetcher.test.ts tests/platform-fetcher.test.ts`. Deben fallar.
 
-- [ ] **Step 3: Implement** `lib/token.ts`. Usa un objeto inmutable que se sustituye en cada cambio, y deja el estado inicial en `loading`. `sessionStorage` ya no se usa aquí: la persistencia es del adaptador.
+- [x] **Step 3: Implement** `lib/token.ts`. Usa un objeto inmutable que se sustituye en cada cambio, y deja el estado inicial en `loading`. `sessionStorage` ya no se usa aquí: la persistencia es del adaptador.
 
-- [ ] **Step 4: Implement** el reintento en `api-fetcher.ts`. Extrae una función compartida `authorizedFetch(url, options): Promise<Response>` que usan los dos fetchers. El reintento reutiliza los mismos `headers`, cambiando solo `Authorization`.
+- [x] **Step 4: Implement** el reintento en `api-fetcher.ts`. Extrae una función compartida `authorizedFetch(url, options): Promise<Response>` que usan los dos fetchers. El reintento reutiliza los mismos `headers`, cambiando solo `Authorization`.
 
-- [ ] **Step 5: Implement** los hooks de `use-session.ts` con `useSyncExternalStore(subscribeSession, getSession, () => SERVER_SNAPSHOT)`. Después sustituye `token?.slice(-16) ?? null` por `useSessionKey()` en todas las `queryKey`:
+- [x] **Step 5: Implement** los hooks de `use-session.ts` con `useSyncExternalStore(subscribeSession, getSession, () => SERVER_SNAPSHOT)`. Después sustituye `token?.slice(-16) ?? null` por `useSessionKey()` en todas las `queryKey`:
   - `use-panel-data.ts`
   - `use-knowledge.ts`
   - `use-bot-config.ts`
@@ -178,9 +178,9 @@ it("userAttributes fija tenant_id o lo quita", () => {
 
   Usa `rg "slice\(-16\)" frontend/src` para comprobar que no queda ninguno. `enabled: Boolean(token)` no cambia.
 
-- [ ] **Step 6: Run** los tests (PASS) y `npm --prefix frontend run typecheck`. El typecheck fallará en `session-drawer.tsx` y `tenants-panel.tsx` porque usan `setToken`/`clearToken`. Para seguir, quita el formulario de token de `session-drawer.tsx` y deja solo `Claims`, y quita de `tenants-panel.tsx` el campo y el `bearer()`, que ya no hacen falta. La UI definitiva es de la tarea 6.
+- [x] **Step 6: Run** los tests (PASS) y `npm --prefix frontend run typecheck`. El typecheck fallará en `session-drawer.tsx` y `tenants-panel.tsx` porque usan `setToken`/`clearToken`. Para seguir, quita el formulario de token de `session-drawer.tsx` y deja solo `Claims`, y quita de `tenants-panel.tsx` el campo y el `bearer()`, que ya no hacen falta. La UI definitiva es de la tarea 6.
 
-- [ ] **Step 7: Commit** con `feat(frontend): almacén de sesión con renovación única ante 401`.
+- [x] **Step 7: Commit** con `feat(frontend): almacén de sesión con renovación única ante 401`.
 
 ### Task 4: adaptador OIDC, configuración y callback
 
@@ -221,7 +221,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
     - Los hijos se pintan siempre, sin esperar la carga, para que `/chat` abra sin sesión.
   - `bind.ts` exporta también `completeSignIn(manager: Pick<UserManager, "signinRedirectCallback">): Promise<string>`. Memoiza la promesa por `location.search`, así que dos llamadas con la misma URL hacen un solo canje. Devuelve `returnTo` del `state`, o `"/"`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
   - `env.test.ts`, `"oidcConfig lee issuer y client id en cada llamada"`:
     - Con `vi.stubEnv` de `PUBLIC_OIDC_ISSUER="https://idp.x/realms/r/"` y `PUBLIC_OIDC_CLIENT_ID="ui"`, devuelve `{ issuer: "https://idp.x/realms/r", clientId: "ui" }`.
     - Si se cambia el env y se vuelve a llamar, devuelve el valor nuevo.
@@ -239,20 +239,20 @@ it("userAttributes fija tenant_id o lo quita", () => {
     - `"completeSignIn sin state vuelve a /"`.
     - `"la función devuelta quita los suscriptores"`.
 
-- [ ] **Step 2: Run** `npm --prefix frontend exec vitest run tests/env.test.ts tests/auth-settings.test.ts tests/auth-bind.test.ts`. Deben fallar.
+- [x] **Step 2: Run** `npm --prefix frontend exec vitest run tests/env.test.ts tests/auth-settings.test.ts tests/auth-bind.test.ts`. Deben fallar.
 
-- [ ] **Step 3: Install** `oidc-client-ts` y comprueba que `npm --prefix frontend ls oidc-client-ts` lo lista. No necesita `allowScripts`. Si npm 12 lo bloquea, apruébalo como `prisma` en el backend.
+- [x] **Step 3: Install** `oidc-client-ts` y comprueba que `npm --prefix frontend ls oidc-client-ts` lo lista. No necesita `allowScripts`. Si npm 12 lo bloquea, apruébalo como `prisma` en el backend.
 
-- [ ] **Step 4: Implement** `env.ts`, `settings.ts` y `bind.ts`.
+- [x] **Step 4: Implement** `env.ts`, `settings.ts` y `bind.ts`.
 
-- [ ] **Step 5: Implement** `auth-provider.tsx` y la página de callback.
+- [x] **Step 5: Implement** `auth-provider.tsx` y la página de callback.
   - **Callback:** es un componente cliente. Llama a `completeSignIn` con el manager del contexto y hace `router.replace(returnTo)`.
   - **Error en el callback:** si la URL trae `error`, o el canje lanza, muestra `ErrorBox`/un `<p role="alert">` con `error_description` y un botón «Volver a intentar» que llama a `signIn`.
   - **Layout:** `(console)/layout.tsx` declara `export const dynamic = "force-dynamic"`, lee `oidcConfig()` y envuelve `<Providers>` en `<AuthProvider config={...}>`.
 
-- [ ] **Step 6: Run** los tests (PASS), `npm --prefix frontend run typecheck` y `npm --prefix backend exec vitest run tests/fronteras.test.ts` (sin `keycloak` en `frontend/src`).
+- [x] **Step 6: Run** los tests (PASS), `npm --prefix frontend run typecheck` y `npm --prefix backend exec vitest run tests/fronteras.test.ts` (sin `keycloak` en `frontend/src`).
 
-- [ ] **Step 7: Commit** con `feat(frontend): login OIDC con PKCE en la consola`.
+- [x] **Step 7: Commit** con `feat(frontend): login OIDC con PKCE en la consola`.
 
 ### Task 5: identidad de clínica o de plataforma
 
@@ -275,22 +275,22 @@ it("userAttributes fija tenant_id o lo quita", () => {
   - `resolveIdentity(loadTenant: () => Promise<Identity>, loadPlatform: () => Promise<PlatformIdentity>): Promise<SessionIdentity>`. Hace las dos peticiones en paralelo y gana la de clínica si las dos responden. Si ninguna responde `200`, relanza el error de `loadTenant`.
   - `useIdentity()`: `useQuery<SessionIdentity>` con `queryKey: ["identity", sessionKey]`, `enabled: Boolean(token)`, `retry: false` y `staleTime: 60_000`.
 
-- [ ] **Step 1: Write the failing tests** en `identity.test.ts`:
+- [x] **Step 1: Write the failing tests** en `identity.test.ts`:
   - `"un token de clínica resuelve kind tenant"`: `loadTenant` resuelve y `loadPlatform` rechaza con un 403. El resultado es `{ kind: "tenant", tenantId: "t-1", ... }`.
   - `"un token platform resuelve kind platform aunque /api/v1/me dé 403"`.
   - `"si ninguna responde, relanza el error de /api/v1/me"`: los dos rechazan y se lanza el error de clínica, con `status: 401`.
   - `"las dos peticiones salen a la vez"`: las dos funciones se llaman antes de que se resuelva ninguna.
 
-- [ ] **Step 2: Run** `npm --prefix frontend exec vitest run tests/identity.test.ts`. Debe fallar.
+- [x] **Step 2: Run** `npm --prefix frontend exec vitest run tests/identity.test.ts`. Debe fallar.
 
-- [ ] **Step 3: Implement** `identity.ts` y `useIdentity`. Después ajusta los consumidores:
+- [x] **Step 3: Implement** `identity.ts` y `useIdentity`. Después ajusta los consumidores:
   - Leen `identity.data?.kind === "tenant"` antes de usar `tenantId`.
   - El chip de `marquee` muestra `platform` sin clínica.
   - `canAdd`, `canWrite` y similares solo valen `true` con `kind === "tenant" && role === "admin"`.
 
-- [ ] **Step 4: Run** los tests (PASS) y `npm --prefix frontend run typecheck`.
+- [x] **Step 4: Run** los tests (PASS) y `npm --prefix frontend run typecheck`.
 
-- [ ] **Step 5: Commit** con `feat(frontend): identidad de clínica o de plataforma desde /me`.
+- [x] **Step 5: Commit** con `feat(frontend): identidad de clínica o de plataforma desde /me`.
 
 ### Task 6: pantallas sin token pegado
 
@@ -310,7 +310,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 **Interfaces:**
 - Consumes: `useAuthStatus` (tarea 3), `useAuthActions` (tarea 4), `useIdentity`/`SessionIdentity` (tarea 5).
 
-- [ ] **Step 1: Session drawer.** Con `useAuthStatus()`:
+- [x] **Step 1: Session drawer.** Con `useAuthStatus()`:
   - `unconfigured`: muestra un aviso «Falta configurar el proveedor de identidad (`PUBLIC_OIDC_ISSUER`, `PUBLIC_OIDC_CLIENT_ID`).».
   - `loading`: muestra «Comprobando sesión…».
   - `anonymous`: muestra el botón primario «Iniciar sesión».
@@ -318,22 +318,22 @@ it("userAttributes fija tenant_id o lo quita", () => {
 
   El texto de ayuda dice que el login lo hace el proveedor de identidad, con los usuarios que imprime `npm run idp:lab`.
 
-- [ ] **Step 2: Tenants panel.** Sin campo de token y sin `bearer()`: `createTenant(body, idempotent(...))` ya lleva el token de la sesión (tarea 3).
+- [x] **Step 2: Tenants panel.** Sin campo de token y sin `bearer()`: `createTenant(body, idempotent(...))` ya lleva el token de la sesión (tarea 3).
   - El formulario solo se habilita con `identity.data?.kind === "platform"`.
   - Con otra sesión muestra «El alta de clínicas requiere una sesión `platform` (usuario `platform-lab` del laboratorio).».
   - Sin sesión muestra «Inicia sesión».
 
-- [ ] **Step 3: Platform notice.** Si `identity.data?.kind === "platform"` y `usePathname()` empieza por `/panel` o `/simulador`, muestra una franja `role="status"` con el texto «La sesión `platform` no opera dentro de una clínica: solo da de alta tenants (Simulador → Tenants).». En cualquier otro caso no pinta nada.
+- [x] **Step 3: Platform notice.** Si `identity.data?.kind === "platform"` y `usePathname()` empieza por `/panel` o `/simulador`, muestra una franja `role="status"` con el texto «La sesión `platform` no opera dentro de una clínica: solo da de alta tenants (Simulador → Tenants).». En cualquier otro caso no pinta nada.
 
-- [ ] **Step 4: Textos.** Cambia cada «Pega un token…» por «Inicia sesión en la franja de sesión (tecla 0)…», adaptado a su pantalla. En `chat-console.tsx` queda «Pega una clave o inicia sesión de panel para usar la vigente.». Comprueba con `rg -n "Pega un (JWT|token)" frontend/src`: no debe devolver nada.
+- [x] **Step 4: Textos.** Cambia cada «Pega un token…» por «Inicia sesión en la franja de sesión (tecla 0)…», adaptado a su pantalla. En `chat-console.tsx` queda «Pega una clave o inicia sesión de panel para usar la vigente.». Comprueba con `rg -n "Pega un (JWT|token)" frontend/src`: no debe devolver nada.
 
-- [ ] **Step 5: Run**:
+- [x] **Step 5: Run**:
   - `npm --prefix frontend run typecheck`
   - `npm --prefix frontend test`
   - `npm run ci`
   - `npm run doctor` (100/100)
 
-- [ ] **Step 6: Commit** con `feat(frontend): consola sin tokens pegados`.
+- [x] **Step 6: Commit** con `feat(frontend): consola sin tokens pegados`.
 
 ### Task 7: documentación, configuración y verificación
 
@@ -352,18 +352,18 @@ it("userAttributes fija tenant_id o lo quita", () => {
   - el login de la consola
   - que el `401` tras logout solo se observa contra la API a la que apunta el back-channel
 
-- [ ] **Step 1: Write** la documentación y la configuración de arriba.
+- [x] **Step 1: Write** la documentación y la configuración de arriba.
 
-- [ ] **Step 2: Run** la batería completa y deja la salida en el informe:
+- [x] **Step 2: Run** la batería completa y deja la salida en el informe:
   - `npm run ci`
   - `npm run typecheck`
   - `npm test`
   - `npm run doctor`
   - `npm --prefix backend run test:db`, si Postgres local está en pie (memoria del proyecto: Laragon). Si no lo está, decirlo.
 
-- [ ] **Step 3: Reconfigure the lab.** Corre `npm --prefix backend run idp:lab` con `LAB_FRONTEND_URLS=https://mango-chatbot-hermes-frontend.dxrulh.easypanel.host`. La salida debe listar `platform-lab tenant_id=(sin clínica)`.
+- [x] **Step 3: Reconfigure the lab.** Corre `npm --prefix backend run idp:lab` con `LAB_FRONTEND_URLS=https://mango-chatbot-hermes-frontend.dxrulh.easypanel.host`. La salida debe listar `platform-lab tenant_id=(sin clínica)`.
 
-- [ ] **Step 4: Manual local**, con `npm --prefix frontend run dev` contra el backend de Easypanel o uno local, pasos 1, 2, 3, 4 y 6 de la §6 de la spec:
+- [x] **Step 4: Manual local**, con `npm --prefix frontend run dev` contra el backend de Easypanel o uno local, pasos 1, 2, 3, 4 y 6 de la §6 de la spec:
   1. `admin-clinica-norte` carga `/panel` y `/simulador`, y la franja muestra rol y clínica.
   2. `operator-clinica-sur` ve solo lo de su clínica.
   3. `platform-lab` da de alta una clínica y ve la franja de `PlatformNotice` en `/panel`.
@@ -372,9 +372,9 @@ it("userAttributes fija tenant_id o lo quita", () => {
 
   Anota además el resultado del callback con error: cancelar en la pantalla del proveedor muestra el error y «Volver a intentar».
 
-- [ ] **Step 5: Commit** con `docs: login OIDC de la consola y usuario platform-lab`.
+- [x] **Step 5: Commit** con `docs: login OIDC de la consola y usuario platform-lab`.
 
-- [ ] **Step 6: Hand off Easypanel to the user.** El frontend se despliega desde `main` y el usuario cierra el merge. Entrégale esta lista:
+- [x] **Step 6: Hand off Easypanel to the user.** El frontend se despliega desde `main` y el usuario cierra el merge. Entrégale esta lista:
   1. Añadir `PUBLIC_OIDC_ISSUER` y `PUBLIC_OIDC_CLIENT_ID` al env del frontend.
   2. Pulsar Deploy.
   3. Repetir el paso 4 del recorrido.
