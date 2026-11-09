@@ -119,7 +119,7 @@ export function clientBody(plan: ClientPlan, serviceSecret: string): Json {
     directAccessGrantsEnabled: plan.directAccessGrants === true,
     serviceAccountsEnabled: Boolean(plan.serviceRole),
     redirectUris: plan.redirectUris,
-    webOrigins: plan.public ? ["+"] : [],
+    webOrigins: plan.public ? ["+"] : (plan.webOrigins ?? []),
     attributes: clientAttributes(plan),
     ...(plan.fixedSecret ? { secret: serviceSecret } : {}),
   };

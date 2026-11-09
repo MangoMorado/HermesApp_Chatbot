@@ -20,6 +20,8 @@ export type ClientPlan = {
   fixedSecret?: "service";
   /** Password grant: solo `chatbot-newman`, y solo en este realm de laboratorio. */
   directAccessGrants?: true;
+  /** CORS del token endpoint: Swagger (`/docs`) pide client_credentials desde el navegador. */
+  webOrigins?: string[];
   mappers: MapperPlan[];
 };
 export type UserPlan = { username: string; tenantId?: string; role: LabRole };
@@ -92,7 +94,7 @@ function tenantClaimMapper(tenantId: string): MapperPlan {
   };
 }
 
-function machineClients(tenantId: string): ClientPlan[] {
+function machineClients(tenantId: string, apiOrigin: string): ClientPlan[] {
   const base = { public: false, redirectUris: [], hardcodedTenant: tenantId };
   const mappers = [tenantClaimMapper(tenantId)];
   return [
@@ -102,6 +104,7 @@ function machineClients(tenantId: string): ClientPlan[] {
       clientId: `service-${tenantId}`,
       serviceRole: "service",
       fixedSecret: "service",
+      webOrigins: [apiOrigin],
       mappers,
     },
   ];
@@ -142,6 +145,7 @@ export function buildLabPlan(input: LabInput): LabPlan {
     public: false,
     redirectUris: [],
     serviceRole: "platform",
+    webOrigins: [new URL(input.apiUrl).origin],
     mappers: [],
   };
   return {
@@ -151,7 +155,7 @@ export function buildLabPlan(input: LabInput): LabPlan {
     clientScope: { name: SCOPE_NAME, mappers: scopeMappers() },
     clients: [
       platform,
-      ...input.tenants.flatMap((t) => machineClients(t.id)),
+      ...input.tenants.flatMap((t) => machineClients(t.id, new URL(input.apiUrl).origin)),
       ...interactiveClients(input),
     ],
     users: [

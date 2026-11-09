@@ -72,6 +72,14 @@ describe("idp-lab plan", () => {
       "chatbot-newman",
     ]);
   });
+  it("Swagger pide tokens client_credentials desde el navegador: CORS para el origen de la API", () => {
+    for (const clientId of ["chatbot-platform", "service-t-n"]) {
+      const client = plan.clients.find((c) => c.clientId === clientId);
+      expect(client && clientBody(client, "s").webOrigins, clientId).toEqual(["https://api.x"]);
+    }
+    const widget = plan.clients.find((c) => c.clientId === "widget-t-n");
+    expect(widget && clientBody(widget, "s").webOrigins).toEqual([]);
+  });
   it("clientBody traduce directAccessGrants", () => {
     const newman = plan.clients.find((c) => c.clientId === "chatbot-newman");
     const swagger = plan.clients.find((c) => c.clientId === "chatbot-swagger");
