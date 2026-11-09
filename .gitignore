@@ -27,3 +27,6 @@ Thumbs.db
 frontend/public/widget.js
 
 .worktrees/
+
+# Documentos personales de prácticas (CUN): información sensible, no se versiona.
+docs/CUN/
