@@ -2,8 +2,13 @@ import type { PrismaClient } from "@prisma/client";
 import { resetContainer } from "@/composition-root";
 import { serviceToken } from "../../helpers/fhir";
 import { platformToken, signToken } from "../../helpers/idp";
-import { enableWidget, openChat, type WidgetChat } from "../chat-support";
-import { seedTenantDomain, type TenantDomainSeed, truncateAll } from "../support";
+import { CHAT_ORIGIN, enableWidget, openChat, type WidgetChat } from "../chat-support";
+import {
+  insertChatbotTenant,
+  seedTenantDomain,
+  type TenantDomainSeed,
+  truncateAll,
+} from "../support";
 
 export type WorldTenant = TenantDomainSeed & {
   readonly slug: string;
@@ -23,6 +28,8 @@ export type ContractWorld = {
     readonly serviceA: string;
   };
   readonly widgetA: WidgetChat;
+  /** Clave de una clinica con una sola sesion por IP y minuto: provoca el 429. */
+  readonly limitedWidgetKey: string;
 };
 
 async function seedTenant(prisma: PrismaClient, slug: string): Promise<WorldTenant> {
@@ -61,6 +68,16 @@ export async function seedContractWorld(prisma: PrismaClient): Promise<ContractW
     platform: await platformToken(),
     serviceA: await serviceToken(tenantA.tenantId),
   };
+  // Muchas aperturas en un archivo: la clinica A admite el maximo por IP y minuto.
+  await prisma.botConfig.update({
+    where: { tenantId: tenantA.tenantId },
+    data: { params: { widget_sessions_per_ip_per_minute: 100 } },
+  });
+  const limited = await insertChatbotTenant(prisma, "crl", { allowedOrigins: [CHAT_ORIGIN] });
+  await prisma.botConfig.update({
+    where: { tenantId: limited.tenantId },
+    data: { params: { widget_sessions_per_ip_per_minute: 1 } },
+  });
   const widgetA = await openChat(tenantA.widgetKey);
-  return { prisma, tenantA, tenantB, tokens, widgetA };
+  return { prisma, tenantA, tenantB, tokens, widgetA, limitedWidgetKey: limited.widgetKey };
 }

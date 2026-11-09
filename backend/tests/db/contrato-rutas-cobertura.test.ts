@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { CHATBOT_PANEL_CASES } from "./contrato-rutas/cases-chatbot-panel";
+import { CHATBOT_WIDGET_CASES } from "./contrato-rutas/cases-chatbot-widget";
+import { coverageGaps } from "./contrato-rutas/coverage";
 import { contractDocument, declaredOperations } from "./contrato-rutas/documents";
 import { EXEMPTIONS } from "./contrato-rutas/exemptions";
 import { CHECKED_STATUSES, type Surface } from "./contrato-rutas/types";
@@ -110,5 +113,11 @@ describe("contrato-rutas: errores comunes y exenciones", () => {
 
   it("los documentos salen de los builders", () => {
     expect(Object.keys(contractDocument("sim").paths).length).toBeGreaterThan(0);
+  });
+});
+
+describe("contrato-rutas: cobertura", () => {
+  it("toda operacion del chatbot tiene sus casos o exenciones", () => {
+    expect(coverageGaps("chatbot", [...CHATBOT_PANEL_CASES, ...CHATBOT_WIDGET_CASES])).toEqual([]);
   });
 });

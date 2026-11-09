@@ -2,4 +2,32 @@
  * Pares (operacion, status) declarados que `contrato-rutas` no reproduce, cada uno con su
  * motivo. Clave: `"<surface> <METHOD> <path>"`. Una exencion sin motivo rompe la suite.
  */
-export const EXEMPTIONS: Readonly<Record<string, Readonly<Partial<Record<number, string>>>>> = {};
+type Reasons = Readonly<Partial<Record<number, string>>>;
+
+const COLLECTION_404 =
+  "coleccion del tenant del token: no hay id ajeno que nombrar y un filtro ajeno da pagina vacia";
+const SINGLETON_404 = "recurso unico del tenant del token: no hay recurso ajeno que nombrar";
+const CREATE_404 = "alta en el tenant del token: no nombra ningun recurso existente";
+const NO_INPUT_422 = "sin query ni cuerpo que validar";
+
+const singletonRead: Reasons = { 404: SINGLETON_404, 422: NO_INPUT_422 };
+
+export const EXEMPTIONS: Readonly<Record<string, Reasons>> = {
+  "chatbot GET /practitioners": { 404: COLLECTION_404 },
+  "chatbot GET /healthcare-services": { 404: COLLECTION_404 },
+  "chatbot GET /schedules": { 404: COLLECTION_404 },
+  "chatbot GET /availability": { 404: COLLECTION_404 },
+  "chatbot GET /knowledge-entries": { 404: COLLECTION_404 },
+  "chatbot GET /medical-records/{id}": { 422: NO_INPUT_422 },
+  "chatbot GET /knowledge-entries/{id}": { 422: NO_INPUT_422 },
+  "chatbot GET /tenant-settings": singletonRead,
+  "chatbot GET /bot-config": singletonRead,
+  "chatbot PATCH /tenant-settings": { 404: SINGLETON_404 },
+  "chatbot PATCH /bot-config": { 404: SINGLETON_404 },
+  "chatbot POST /bot-config/widget-keys/rotate": { 404: SINGLETON_404 },
+  "chatbot POST /bot-config/allowed-origins": { 404: SINGLETON_404 },
+  "chatbot POST /knowledge-entries": { 404: CREATE_404 },
+  "chatbot GET /widget/conversation": {
+    422: "sin query ni cuerpo; la cabecera X-Conversation-Secret ausente es 404 (no divulgacion)",
+  },
+};
