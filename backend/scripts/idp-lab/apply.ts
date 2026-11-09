@@ -109,14 +109,14 @@ function clientAttributes(plan: ClientPlan): Record<string, string> {
   return attributes;
 }
 
-function clientBody(plan: ClientPlan, serviceSecret: string): Json {
+export function clientBody(plan: ClientPlan, serviceSecret: string): Json {
   return {
     clientId: plan.clientId,
     enabled: true,
     protocol: "openid-connect",
     publicClient: plan.public,
     standardFlowEnabled: plan.public,
-    directAccessGrantsEnabled: false,
+    directAccessGrantsEnabled: plan.directAccessGrants === true,
     serviceAccountsEnabled: Boolean(plan.serviceRole),
     redirectUris: plan.redirectUris,
     webOrigins: plan.public ? ["+"] : [],

@@ -18,6 +18,8 @@ export type ClientPlan = {
   serviceRole?: LabRole;
   hardcodedTenant?: string;
   fixedSecret?: "service";
+  /** Password grant: solo `chatbot-newman`, y solo en este realm de laboratorio. */
+  directAccessGrants?: true;
   mappers: MapperPlan[];
 };
 export type UserPlan = { username: string; tenantId?: string; role: LabRole };
@@ -121,6 +123,14 @@ function interactiveClients(input: LabInput): ClientPlan[] {
       public: true,
       pkce: "S256",
       redirectUris: [`${api}/docs/*`],
+      mappers: [],
+    },
+    // Newman pide tokens de usuario sin navegador. Hermes nunca usa este flujo.
+    {
+      clientId: "chatbot-newman",
+      public: false,
+      redirectUris: [],
+      directAccessGrants: true,
       mappers: [],
     },
   ];
