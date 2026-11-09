@@ -129,6 +129,23 @@ todo el backend responde 500.
 apunta a `LAB_API_URL`, así que el `401` de un token reutilizado tras cerrar sesión solo se
 observa contra esa API; un backend local no recibe el aviso.
 
+Usuarios del realm `chatbot-lab` (solo pruebas):
+
+| Usuario | Rol | Clínica | Contraseña |
+| --- | --- | --- | --- |
+| `admin-clinica-norte`, `admin-clinica-sur` | `admin` | la de su nombre | valor de `LAB_USER_PASSWORD` en la corrida de `idp:lab` |
+| `operator-clinica-norte`, `operator-clinica-sur` | `operator` | la de su nombre | valor de `LAB_USER_PASSWORD` en la corrida de `idp:lab` |
+| `platform-lab` | `platform` | ninguna | `LAB_USER_PASSWORD` (texto literal) |
+
+`platform-lab` se creó a mano el 9 de noviembre de 2026 con el mismo plan que `idp:lab`
+(rol `platform`, sin `tenant_id`) y con el texto literal `LAB_USER_PASSWORD` como contraseña.
+Una nueva corrida de `idp:lab` la sustituye por el valor real de esa variable.
+
+Para probar el login de la consola sin desplegar, crea `frontend/.env.local` con `BACKEND_URL` y
+`PUBLIC_BACKEND_URL` apuntando al backend (local o de Easypanel), y con `PUBLIC_OIDC_ISSUER` y
+`PUBLIC_OIDC_CLIENT_ID` como en `frontend/.env.example`. Después, `npm --prefix frontend run dev`.
+El redirect `http://localhost:3000/*` ya está registrado en `chatbot-reference-ui`.
+
 `npm run demo` solo siembra datos: ya no firma tokens. El panel de tenants del simulador exige
 una sesión `platform` (usuario `platform-lab`).
 
