@@ -26,10 +26,10 @@ provisional.
 
 Hay dos piezas:
 
-| Pieza | Para qué sirve | En producción |
-| --- | --- | --- |
-| **Chatbot** | El producto que se despliega: API, panel y chat (consola, iframe y script) | Sí |
-| **Simulador de Hermes** | Una “réplica de juguete” de Hermes para probar el ciclo completo en desarrollo | Se apaga |
+| Pieza                   | Para qué sirve                                                                 | En producción |
+| ----------------------- | ------------------------------------------------------------------------------ | ------------- |
+| **Chatbot**             | El producto que se despliega: API, panel y chat (consola, iframe y script)     | Sí            |
+| **Simulador de Hermes** | Una “réplica de juguete” de Hermes para probar el ciclo completo en desarrollo | Se apaga      |
 
 ---
 
@@ -80,11 +80,11 @@ Reglas importantes que no cambian de fase en fase:
 El repositorio es un “monorepo” (varios proyectos en una sola carpeta git), pero
 **backend** y **frontend** no se mezclan: cada uno tiene su propio `package.json`.
 
-| Carpeta | Rol |
-| --- | --- |
-| `backend/` | API, reglas de negocio, base de datos |
+| Carpeta     | Rol                                                                              |
+| ----------- | -------------------------------------------------------------------------------- |
+| `backend/`  | API, reglas de negocio, base de datos                                            |
 | `frontend/` | Panel, consola de chat y widget; **sin** reglas de negocio (solo llama a la API) |
-| Raíz | Herramientas compartidas (Biome, scripts, Docker Compose) |
+| Raíz        | Herramientas compartidas (Biome, scripts, Docker Compose)                        |
 
 Stack del día a día: **Next.js** (framework web), **Prisma** (capa que habla con la
 base de datos) y **Postgres** (base de datos relacional).
@@ -93,11 +93,11 @@ base de datos) y **Postgres** (base de datos relacional).
 
 El backend se organiza por “módulos” de negocio. Cada módulo tiene tres capas:
 
-| Capa | En palabras simples |
-| --- | --- |
-| `domain/` | Las reglas y conceptos puros (qué es un cupo, una solicitud…). Sin base de datos ni web. |
-| `application/` | Los “casos de uso”: orquestan el dominio para cumplir una acción (crear solicitud, listar agenda…). |
-| `infrastructure/` | Los adaptadores concretos: Prisma, JWT, reloj, IDs, etc. |
+| Capa              | En palabras simples                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `domain/`         | Las reglas y conceptos puros (qué es un cupo, una solicitud…). Sin base de datos ni web.            |
+| `application/`    | Los “casos de uso”: orquestan el dominio para cumplir una acción (crear solicitud, listar agenda…). |
+| `infrastructure/` | Los adaptadores concretos: Prisma, JWT, reloj, IDs, etc.                                            |
 
 Las dependencias van **hacia adentro**: lo de afuera (HTTP, DB) depende del núcleo, no
 al revés. Un archivo llamado “composition root” (`composition-root.ts`) es el único
@@ -109,9 +109,9 @@ reescribir las reglas de agenda.
 
 ### 3.3 Dos “superficies” HTTP (dos formas de hablar con el mismo dominio)
 
-| Superficie | Quién la usa | Para qué |
-| --- | --- | --- |
-| **REST** `/api/v1` | Widget, panel, chat | Operaciones del producto en formato JSON habitual |
+| Superficie          | Quién la usa           | Para qué                                                   |
+| ------------------- | ---------------------- | ---------------------------------------------------------- |
+| **REST** `/api/v1`  | Widget, panel, chat    | Operaciones del producto en formato JSON habitual          |
 | **FHIR R4** `/fhir` | Hermes (rol `service`) | Estándar sanitario de intercambio de datos clínicos/agenda |
 
 Además existe `/api/platform/v1`: la “plataforma” (fuera de cualquier clínica) da de alta
@@ -120,11 +120,11 @@ en desarrollo, tiene su propio REST en `/api/sim/v1`.
 
 Roles del token:
 
-| Rol | Quién es |
-| --- | --- |
-| `widget` | El chat embebido; solo su propia sesión |
-| `operator` / `admin` | Personal del panel |
-| `service` | Hermes / integraciones de servicio |
+| Rol                  | Quién es                                |
+| -------------------- | --------------------------------------- |
+| `widget`             | El chat embebido; solo su propia sesión |
+| `operator` / `admin` | Personal del panel                      |
+| `service`            | Hermes / integraciones de servicio      |
 
 ### 3.4 Frontend
 
@@ -133,11 +133,11 @@ describe la API). No se edita a mano.
 
 Hay tres formas de montar el mismo chat; las tres hablan directo con el backend:
 
-| Montaje | Dónde |
-| --- | --- |
-| Consola | `/chat` |
-| Iframe | `/widget` |
-| Script | `widget.js` en el sitio de la clínica, con la clave pública del tenant |
+| Montaje | Dónde                                                                  |
+| ------- | ---------------------------------------------------------------------- |
+| Consola | `/chat`                                                                |
+| Iframe  | `/widget`                                                              |
+| Script  | `widget.js` en el sitio de la clínica, con la clave pública del tenant |
 
 La consola también tiene el panel (bot, conocimiento, ajustes), el simulador y su
 bandeja. El sistema visual del panel está en `DESIGN.md`.
@@ -148,17 +148,17 @@ bandeja. El sistema visual del panel está en `DESIGN.md`.
 
 Estado resumido del roadmap. Solo cuenta lo cerrado en `main`:
 
-| Fase | Estado | En una frase |
-| --- | --- | --- |
-| **1 — Cimientos** | Cerrada | Auth, contratos, Docker, calidad, hexágono vacío |
-| **2 — Dominio persistido** | Cerrada | Agenda, pacientes, historial, seed, panel y simulador |
-| **3 — Chat, pre-agenda y config** | Cerrada | Motor determinista, widget, verificación, KB, bandeja y apartado de cupos |
-| **4.1 — FHIR base y lectura** | Cerrada | Lectura y búsqueda R4; `GET /fhir/metadata` igual a lo implementado |
-| **4.2 — Escritura de maestros** | Cerrada | `PUT` condicional de Patient, Practitioner, HealthcareService, Schedule y Slot |
-| **4.3 — Pre-agenda por FHIR** | Cerrada | Solicitudes como Appointment `proposed` y Task; Hermes las resuelve con `PUT` |
-| **4.4 — Simulador por FHIR** | Cerrada | El simulador cierra maestros, bandeja y pre-registro solo por `/fhir` |
-| **5 — Keycloak y contrato** | Pendiente | Identidad del panel y de Hermes en Keycloak; Postman y Swagger UI |
-| **6 — Endurecimiento** | Pendiente | Fuera del MVP: secretos, cobertura al 100 %, SonarQube, carga |
+| Fase                              | Estado    | En una frase                                                                   |
+| --------------------------------- | --------- | ------------------------------------------------------------------------------ |
+| **1 — Cimientos**                 | Cerrada   | Auth, contratos, Docker, calidad, hexágono vacío                               |
+| **2 — Dominio persistido**        | Cerrada   | Agenda, pacientes, historial, seed, panel y simulador                          |
+| **3 — Chat, pre-agenda y config** | Cerrada   | Motor determinista, widget, verificación, KB, bandeja y apartado de cupos      |
+| **4.1 — FHIR base y lectura**     | Cerrada   | Lectura y búsqueda R4; `GET /fhir/metadata` igual a lo implementado            |
+| **4.2 — Escritura de maestros**   | Cerrada   | `PUT` condicional de Patient, Practitioner, HealthcareService, Schedule y Slot |
+| **4.3 — Pre-agenda por FHIR**     | Cerrada   | Solicitudes como Appointment `proposed` y Task; Hermes las resuelve con `PUT`  |
+| **4.4 — Simulador por FHIR**      | Cerrada   | El simulador cierra maestros, bandeja y pre-registro solo por `/fhir`          |
+| **5 — Keycloak y contrato**       | Pendiente | Identidad del panel y de Hermes en Keycloak; Postman y Swagger UI              |
+| **6 — Endurecimiento**            | Pendiente | Fuera del MVP: secretos, cobertura al 100 %, SonarQube, carga                  |
 
 ### Capacidades ya disponibles
 
@@ -252,34 +252,34 @@ Queda fuera del MVP. Se abre cuando la Fase 5 esté cerrada.
 
 ## 6. Mapa rápido de módulos del backend
 
-| Módulo | Qué cubre |
-| --- | --- |
-| `auth` | Quién es el actor (roles, verificación de token) |
-| `platform` | Alta de tenants y emisión de tokens de panel/servicio |
-| `tenancy` | Ajustes del tenant |
-| `bot-config` | Textos, parámetros, claves del widget y orígenes permitidos |
-| `knowledge` | Base de conocimiento |
-| `widget` | Sesiones del chat embebido |
-| `conversation` | Motor de estados y turnos del chat |
-| `verification` | Preguntas de identidad, bloqueo y redacción |
-| `handoff` | Tickets para que un humano tome el chat |
-| `scheduling` | Agenda, cupos, citas y solicitudes / pre-agenda |
-| `patients` | Expediente / historial y pre-registro |
-| `fhir` | Perfiles, mappers y contrato R4 de `/fhir` |
-| `hermes-simulator` | Simulador (se apaga en producción) |
-| `shared` | Reloj, IDs, idempotencia, auditoría, paginación… |
+| Módulo             | Qué cubre                                                   |
+| ------------------ | ----------------------------------------------------------- |
+| `auth`             | Quién es el actor (roles, verificación de token)            |
+| `platform`         | Alta de tenants y emisión de tokens de panel/servicio       |
+| `tenancy`          | Ajustes del tenant                                          |
+| `bot-config`       | Textos, parámetros, claves del widget y orígenes permitidos |
+| `knowledge`        | Base de conocimiento                                        |
+| `widget`           | Sesiones del chat embebido                                  |
+| `conversation`     | Motor de estados y turnos del chat                          |
+| `verification`     | Preguntas de identidad, bloqueo y redacción                 |
+| `handoff`          | Tickets para que un humano tome el chat                     |
+| `scheduling`       | Agenda, cupos, citas y solicitudes / pre-agenda             |
+| `patients`         | Expediente / historial y pre-registro                       |
+| `fhir`             | Perfiles, mappers y contrato R4 de `/fhir`                  |
+| `hermes-simulator` | Simulador (se apaga en producción)                          |
+| `shared`           | Reloj, IDs, idempotencia, auditoría, paginación…            |
 
 ---
 
 ## 7. Dónde leer más
 
-| Documento | Contenido |
-| --- | --- |
-| [`README.md`](../README.md) | Arranque local, variables, Docker, mapa del código |
-| [`ROADMAP.md`](../ROADMAP.md) | Plan de las cinco fases del MVP, la Fase 6 y los criterios de cierre |
-| [`GOBERNANZA.md`](../GOBERNANZA.md) | Reglas de trabajo y no negociables |
-| [`DESIGN.md`](../DESIGN.md) | Sistema visual del panel |
-| `docs/superpowers/specs/` | Diseños detallados por sub-fase (de la 2 a la 4.4) |
+| Documento                           | Contenido                                                            |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| [`README.md`](../README.md)         | Arranque local, variables, Docker, mapa del código                   |
+| [`ROADMAP.md`](../ROADMAP.md)       | Plan de las cinco fases del MVP, la Fase 6 y los criterios de cierre |
+| [`GOBERNANZA.md`](../GOBERNANZA.md) | Reglas de trabajo y no negociables                                   |
+| [`DESIGN.md`](../DESIGN.md)         | Sistema visual del panel                                             |
+| `docs/superpowers/specs/`           | Diseños detallados por sub-fase (de la 2 a la 4.4)                   |
 
 ---
 

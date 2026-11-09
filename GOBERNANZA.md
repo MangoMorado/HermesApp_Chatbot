@@ -192,11 +192,11 @@ experiencia: la validación de forma (campo requerido, formato) sí vive ahí.
 Un solo dominio, dos adaptadores de entrada, **contratos de error incompatibles que nunca
 se mezclan**:
 
-| Superficie | Consumidores | Errores |
-| --- | --- | --- |
-| REST `/api/v1` | widget, panel, chat | `{ error: { code, message, request_id, details } }` + cabecera `X-Request-Id` |
-| FHIR R4 `/fhir` | Hermes (solo rol `service`, en lectura y escritura) | `OperationOutcome` con `application/fhir+json` |
-| Plataforma `/api/platform/v1` | Operación (alta de tenants, tokens) | Misma envoltura que REST `/api/v1` |
+| Superficie                    | Consumidores                                        | Errores                                                                       |
+| ----------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------- |
+| REST `/api/v1`                | widget, panel, chat                                 | `{ error: { code, message, request_id, details } }` + cabecera `X-Request-Id` |
+| FHIR R4 `/fhir`               | Hermes (solo rol `service`, en lectura y escritura) | `OperationOutcome` con `application/fhir+json`                                |
+| Plataforma `/api/platform/v1` | Operación (alta de tenants, tokens)                 | Misma envoltura que REST `/api/v1`                                            |
 
 ### 3.1 Reglas FHIR
 
@@ -221,14 +221,14 @@ se mezclan**:
 
 ## 4. Clean Code y DRY
 
-| Regla | Umbral |
-| --- | --- |
-| Complejidad cognitiva por función | ≤ 15 |
-| Líneas por función | ≤ 40 (sin blancos) |
-| Archivo de lógica | ≤ 400 líneas |
-| Ciclos de importación | 0 |
-| `process.env` | Solo en `backend/src/config/env.ts`, `frontend/src/config/env.ts` (solo servidor) y en configs de herramientas |
-| Extracción DRY | Al **tercer** uso real del mismo patrón |
+| Regla                             | Umbral                                                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Complejidad cognitiva por función | ≤ 15                                                                                                           |
+| Líneas por función                | ≤ 40 (sin blancos)                                                                                             |
+| Archivo de lógica                 | ≤ 400 líneas                                                                                                   |
+| Ciclos de importación             | 0                                                                                                              |
+| `process.env`                     | Solo en `backend/src/config/env.ts`, `frontend/src/config/env.ts` (solo servidor) y en configs de herramientas |
+| Extracción DRY                    | Al **tercer** uso real del mismo patrón                                                                        |
 
 Dos usos parecidos no son duplicación: son coincidencia. Abstraer al segundo uso produce
 acoplamientos que cuestan más que la repetición. Al tercero ya hay evidencia de patrón.
@@ -273,17 +273,17 @@ Instaladas en `.agents/skills/` (espejo en `.claude/skills/` para Claude Code y,
 aplica, en `.github/skills/` para GitHub Copilot) y fijadas en `skills-lock.json`, vía el
 CLI de [skills.sh](https://skills.sh):
 
-| Skill | Origen | Para qué |
-| --- | --- | --- |
-| `dry-refactoring` | `kucherenko/jscpd` | Eliminar duplicación detectada por jscpd |
-| `fhir-developer-skill` | `anthropics/healthcare` | R4: recursos, value sets, `OperationOutcome` |
-| `find-skills` | `vercel-labs/skills` | Descubrir e instalar skills del ecosistema |
-| `frontend-design` | `anthropics/skills` | Dirección visual distintiva (ligera) al construir UI |
-| `grilling` | `mattpocock/skills` | Stress-test de planes y decisiones |
-| `hexagonal-architecture` | `lexler/skill-factory` | Decidir fronteras de capa |
-| `impeccable` | `pbakaus/impeccable` | Diseño UI de producción: craft, critique, audit, polish, DESIGN.md |
-| `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI |
-| `security-best-practices` | `openai/skills` | Revisión de seguridad (JS/TS, Next.js) |
+| Skill                          | Origen                       | Para qué                                                           |
+| ------------------------------ | ---------------------------- | ------------------------------------------------------------------ |
+| `dry-refactoring`              | `kucherenko/jscpd`           | Eliminar duplicación detectada por jscpd                           |
+| `fhir-developer-skill`         | `anthropics/healthcare`      | R4: recursos, value sets, `OperationOutcome`                       |
+| `find-skills`                  | `vercel-labs/skills`         | Descubrir e instalar skills del ecosistema                         |
+| `frontend-design`              | `anthropics/skills`          | Dirección visual distintiva (ligera) al construir UI               |
+| `grilling`                     | `mattpocock/skills`          | Stress-test de planes y decisiones                                 |
+| `hexagonal-architecture`       | `lexler/skill-factory`       | Decidir fronteras de capa                                          |
+| `impeccable`                   | `pbakaus/impeccable`         | Diseño UI de producción: craft, critique, audit, polish, DESIGN.md |
+| `nielsen-usability-heuristics` | `dembrandt/dembrandt-skills` | Revisión de usabilidad de UI                                       |
+| `security-best-practices`      | `openai/skills`              | Revisión de seguridad (JS/TS, Next.js)                             |
 
 `hexagonal-architecture` y `fhir-developer-skill` viven hoy en `.claude/skills/`; el resto
 del inventario compartido está en `.agents/skills/` y `.claude/skills/`. `impeccable`

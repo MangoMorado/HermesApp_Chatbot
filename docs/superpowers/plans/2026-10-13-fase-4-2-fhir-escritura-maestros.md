@@ -32,27 +32,27 @@
 
 ## Mapa de archivos
 
-| Archivo | Responsabilidad |
-| --- | --- |
-| `fhir/domain/fhir-error.ts` | `conflict` 409/412; `Allow` configurable en 405 |
-| `fhir/domain/resources/types.ts` | `IssueCode` + `conflict`; `CapabilityStatement` con `update` / `conditionalUpdate` / `updateCreate` |
-| `fhir/domain/operation-outcome.ts` | Sin cambio de firma; usa el nuevo código |
-| `fhir/domain/parsers/*.ts` | Un parser por recurso (cuerpo → comando tipado) |
-| `fhir/domain/ports/writers.ts` | Puertos de escritura y tipos de comando / resultado |
-| `fhir/domain/registry.ts` | `writable: boolean` (o interacciones) por recurso |
-| `fhir/domain/capability-statement.ts` | Emite `update` + flags solo si el recurso es escribible |
-| `fhir/domain/profiles.ts` | `CAPABILITY_DATE` → `2026-10-13` (escritura) o la fecha del commit de contrato |
-| `fhir/application/conditional-put.ts` | Orquesta parseo → puerto → mapper de lectura |
-| `http/fhir-route.ts` | `fhirResponse` con status, `Location`, `Allow`; `toFhirError` traduce `ConflictError` |
-| `http/fhir-idempotent-route.ts` | Adaptador idempotente FHIR (reusa `runIdempotent`) |
-| `http/fhir-dispatch.ts` | Despacha `PUT` condicional de los cinco tipos |
-| `patients/.../upsert-patient-from-hermes.ts` | Upsert + confirmación de pre-registro |
-| `patients/.../repositories.ts` + Prisma | `findByIdentifier`, `insertActive`, `updateFromHermes` |
-| `scheduling/.../upsert-*-from-hermes.ts` | Cuatro casos de uso (practitioner, service, schedule, slot) |
-| `scheduling/...` puertos + Prisma | `findByIdentifier`, insert/update; en slot, hold vivo y rechazo sin liberar |
-| `composition/fhir-wiring.ts` | Conecta lecturas y escrituras |
-| `tests/helpers/fhir.ts` | `fhirPut` con cuerpo, cabeceras e `Idempotency-Key` |
-| Suites | `fhir/parsers`, upserts unitarios, `fhir-conformance` HTTP write, aislamiento, roles, idempotencia |
+| Archivo                                      | Responsabilidad                                                                                     |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `fhir/domain/fhir-error.ts`                  | `conflict` 409/412; `Allow` configurable en 405                                                     |
+| `fhir/domain/resources/types.ts`             | `IssueCode` + `conflict`; `CapabilityStatement` con `update` / `conditionalUpdate` / `updateCreate` |
+| `fhir/domain/operation-outcome.ts`           | Sin cambio de firma; usa el nuevo código                                                            |
+| `fhir/domain/parsers/*.ts`                   | Un parser por recurso (cuerpo → comando tipado)                                                     |
+| `fhir/domain/ports/writers.ts`               | Puertos de escritura y tipos de comando / resultado                                                 |
+| `fhir/domain/registry.ts`                    | `writable: boolean` (o interacciones) por recurso                                                   |
+| `fhir/domain/capability-statement.ts`        | Emite `update` + flags solo si el recurso es escribible                                             |
+| `fhir/domain/profiles.ts`                    | `CAPABILITY_DATE` → `2026-10-13` (escritura) o la fecha del commit de contrato                      |
+| `fhir/application/conditional-put.ts`        | Orquesta parseo → puerto → mapper de lectura                                                        |
+| `http/fhir-route.ts`                         | `fhirResponse` con status, `Location`, `Allow`; `toFhirError` traduce `ConflictError`               |
+| `http/fhir-idempotent-route.ts`              | Adaptador idempotente FHIR (reusa `runIdempotent`)                                                  |
+| `http/fhir-dispatch.ts`                      | Despacha `PUT` condicional de los cinco tipos                                                       |
+| `patients/.../upsert-patient-from-hermes.ts` | Upsert + confirmación de pre-registro                                                               |
+| `patients/.../repositories.ts` + Prisma      | `findByIdentifier`, `insertActive`, `updateFromHermes`                                              |
+| `scheduling/.../upsert-*-from-hermes.ts`     | Cuatro casos de uso (practitioner, service, schedule, slot)                                         |
+| `scheduling/...` puertos + Prisma            | `findByIdentifier`, insert/update; en slot, hold vivo y rechazo sin liberar                         |
+| `composition/fhir-wiring.ts`                 | Conecta lecturas y escrituras                                                                       |
+| `tests/helpers/fhir.ts`                      | `fhirPut` con cuerpo, cabeceras e `Idempotency-Key`                                                 |
+| Suites                                       | `fhir/parsers`, upserts unitarios, `fhir-conformance` HTTP write, aislamiento, roles, idempotencia  |
 
 ## Refinamientos sobre la spec
 
@@ -84,21 +84,22 @@ La spec ganó la §10 a partir de `docs/FHIR_R4_REVIEW.md`. Cuando se revisó, l
 
 Cambios de contrato, en breve:
 
-| Tema | Antes | Ahora |
-| --- | --- | --- |
-| `metadata` | `update`, `conditionalUpdate: true`, `updateCreate: true` | `update` con `documentation` (solo condicional), `conditionalUpdate: true`, `updateCreate: false` |
-| Cuerpo | Cualquier campo de más → `400` `not-supported` | Se ignoran `meta` (salvo tag), `text`, `extension`, `use` y afines; elemento con significado no guardado o `modifierExtension` → `422` `structure` |
-| `id` del cuerpo | Se ignora | Debe faltar o coincidir; si no, `400` |
-| Reglas del servidor | `400` | `422` (`processing` o `business-rule`) |
-| `412` | `conflict` | `multiple-matches` |
-| `Content-Type` | Solo `application/fhir+json`; si no, `400` | También `application/json`; si no, `415` |
-| Orden | Clave antes de enrutar | Enrutado (`405`/`404`) y `415` antes de la clave y el cuerpo |
+| Tema                | Antes                                                     | Ahora                                                                                                                                              |
+| ------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `metadata`          | `update`, `conditionalUpdate: true`, `updateCreate: true` | `update` con `documentation` (solo condicional), `conditionalUpdate: true`, `updateCreate: false`                                                  |
+| Cuerpo              | Cualquier campo de más → `400` `not-supported`            | Se ignoran `meta` (salvo tag), `text`, `extension`, `use` y afines; elemento con significado no guardado o `modifierExtension` → `422` `structure` |
+| `id` del cuerpo     | Se ignora                                                 | Debe faltar o coincidir; si no, `400`                                                                                                              |
+| Reglas del servidor | `400`                                                     | `422` (`processing` o `business-rule`)                                                                                                             |
+| `412`               | `conflict`                                                | `multiple-matches`                                                                                                                                 |
+| `Content-Type`      | Solo `application/fhir+json`; si no, `400`                | También `application/json`; si no, `415`                                                                                                           |
+| Orden               | Clave antes de enrutar                                    | Enrutado (`405`/`404`) y `415` antes de la clave y el cuerpo                                                                                       |
 
 ---
 
 ### Task 1: Errores, tipos de capability y parsers
 
 **Files:**
+
 - Modify: `docs/superpowers/specs/2026-10-13-fase-4-2-fhir-escritura-maestros-design.md` (añadir §9)
 - Modify: `backend/src/modules/fhir/domain/resources/types.ts`
 - Modify: `backend/src/modules/fhir/domain/fhir-error.ts`
@@ -114,6 +115,7 @@ Cambios de contrato, en breve:
 - Modify: `backend/tests/fhir/registro.test.ts` (solo si ya falla por tipos; si no, en Tarea 5)
 
 **Interfaces:**
+
 - Produces:
   - `IssueCode` incluye `"conflict"`.
   - `fhirConflict(message: string): FhirError` → 409.
@@ -122,6 +124,7 @@ Cambios de contrato, en breve:
   - `fhirResponse(body, status, requestId, extras?: { location?: string; allow?: string })`.
   - `toFhirError` traduce `ConflictError` → `fhirConflict(error.message)`.
   - De `ports/writers.ts`:
+
     ```ts
     export type WriteOutcome = "created" | "updated";
     export type MasterWriteCommand = {
@@ -180,7 +183,6 @@ Cambios de contrato, en breve:
 Al final de la spec añade:
 
 ```markdown
-
 ## 9. Refinamientos al planificar
 
 1. **Envoltorio de escritura aparte.** `serviceFhirRoute` siempre responde 200; el `PUT`
@@ -292,6 +294,7 @@ Expected: FAIL (módulos inexistentes)
 - [ ] **Step 4: Implementar tipos, errores, helpers y parsers**
 
 En `resources/types.ts`:
+
 - Añadir `"conflict"` a `IssueCode`.
 - Ampliar `interaction.code` a `"read" | "search-type" | "update"`.
 - En cada recurso del capability: opcionales `conditionalUpdate?: boolean` y `updateCreate?: boolean`.
@@ -364,7 +367,9 @@ export function requireQueryIdentifier(
   identifiers: readonly FhirIdentifier[],
   query: FhirIdentifier,
 ): void {
-  const found = identifiers.some((item) => item.system === query.system && item.value === query.value);
+  const found = identifiers.some(
+    (item) => item.system === query.system && item.value === query.value,
+  );
   if (!found) {
     throw fhirInvalid("El identifier de la query debe aparecer en el cuerpo");
   }
@@ -379,7 +384,12 @@ export function readIdentifierArray(value: unknown): FhirIdentifier[] {
       throw fhirInvalid(`identifier[${index}] invalido`);
     }
     const row = item as Record<string, unknown>;
-    if (typeof row.system !== "string" || typeof row.value !== "string" || !row.system || !row.value) {
+    if (
+      typeof row.system !== "string" ||
+      typeof row.value !== "string" ||
+      !row.system ||
+      !row.value
+    ) {
       throw fhirInvalid(`identifier[${index}] debe tener system y value`);
     }
     return { system: row.system, value: row.value };
@@ -422,14 +432,17 @@ En PowerShell, si el heredoc falla, usa: `git commit -m "feat(fhir): parsers y e
 ### Task 2: Upsert de `Patient` en `patients`
 
 **Files:**
+
 - Modify: `backend/src/modules/patients/domain/ports/repositories.ts`
 - Modify: `backend/src/modules/patients/infrastructure/prisma-medical-record-repository.ts`
 - Create: `backend/src/modules/patients/application/upsert-patient-from-hermes.ts`
 - Test: `backend/tests/dominio/upsert-patient-from-hermes.test.ts`
 
 **Interfaces:**
+
 - Consumes: `MedicalRecord`, `AuditLog`, `Clock`, `IdGenerator`, `ConflictError`
 - Produces:
+
   ```ts
   export type UpsertPatientFromHermes = (input: {
     readonly tenantId: TenantId;
@@ -445,6 +458,7 @@ En PowerShell, si el heredoc falla, usa: `git commit -m "feat(fhir): parsers y e
     readonly email: string | null;
   }) => Promise<{ outcome: "created" | "updated"; record: MedicalRecord }>;
   ```
+
   Si hay ambigüedad imposible por índices, no hace falta devolver `ambiguous` aquí; el puerto FHIR puede mapear solo created/updated. **Si el buscador devolviera >1, el writer FHIR traduce a ambiguous** — el repo busca con `findUnique` / `findFirst` y no puede devolver >1. El writer de fhir-wiring envuelve y nunca emite ambiguous salvo que se busque por lista; **esta fase: search by unique keys only**, sin `ambiguous` desde patients. El `412` se prueba a nivel HTTP solo si se puede fabricar (p. ej. sin unique en test) — **refinamiento:** con el esquema actual el `412` queda cubierto por un test unitario del caso de uso de `conditional-put` con puerto falso que devuelve `ambiguous`, no por una fila real en Postgres.
 
 - [ ] **Step 1: Test unitario del caso de uso (falla)**
@@ -590,6 +604,7 @@ git commit -m "feat(patients): upsert y confirmacion de pre-registro desde Herme
 ### Task 3: Upserts de `Practitioner`, `HealthcareService` y `Schedule`
 
 **Files:**
+
 - Modify: `backend/src/modules/scheduling/domain/ports/repositories.ts` (o crear `ports/hermes-writes.ts` si el archivo de repos de lectura no es el lugar — **usar** ampliar repos existentes / nuevo puerto `MasterWriteStore` en `scheduling/domain/ports/hermes-masters.ts` para no mezclar listados con escritura)
 - Create: `backend/src/modules/scheduling/domain/ports/hermes-masters.ts`
 - Create: `backend/src/modules/scheduling/infrastructure/prisma-hermes-masters.ts`
@@ -599,6 +614,7 @@ git commit -m "feat(patients): upsert y confirmacion de pre-registro desde Herme
 - Test: `backend/tests/dominio/upsert-masters-from-hermes.test.ts`
 
 **Interfaces:**
+
 - Produces: tres factories `createUpsert*FromHermes` con firma análoga a Patient (sin documento). Schedule valida que existan practitioner y service (`ValidationError` si faltan).
 - Puerto:
 
@@ -631,6 +647,7 @@ git commit -m "feat(scheduling): upsert de profesionales, servicios y agendas de
 ### Task 4: Upsert de `Slot` con conflicto de apartado
 
 **Files:**
+
 - Modify: `backend/src/modules/scheduling/domain/ports/hermes-masters.ts` (o `hermes-slots.ts`)
 - Modify: `backend/src/modules/scheduling/infrastructure/prisma-hermes-masters.ts`
 - Modify: `backend/src/modules/scheduling/domain/ports/pre-agenda.ts` — añadir `findLiveHoldBySlot(tenantId, slotId, now): Promise<AppointmentRequest | null>`
@@ -639,6 +656,7 @@ git commit -m "feat(scheduling): upsert de profesionales, servicios y agendas de
 - Test: `backend/tests/dominio/upsert-slot-from-hermes.test.ts`
 
 **Interfaces:**
+
 - Produces: `createUpsertSlotFromHermes`
 - Reglas:
   1. `expireDue(tenantId, now)` (o el puerto `RequestExpirer`) **antes** de mirar el hold.
@@ -655,9 +673,15 @@ Comparación de campos del cupo apartado: `scheduleId`, `startAt`, `endAt` deben
 - [ ] **Step 1: Test**
 
 ```ts
-it("ocupa un cupo apartado y rechaza la solicitud sin liberarlo", async () => { /* ... */ });
-it("rechaza un PUT free sobre cupo apartado", async () => { /* ... */ });
-it("rechaza cambiar start de un cupo apartado", async () => { /* ... */ });
+it("ocupa un cupo apartado y rechaza la solicitud sin liberarlo", async () => {
+  /* ... */
+});
+it("rechaza un PUT free sobre cupo apartado", async () => {
+  /* ... */
+});
+it("rechaza cambiar start de un cupo apartado", async () => {
+  /* ... */
+});
 ```
 
 - [ ] **Step 2–4: FAIL → implement → PASS → commit**
@@ -673,6 +697,7 @@ git commit -m "feat(scheduling): upsert de Slot con rechazo de apartado por Herm
 Corrige lo commiteado en la Tarea 1 según la spec §10.2, §10.4 y §10.6. No toca `patients` ni `scheduling`.
 
 **Files:**
+
 - Modify: `backend/src/modules/fhir/domain/resources/types.ts`
 - Modify: `backend/src/modules/fhir/domain/fhir-error.ts`
 - Modify: `backend/src/http/fhir-route.ts`
@@ -682,6 +707,7 @@ Corrige lo commiteado en la Tarea 1 según la spec §10.2, §10.4 y §10.6. No t
 - Modify: `backend/tests/fhir/parsers.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `IssueCode` gana `"multiple-matches" | "processing" | "business-rule" | "structure"`.
   - `fhirMultipleMatches(message)` → `412` `multiple-matches` (antes `conflict`).
@@ -700,7 +726,7 @@ it("ignora meta, text, extension y use", () => {
     {
       resourceType: "Patient",
       meta: { versionId: "3", lastUpdated: "2026-06-15T12:00:00Z" },
-      text: { status: "generated", div: "<div xmlns=\"http://www.w3.org/1999/xhtml\">Ana</div>" },
+      text: { status: "generated", div: '<div xmlns="http://www.w3.org/1999/xhtml">Ana</div>' },
       extension: [{ url: "urn:x", valueString: "y" }],
       identifier: [
         { use: "official", ...query },
@@ -755,12 +781,12 @@ Run: `npm --prefix backend exec vitest run tests/fhir/parsers.test.ts`
 
 Qué devuelve cada código, según la spec §5:
 
-| Error en el cuerpo | Status | Código |
-| --- | --- | --- |
-| No es un objeto JSON, `resourceType` distinto, identificador de la query ausente | 400 | `invalid` |
-| Clave desconocida (no conocida ni ignorada), `modifierExtension` | 422 | `structure` |
-| Campo obligatorio ausente o con valor inválido (fechas, offset, `start ≥ end`, value set, forma de referencia, identificador de negocio) | 422 | `processing` |
-| Tag `pre-registered` | 422 | `business-rule` |
+| Error en el cuerpo                                                                                                                       | Status | Código          |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ------ | --------------- |
+| No es un objeto JSON, `resourceType` distinto, identificador de la query ausente                                                         | 400    | `invalid`       |
+| Clave desconocida (no conocida ni ignorada), `modifierExtension`                                                                         | 422    | `structure`     |
+| Campo obligatorio ausente o con valor inválido (fechas, offset, `start ≥ end`, value set, forma de referencia, identificador de negocio) | 422    | `processing`    |
+| Tag `pre-registered`                                                                                                                     | 422    | `business-rule` |
 
 Claves ignoradas (spec §10.2): en la raíz `meta` (tras revisar `meta.tag`), `text` y `extension`; en `identifier`: `use`, `type`, `period`, `extension`; en `name`: `use`, `prefix`, `suffix`, `period`, `extension` (y `text` en `Patient`); en `telecom`: `use`, `rank`, `period`, `extension`; en referencias: `display`, `type`, `extension`.
 
@@ -782,6 +808,7 @@ git commit -m "fix(fhir): parsers tolerantes y errores 422/412 segun R4"
 ### Task 5: Registro, capability, caso de uso `conditional-put` y wiring
 
 **Files:**
+
 - Modify: `backend/src/modules/fhir/domain/registry.ts`
 - Modify: `backend/src/modules/fhir/domain/capability-statement.ts`
 - Modify: `backend/src/modules/fhir/domain/profiles.ts` (`CAPABILITY_DATE`)
@@ -792,6 +819,7 @@ git commit -m "fix(fhir): parsers tolerantes y errores 422/412 segun R4"
 - Test: `backend/tests/fhir/conditional-put.test.ts`
 
 **Interfaces:**
+
 - Produces:
 
 ```ts
@@ -805,6 +833,7 @@ export type ConditionalPut = (input: {
 ```
 
 Flujo:
+
 1. Si tipo no es resource type → el dispatch ya filtró; aquí si no es writable → no se llama.
 2. Query: solo `identifier` (un valor `system|value`); otros params → `not-supported`/`invalid`.
 3. `parse*Body` según tipo; separa `bodyId` del resto del payload.
@@ -853,6 +882,7 @@ git commit -m "feat(fhir): conditional-put y metadata con update"
 ### Task 6: Superficie HTTP idempotente
 
 **Files:**
+
 - Create: `backend/src/http/fhir-idempotent-route.ts`
 - Modify: `backend/src/http/fhir-dispatch.ts`
 - Modify: `backend/src/http/fhir-route.ts` (si faltó algo de Allow/Location en Tarea 1)
@@ -861,6 +891,7 @@ git commit -m "feat(fhir): conditional-put y metadata con update"
 - Test unitario opcional del dispatch si hace falta
 
 **Interfaces:**
+
 - Produces: `serviceFhirIdempotentRoute(request, precheck, execute)`. `precheck` corre tras autenticar y exigir `service`, y **antes** de leer la clave y el cuerpo (spec §10.5); lo que devuelve llega a `execute` como `target`. `execute` recibe `{ actor, body, ports, requestId, target }` y devuelve `{ status, body }`.
 
 Implementación clave:
@@ -938,7 +969,7 @@ export async function readIdempotentRequest(
   minKeyLength = 1,
   hashKey?: string,
   pathMode: "pathname" | "pathname+search" = "pathname",
-): Promise<IdempotentRequest>
+): Promise<IdempotentRequest>;
 ```
 
 REST sigue con default `pathname`. FHIR pasa `"pathname+search"`.
@@ -1040,6 +1071,7 @@ git commit -m "feat(fhir): PUT condicional idempotente en /fhir"
 ### Task 7: Suites HTTP `db` (conformidad, aislamiento, idempotencia)
 
 **Files:**
+
 - Create: `backend/tests/db/fhir-escritura-http.test.ts` (o ampliar `fhir-conformance-http.test.ts`)
 - Modify: `backend/tests/db/aislamiento-tenant-http.test.ts` (o archivo fhir aislamiento)
 - Modify: `backend/tests/db/idempotencia-http.test.ts`
@@ -1083,6 +1115,7 @@ git commit -m "test(fhir): escritura condicional, aislamiento e idempotencia"
 ### Task 8: Documentación y puertas de cierre
 
 **Files:**
+
 - Modify: `README.md` (estado: 4.2 en curso o cerrada según el momento del PR; documentar `PUT` + `Idempotency-Key`)
 - Modify: `backend/AGENTS.md` (cómo añadir escritura: parser + writable en registro + writer en wiring)
 - Modify: spec estado → implementada en rama (opcional)
@@ -1117,27 +1150,27 @@ git commit -m "docs: guia de escritura FHIR de maestros (Fase 4.2)"
 
 ## Cobertura de la spec
 
-| Requisito | Tarea |
-| --- | --- |
-| PUT condicional 5 recursos | 5, 6, 7 |
-| Upsert 0/1/412 | 1, 5, 7 |
-| Confirmación pre-registro | 2, 7 |
-| Conflicto documento | 2, 7 |
-| Cupo apartado → rejected/slot_unavailable | 4, 7 |
-| PUT free no suelta apartado | 4, 7 |
-| Idempotencia + hash con query | 6, 7 |
-| Auditoría written_by_hermes | 2–4, 7 |
-| metadata update flags | 5, 7 |
-| Roles 401/403 | 6, 7 |
-| OperationOutcome / conflict code | 1, 6 |
-| Fronteras fhir ↛ patients/scheduling | 5 + suite fronteras |
-| Sin OpenAPI / sin frontend | Global |
-| Alineación R4: parsers tolerantes, `422`, `multiple-matches`, `415` (spec §10.2, §10.4, §10.6) | 4b, 6, 7 |
-| `id` del cuerpo (spec §10.3) | 4b, 5, 7 |
-| `metadata` con `updateCreate: false` y `documentation` (spec §10.1, §10.8) | 5, 7 |
-| Orden enrutado → `415` → clave (spec §10.5) | 6, 7 |
-| Menores R4: `WWW-Authenticate`, `no-version`, `Patient.active` | 8 |
-| Cupo apartado frente a Hermes (spec §10.7, opción A) | 4 |
+| Requisito                                                                                      | Tarea               |
+| ---------------------------------------------------------------------------------------------- | ------------------- |
+| PUT condicional 5 recursos                                                                     | 5, 6, 7             |
+| Upsert 0/1/412                                                                                 | 1, 5, 7             |
+| Confirmación pre-registro                                                                      | 2, 7                |
+| Conflicto documento                                                                            | 2, 7                |
+| Cupo apartado → rejected/slot_unavailable                                                      | 4, 7                |
+| PUT free no suelta apartado                                                                    | 4, 7                |
+| Idempotencia + hash con query                                                                  | 6, 7                |
+| Auditoría written_by_hermes                                                                    | 2–4, 7              |
+| metadata update flags                                                                          | 5, 7                |
+| Roles 401/403                                                                                  | 6, 7                |
+| OperationOutcome / conflict code                                                               | 1, 6                |
+| Fronteras fhir ↛ patients/scheduling                                                           | 5 + suite fronteras |
+| Sin OpenAPI / sin frontend                                                                     | Global              |
+| Alineación R4: parsers tolerantes, `422`, `multiple-matches`, `415` (spec §10.2, §10.4, §10.6) | 4b, 6, 7            |
+| `id` del cuerpo (spec §10.3)                                                                   | 4b, 5, 7            |
+| `metadata` con `updateCreate: false` y `documentation` (spec §10.1, §10.8)                     | 5, 7                |
+| Orden enrutado → `415` → clave (spec §10.5)                                                    | 6, 7                |
+| Menores R4: `WWW-Authenticate`, `no-version`, `Patient.active`                                 | 8                   |
+| Cupo apartado frente a Hermes (spec §10.7, opción A)                                           | 4                   |
 
 ## Autorevisión del plan
 

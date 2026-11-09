@@ -49,10 +49,10 @@ Comprobación rápida: `curl http://localhost:3001/api/v1/health` responde
 
 ## Endpoints
 
-| Ruta | Acceso | Qué hace |
-| --- | --- | --- |
-| `GET /api/v1/health` | público | Comprueba que el servicio responde |
-| `GET /api/v1/me` | cualquier rol autenticado | Identidad efectiva del token |
+| Ruta                 | Acceso                    | Qué hace                           |
+| -------------------- | ------------------------- | ---------------------------------- |
+| `GET /api/v1/health` | público                   | Comprueba que el servicio responde |
+| `GET /api/v1/me`     | cualquier rol autenticado | Identidad efectiva del token       |
 
 Los errores siempre vienen como `{ error: { code, message, request_id, details? } }` con
 cabecera `X-Request-Id`. Si el cliente manda `X-Request-Id`, se devuelve el mismo.
@@ -131,11 +131,11 @@ observa contra esa API; un backend local no recibe el aviso.
 
 Usuarios del realm `chatbot-lab` (solo pruebas):
 
-| Usuario | Rol | Clínica | Contraseña |
-| --- | --- | --- | --- |
-| `admin-clinica-norte`, `admin-clinica-sur` | `admin` | la de su nombre | `LAB_USER_PASSWORD` (texto literal) |
+| Usuario                                          | Rol        | Clínica         | Contraseña                          |
+| ------------------------------------------------ | ---------- | --------------- | ----------------------------------- |
+| `admin-clinica-norte`, `admin-clinica-sur`       | `admin`    | la de su nombre | `LAB_USER_PASSWORD` (texto literal) |
 | `operator-clinica-norte`, `operator-clinica-sur` | `operator` | la de su nombre | `LAB_USER_PASSWORD` (texto literal) |
-| `platform-lab` | `platform` | ninguna | `LAB_USER_PASSWORD` (texto literal) |
+| `platform-lab`                                   | `platform` | ninguna         | `LAB_USER_PASSWORD` (texto literal) |
 
 El 9 de noviembre de 2026 se creó `platform-lab` a mano con el mismo plan que `idp:lab` (rol
 `platform`, sin `tenant_id`), y los cinco usuarios quedaron con el texto literal
@@ -170,11 +170,11 @@ Para que Hermes sea el proveedor de identidad de este servicio:
 
 Un solo widget con tres montajes; los tres hablan directo con el backend por CORS.
 
-| Montaje | Cómo se usa | Origen que ve el backend |
-| --- | --- | --- |
-| Script | `<script src="https://<frontend>/widget.js" data-key="<clave>" data-api="https://<backend>" async></script>` | El del sitio del tenant |
-| Iframe | `<iframe src="https://<frontend>/widget?key=<clave>"></iframe>` | El del frontend |
-| Consola | `/chat` en el frontend | El del frontend |
+| Montaje | Cómo se usa                                                                                                  | Origen que ve el backend |
+| ------- | ------------------------------------------------------------------------------------------------------------ | ------------------------ |
+| Script  | `<script src="https://<frontend>/widget.js" data-key="<clave>" data-api="https://<backend>" async></script>` | El del sitio del tenant  |
+| Iframe  | `<iframe src="https://<frontend>/widget?key=<clave>"></iframe>`                                              | El del frontend          |
+| Consola | `/chat` en el frontend                                                                                       | El del frontend          |
 
 El origen correspondiente debe estar en los orígenes permitidos del tenant (pantalla **Bot**).
 En modo iframe no se controla qué sitio lo incrusta: la protección por origen es del modo
@@ -231,29 +231,29 @@ provisionales hasta la Fase 6, donde salen del YAML versionado.
 
 ## Variables
 
-| Variable | Dónde | Para qué |
-| --- | --- | --- |
-| `DATABASE_URL` | backend | Conexión a Postgres (la lee `prisma.config.ts` y `src/config/env.ts`) |
-| `TEST_DATABASE_URL` | backend (pruebas) | Base que usa el proyecto Vitest `db`; la suite la borra y recrea en cada corrida |
-| `APP_TIMEZONE` | backend | Zona de referencia para agenda y búsquedas FHIR |
-| `OIDC_ISSUER` / `OIDC_AUDIENCE` | backend | Emisor y audiencia esperados del proveedor OIDC (obligatorias) |
-| `OIDC_TENANT_CLAIM` | backend | Claim del tenant; por defecto `tenant_id`. Admite los sufijos `[]` y `{}` para listas y objetos |
-| `OIDC_ROLES_CLAIM` | backend | Claim de roles; por defecto `roles` |
-| `OIDC_ROLE_MAP` | backend | Mapa `externo=producto,…`; vacío significa identidad |
-| `OIDC_CLOCK_TOLERANCE_SECONDS` | backend | Tolerancia de reloj; por defecto 30 |
-| `OIDC_LOGOUT_AUDIENCES` | backend | Audiencias admitidas del `logout_token`, separadas por comas |
-| `OIDC_MAX_TOKEN_LIFETIME_SECONDS` | backend | Vida máxima de un token de acceso del proveedor; por defecto 300. Entero ≥ 1 y **≥ la vida de acceso que configure el proveedor**: el back-channel logout cierra el `sid` durante este tiempo más `OIDC_CLOCK_TOLERANCE_SECONDS` |
-| `OIDC_HTTP_TIMEOUT_MS` | backend | Límite de cada llamada al proveedor (discovery, JWKS, token endpoint), en ms; por defecto 5000. Vencido, la API responde `503 identity_unavailable` |
-| `CREDENTIALS_ENCRYPTION_KEY` | backend | 32 bytes en base64 (obligatoria): sella los secretos de widget. Genérala con `openssl rand -base64 32` |
-| `HERMES_SIM_SERVICE_CLIENTS` | backend | JSON de clientes `service` del simulador por tenant; obligatoria solo con `HERMES_SIMULATOR_ENABLED=true`. Acepta `"*"` con `{tenant}` en el `client_id` |
-| `TRUST_PROXY` | backend | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible |
-| `FHIR_BASE_URL` | backend | Base pública de `/fhir` para los enlaces y `fullUrl` de los `Bundle`, y destino del cliente del simulador. Debe ser una URL absoluta `http(s)` que **incluya** la ruta `/fhir` (p. ej. `https://api.clinica.com/fhir`); si no es una URL absoluta, el backend se niega a arrancar. Obligatoria cuando `HERMES_SIMULATOR_ENABLED=true` y `FHIR_GATEWAY=fetch`. Sin ella, y con el simulador apagado, los enlaces se construyen con el origen de la petición |
-| `FHIR_GATEWAY` | backend | `fetch` (el proceso y `hermes:sync`) o `handlers` (las pruebas invocan `/fhir` sin abrir un puerto). Por defecto `fetch` |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose | Credenciales del contenedor de Postgres |
-| `BACKEND_URL` | frontend | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio) |
-| `PUBLIC_BACKEND_URL` | frontend | URL del backend alcanzable desde el navegador; la usa el widget del chat (CORS). Por defecto `http://localhost:3001` |
-| `PUBLIC_OIDC_ISSUER` | frontend | Issuer del proveedor para el login de la consola (p. ej. `https://keycloak.mangomorado.com/realms/chatbot-lab`); se lee en runtime. Sin él la consola avisa y no ofrece login |
-| `PUBLIC_OIDC_CLIENT_ID` | frontend | Cliente público con PKCE de la consola; en el laboratorio, `chatbot-reference-ui` |
+| Variable                                              | Dónde             | Para qué                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                        | backend           | Conexión a Postgres (la lee `prisma.config.ts` y `src/config/env.ts`)                                                                                                                                                                                                                                                                                                                                                                                      |
+| `TEST_DATABASE_URL`                                   | backend (pruebas) | Base que usa el proyecto Vitest `db`; la suite la borra y recrea en cada corrida                                                                                                                                                                                                                                                                                                                                                                           |
+| `APP_TIMEZONE`                                        | backend           | Zona de referencia para agenda y búsquedas FHIR                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `OIDC_ISSUER` / `OIDC_AUDIENCE`                       | backend           | Emisor y audiencia esperados del proveedor OIDC (obligatorias)                                                                                                                                                                                                                                                                                                                                                                                             |
+| `OIDC_TENANT_CLAIM`                                   | backend           | Claim del tenant; por defecto `tenant_id`. Admite los sufijos `[]` y `{}` para listas y objetos                                                                                                                                                                                                                                                                                                                                                            |
+| `OIDC_ROLES_CLAIM`                                    | backend           | Claim de roles; por defecto `roles`                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `OIDC_ROLE_MAP`                                       | backend           | Mapa `externo=producto,…`; vacío significa identidad                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `OIDC_CLOCK_TOLERANCE_SECONDS`                        | backend           | Tolerancia de reloj; por defecto 30                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `OIDC_LOGOUT_AUDIENCES`                               | backend           | Audiencias admitidas del `logout_token`, separadas por comas                                                                                                                                                                                                                                                                                                                                                                                               |
+| `OIDC_MAX_TOKEN_LIFETIME_SECONDS`                     | backend           | Vida máxima de un token de acceso del proveedor; por defecto 300. Entero ≥ 1 y **≥ la vida de acceso que configure el proveedor**: el back-channel logout cierra el `sid` durante este tiempo más `OIDC_CLOCK_TOLERANCE_SECONDS`                                                                                                                                                                                                                           |
+| `OIDC_HTTP_TIMEOUT_MS`                                | backend           | Límite de cada llamada al proveedor (discovery, JWKS, token endpoint), en ms; por defecto 5000. Vencido, la API responde `503 identity_unavailable`                                                                                                                                                                                                                                                                                                        |
+| `CREDENTIALS_ENCRYPTION_KEY`                          | backend           | 32 bytes en base64 (obligatoria): sella los secretos de widget. Genérala con `openssl rand -base64 32`                                                                                                                                                                                                                                                                                                                                                     |
+| `HERMES_SIM_SERVICE_CLIENTS`                          | backend           | JSON de clientes `service` del simulador por tenant; obligatoria solo con `HERMES_SIMULATOR_ENABLED=true`. Acepta `"*"` con `{tenant}` en el `client_id`                                                                                                                                                                                                                                                                                                   |
+| `TRUST_PROXY`                                         | backend           | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible                                                                                                                                                                   |
+| `FHIR_BASE_URL`                                       | backend           | Base pública de `/fhir` para los enlaces y `fullUrl` de los `Bundle`, y destino del cliente del simulador. Debe ser una URL absoluta `http(s)` que **incluya** la ruta `/fhir` (p. ej. `https://api.clinica.com/fhir`); si no es una URL absoluta, el backend se niega a arrancar. Obligatoria cuando `HERMES_SIMULATOR_ENABLED=true` y `FHIR_GATEWAY=fetch`. Sin ella, y con el simulador apagado, los enlaces se construyen con el origen de la petición |
+| `FHIR_GATEWAY`                                        | backend           | `fetch` (el proceso y `hermes:sync`) o `handlers` (las pruebas invocan `/fhir` sin abrir un puerto). Por defecto `fetch`                                                                                                                                                                                                                                                                                                                                   |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose           | Credenciales del contenedor de Postgres                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `BACKEND_URL`                                         | frontend          | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio)                                                                                                                                                                                                                                                                                                                                              |
+| `PUBLIC_BACKEND_URL`                                  | frontend          | URL del backend alcanzable desde el navegador; la usa el widget del chat (CORS). Por defecto `http://localhost:3001`                                                                                                                                                                                                                                                                                                                                       |
+| `PUBLIC_OIDC_ISSUER`                                  | frontend          | Issuer del proveedor para el login de la consola (p. ej. `https://keycloak.mangomorado.com/realms/chatbot-lab`); se lee en runtime. Sin él la consola avisa y no ofrece login                                                                                                                                                                                                                                                                              |
+| `PUBLIC_OIDC_CLIENT_ID`                               | frontend          | Cliente público con PKCE de la consola; en el laboratorio, `chatbot-reference-ui`                                                                                                                                                                                                                                                                                                                                                                          |
 
 `process.env` solo se lee en `backend/src/config/env.ts`, `frontend/src/config/env.ts` y en configs de herramientas.
 
@@ -333,24 +333,24 @@ con `-t "<nombre>"`.
 
 ### Suites actuales
 
-| Suite | Qué protege |
-| --- | --- |
-| `fronteras` | `domain` y `application` no importan framework, ORM ni `node:*`; el código fuente no nombra al proveedor de identidad |
-| `contrato-api` | Envoltura de errores, `X-Request-Id` y OpenAPI sin desfase |
-| `roles` | 401 sin token, `404` por tenant ajeno, alcance del widget |
-| `dominio` | Reglas compartidas: tenant id, paginación por cursor, ajustes del tenant, datos del seed |
-| `aislamiento-tenant` | La base impide referencias entre tenants; ajustes del tenant aislados |
-| `simetria-seed` | El simulador y el chatbot parten de los mismos datos deterministas |
-| `conocimiento-config` | Esquema de `bot-config`, rotación de claves, KB y búsqueda por tokens |
-| `alta-chatbot` | Alta de tenant con predeterminados y credenciales de widget de plataforma |
-| `sesion-widget` | Clave pública, `Origin`, límite por IP, renovación e idempotencia sin JWT persistido |
-| `idempotencia` | Repetición sin efectos duplicados en todas las escrituras |
-| `sin-ia` | Ninguna dependencia ni import de IA o n8n |
-| `flujo` | Motor, pasos, recorrido del chat y conversación por HTTP |
-| `verificacion` | Banco de preguntas, par fijo, bloqueo y redacción |
-| `pre-agenda` | Apartado atómico, tope, vencimiento y bandeja |
-| `fhir-conformance` | Forma R4, búsqueda, `OperationOutcome`, `metadata` igual a lo implementado y vencimiento al leer |
-| `hermes-simulador` | El simulador cierra maestros, pre-agenda y pre-registro solo por `/fhir` |
-| `cors` | CORS del widget y alta / baja de orígenes |
+| Suite                 | Qué protege                                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `fronteras`           | `domain` y `application` no importan framework, ORM ni `node:*`; el código fuente no nombra al proveedor de identidad |
+| `contrato-api`        | Envoltura de errores, `X-Request-Id` y OpenAPI sin desfase                                                            |
+| `roles`               | 401 sin token, `404` por tenant ajeno, alcance del widget                                                             |
+| `dominio`             | Reglas compartidas: tenant id, paginación por cursor, ajustes del tenant, datos del seed                              |
+| `aislamiento-tenant`  | La base impide referencias entre tenants; ajustes del tenant aislados                                                 |
+| `simetria-seed`       | El simulador y el chatbot parten de los mismos datos deterministas                                                    |
+| `conocimiento-config` | Esquema de `bot-config`, rotación de claves, KB y búsqueda por tokens                                                 |
+| `alta-chatbot`        | Alta de tenant con predeterminados y credenciales de widget de plataforma                                             |
+| `sesion-widget`       | Clave pública, `Origin`, límite por IP, renovación e idempotencia sin JWT persistido                                  |
+| `idempotencia`        | Repetición sin efectos duplicados en todas las escrituras                                                             |
+| `sin-ia`              | Ninguna dependencia ni import de IA o n8n                                                                             |
+| `flujo`               | Motor, pasos, recorrido del chat y conversación por HTTP                                                              |
+| `verificacion`        | Banco de preguntas, par fijo, bloqueo y redacción                                                                     |
+| `pre-agenda`          | Apartado atómico, tope, vencimiento y bandeja                                                                         |
+| `fhir-conformance`    | Forma R4, búsqueda, `OperationOutcome`, `metadata` igual a lo implementado y vencimiento al leer                      |
+| `hermes-simulador`    | El simulador cierra maestros, pre-agenda y pre-registro solo por `/fhir`                                              |
+| `cors`                | CORS del widget y alta / baja de orígenes                                                                             |
 
 `carga-basica` llega con la Fase 6. El inventario completo está en `GOBERNANZA.md` §5.1.

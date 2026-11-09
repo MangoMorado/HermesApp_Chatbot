@@ -20,18 +20,18 @@ La fase se ejecuta en **tres sub-proyectos**, cada uno con su propio plan en
 
 ## 2. Decisiones tomadas
 
-| Tema | Decisión | Razón |
-| --- | --- | --- |
-| Simulador | Módulo aislado `modules/hermes-simulator/` en el backend, schema Postgres `hermes_sim`, apagable por `HERMES_SIMULATOR_ENABLED` | Mismo contenedor y base; separación verificable por tests; se borra entero en producción |
-| Expediente | Identidad + historial de citas. **Sin campos clínicos** | Los casos de uso no los necesitan; reduce superficie de no divulgación (§1.5) |
-| Cupos | Filas explícitas, sin reglas de recurrencia en el chatbot. El simulador los genera sobre sus tablas | Hermes es dueño de la agenda y en Fase 4 empuja `Slot` por FHIR |
-| Auth del frontend | Script `token:dev` firma JWT; el panel lo recibe pegado | La emisión de tokens es de la Fase 3; no se abre una puerta de emisión en el servidor |
-| Módulos | Uno por contexto: `shared`, `tenancy`, `scheduling`, `patients`, `hermes-simulator` | Umbrales de tamaño y dependencias sin ciclos |
-| Idempotencia | Desde esta fase en toda escritura (simulador y `PATCH /tenant-settings`) | GOBERNANZA §1.6 manda sobre el roadmap, que la ubicaba en Fase 3 |
-| Identificador Hermes | Todo maestro y cita guarda `identifier_system` + `identifier_value`, únicos por tenant | Base del `PUT` condicional (Fase 4) y de `simetria-seed` |
-| Citas | En Fase 2 el chatbot solo **lee** citas en firme; no las escribe | Las solicitudes son de la Fase 3; Hermes confirma (§1.2) |
-| Tope de rango | `max_query_range_days` por tenant (defecto 31, entre 1 y 366), editable por `admin` desde el panel | Cada tenant decide su horizonte de consulta sin afectar a los demás |
-| `conversations` | Se difiere a la Fase 3 junto con sus mensajes | Su forma depende del motor de flujo; ningún caso de uso de Fase 2 la usa |
+| Tema                 | Decisión                                                                                                                        | Razón                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Simulador            | Módulo aislado `modules/hermes-simulator/` en el backend, schema Postgres `hermes_sim`, apagable por `HERMES_SIMULATOR_ENABLED` | Mismo contenedor y base; separación verificable por tests; se borra entero en producción |
+| Expediente           | Identidad + historial de citas. **Sin campos clínicos**                                                                         | Los casos de uso no los necesitan; reduce superficie de no divulgación (§1.5)            |
+| Cupos                | Filas explícitas, sin reglas de recurrencia en el chatbot. El simulador los genera sobre sus tablas                             | Hermes es dueño de la agenda y en Fase 4 empuja `Slot` por FHIR                          |
+| Auth del frontend    | Script `token:dev` firma JWT; el panel lo recibe pegado                                                                         | La emisión de tokens es de la Fase 3; no se abre una puerta de emisión en el servidor    |
+| Módulos              | Uno por contexto: `shared`, `tenancy`, `scheduling`, `patients`, `hermes-simulator`                                             | Umbrales de tamaño y dependencias sin ciclos                                             |
+| Idempotencia         | Desde esta fase en toda escritura (simulador y `PATCH /tenant-settings`)                                                        | GOBERNANZA §1.6 manda sobre el roadmap, que la ubicaba en Fase 3                         |
+| Identificador Hermes | Todo maestro y cita guarda `identifier_system` + `identifier_value`, únicos por tenant                                          | Base del `PUT` condicional (Fase 4) y de `simetria-seed`                                 |
+| Citas                | En Fase 2 el chatbot solo **lee** citas en firme; no las escribe                                                                | Las solicitudes son de la Fase 3; Hermes confirma (§1.2)                                 |
+| Tope de rango        | `max_query_range_days` por tenant (defecto 31, entre 1 y 366), editable por `admin` desde el panel                              | Cada tenant decide su horizonte de consulta sin afectar a los demás                      |
+| `conversations`      | Se difiere a la Fase 3 junto con sus mensajes                                                                                   | Su forma depende del motor de flujo; ningún caso de uso de Fase 2 la usa                 |
 
 ## 3. Modelo de datos
 
@@ -42,17 +42,17 @@ Identificador Hermes = par (`identifier_system`, `identifier_value`), único por
 
 ### 3.1 Schema `public` (chatbot)
 
-| Tabla | Campos | Restricciones e índices |
-| --- | --- | --- |
-| `tenants` | `id`, `slug`, `name`, `max_query_range_days` | `slug` único; `max_query_range_days` entre 1 y 366, defecto 31. El claim `tenant_id` del JWT es `tenants.id` |
-| `practitioners` | identificador, `name`, `active` | FK `tenant_id` |
-| `healthcare_services` | identificador, `name`, `active` | FK `tenant_id` |
-| `schedules` | identificador, `practitioner_id`, `healthcare_service_id`, `active` | FKs dentro del mismo tenant |
-| `slots` | identificador, `schedule_id`, `start_at`, `end_at`, `status` | `status` ∈ `free`·`busy`·`busy_tentative`·`busy_unavailable`; índices (`tenant_id`,`schedule_id`,`start_at`) y (`tenant_id`,`status`,`start_at`); `end_at > start_at` |
-| `medical_records` | identificador, `document_type`, `document_number`, `given_names`, `family_names`, `birth_date`, `phone`, `email`, `status` | `status` ∈ `active`·`pre_registered`; único (`tenant_id`,`document_type`,`document_number`) |
-| `appointments` | identificador, `medical_record_id`, `schedule_id`, `slot_id`, `start_at`, `end_at`, `status` | `status` ∈ `booked`·`cancelled`·`fulfilled`·`noshow`; índices (`tenant_id`,`medical_record_id`,`start_at`) y (`tenant_id`,`schedule_id`,`start_at`) |
-| `audit_events` | `tenant_id`, `actor_subject`, `actor_role`, `action`, `resource_type`, `resource_id`, `request_id`, `occurred_at` | Sin columnas de contenido: se registra el hecho, no el dato |
-| `idempotency_keys` | PK (`tenant_id`, `key`), `actor_subject`, `method`, `path`, `request_hash`, `response_status`, `response_body`, `created_at` | Ver §5.3 |
+| Tabla                 | Campos                                                                                                                       | Restricciones e índices                                                                                                                                               |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tenants`             | `id`, `slug`, `name`, `max_query_range_days`                                                                                 | `slug` único; `max_query_range_days` entre 1 y 366, defecto 31. El claim `tenant_id` del JWT es `tenants.id`                                                          |
+| `practitioners`       | identificador, `name`, `active`                                                                                              | FK `tenant_id`                                                                                                                                                        |
+| `healthcare_services` | identificador, `name`, `active`                                                                                              | FK `tenant_id`                                                                                                                                                        |
+| `schedules`           | identificador, `practitioner_id`, `healthcare_service_id`, `active`                                                          | FKs dentro del mismo tenant                                                                                                                                           |
+| `slots`               | identificador, `schedule_id`, `start_at`, `end_at`, `status`                                                                 | `status` ∈ `free`·`busy`·`busy_tentative`·`busy_unavailable`; índices (`tenant_id`,`schedule_id`,`start_at`) y (`tenant_id`,`status`,`start_at`); `end_at > start_at` |
+| `medical_records`     | identificador, `document_type`, `document_number`, `given_names`, `family_names`, `birth_date`, `phone`, `email`, `status`   | `status` ∈ `active`·`pre_registered`; único (`tenant_id`,`document_type`,`document_number`)                                                                           |
+| `appointments`        | identificador, `medical_record_id`, `schedule_id`, `slot_id`, `start_at`, `end_at`, `status`                                 | `status` ∈ `booked`·`cancelled`·`fulfilled`·`noshow`; índices (`tenant_id`,`medical_record_id`,`start_at`) y (`tenant_id`,`schedule_id`,`start_at`)                   |
+| `audit_events`        | `tenant_id`, `actor_subject`, `actor_role`, `action`, `resource_type`, `resource_id`, `request_id`, `occurred_at`            | Sin columnas de contenido: se registra el hecho, no el dato                                                                                                           |
+| `idempotency_keys`    | PK (`tenant_id`, `key`), `actor_subject`, `method`, `path`, `request_hash`, `response_status`, `response_body`, `created_at` | Ver §5.3                                                                                                                                                              |
 
 Tipos de documento: `CC`, `TI`, `CE`, `PA`, `RC` (enum en dominio y en base).
 
@@ -107,19 +107,19 @@ disponibilidad, agenda y citas es `max_query_range_days` del tenant del token (f
 
 Lectura para `operator` y `admin`; la única escritura es el ajuste del tenant. `widget` → `403 forbidden`. Recurso de otro tenant → `404`.
 
-| Ruta | Descripción |
-| --- | --- |
-| `GET /practitioners` | Lista paginada; filtro `active` |
-| `GET /healthcare-services` | Lista paginada; filtro `active` |
-| `GET /schedules` | Filtros `practitioner_id`, `healthcare_service_id` |
-| `GET /availability` | Cupos `free` en [`from`,`to`); filtros `healthcare_service_id`, `practitioner_id`, `schedule_id`; orden por `start_at` |
-| `GET /schedules/{id}/slots` | Agenda: cupos en todos los estados en el rango |
-| `GET /appointments` | Citas por `schedule_id` y rango |
-| `POST /medical-records/search` | Búsqueda exacta por `document_type` + `document_number` en el cuerpo (no en la URL: §12). No escribe, no exige `Idempotency-Key` |
-| `GET /medical-records/{id}` | Detalle del expediente |
-| `GET /medical-records/{id}/appointments` | Historial, orden `start_at` descendente |
-| `GET /tenant-settings` | Ajustes del tenant del token (`operator`, `admin`) |
-| `PATCH /tenant-settings` | Cambia `max_query_range_days`. Solo `admin`; exige `Idempotency-Key` y deja `audit_events` (`action` `tenant_settings.updated`, sin valores) |
+| Ruta                                     | Descripción                                                                                                                                  |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /practitioners`                     | Lista paginada; filtro `active`                                                                                                              |
+| `GET /healthcare-services`               | Lista paginada; filtro `active`                                                                                                              |
+| `GET /schedules`                         | Filtros `practitioner_id`, `healthcare_service_id`                                                                                           |
+| `GET /availability`                      | Cupos `free` en [`from`,`to`); filtros `healthcare_service_id`, `practitioner_id`, `schedule_id`; orden por `start_at`                       |
+| `GET /schedules/{id}/slots`              | Agenda: cupos en todos los estados en el rango                                                                                               |
+| `GET /appointments`                      | Citas por `schedule_id` y rango                                                                                                              |
+| `POST /medical-records/search`           | Búsqueda exacta por `document_type` + `document_number` en el cuerpo (no en la URL: §12). No escribe, no exige `Idempotency-Key`             |
+| `GET /medical-records/{id}`              | Detalle del expediente                                                                                                                       |
+| `GET /medical-records/{id}/appointments` | Historial, orden `start_at` descendente                                                                                                      |
+| `GET /tenant-settings`                   | Ajustes del tenant del token (`operator`, `admin`)                                                                                           |
+| `PATCH /tenant-settings`                 | Cambia `max_query_range_days`. Solo `admin`; exige `Idempotency-Key` y deja `audit_events` (`action` `tenant_settings.updated`, sin valores) |
 
 ### 5.2 `/api/sim/v1` (simulador)
 
@@ -179,15 +179,15 @@ Se añade `conflict` (`409`) a `ERROR_CODES`. El resto del contrato de errores n
 
 ## 8. Pruebas
 
-| Suite | Cubre | Contra |
-| --- | --- | --- |
-| `dominio` | Casos de uso: filtros, rangos, tope por tenant, cursor, límites 50/200, fechas en `APP_TIMEZONE` | Adaptadores en memoria |
-| `aislamiento-tenant` | Toda ruta `/api/v1` con dos tenants: sin fugas en listas; ID ajeno → `404` | Postgres real |
-| `simetria-seed` | Todo maestro de `hermes_sim` tiene gemelo en `public` (mismo identificador y campos) | Postgres real |
-| `idempotencia` | Escrituras del simulador y `PATCH /tenant-settings`. Repetición → misma respuesta, sin duplicar filas ni auditoría; cuerpo distinto → `409` | Postgres real |
-| `contrato-api` | Ampliada a ambos OpenAPI; ninguna ruta sin declarar | Sin base |
-| `fronteras` | Ampliada: chatbot no importa `hermes-simulator` | Sin base |
-| `roles` | Ampliada: `widget` → `403` en rutas de dominio; `PATCH /tenant-settings` y simulador solo `admin` | Sin base |
+| Suite                | Cubre                                                                                                                                       | Contra                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `dominio`            | Casos de uso: filtros, rangos, tope por tenant, cursor, límites 50/200, fechas en `APP_TIMEZONE`                                            | Adaptadores en memoria |
+| `aislamiento-tenant` | Toda ruta `/api/v1` con dos tenants: sin fugas en listas; ID ajeno → `404`                                                                  | Postgres real          |
+| `simetria-seed`      | Todo maestro de `hermes_sim` tiene gemelo en `public` (mismo identificador y campos)                                                        | Postgres real          |
+| `idempotencia`       | Escrituras del simulador y `PATCH /tenant-settings`. Repetición → misma respuesta, sin duplicar filas ni auditoría; cuerpo distinto → `409` | Postgres real          |
+| `contrato-api`       | Ampliada a ambos OpenAPI; ninguna ruta sin declarar                                                                                         | Sin base               |
+| `fronteras`          | Ampliada: chatbot no importa `hermes-simulator`                                                                                             | Sin base               |
+| `roles`              | Ampliada: `widget` → `403` en rutas de dominio; `PATCH /tenant-settings` y simulador solo `admin`                                           | Sin base               |
 
 Las suites con Postgres leen `TEST_DATABASE_URL` y aplican migraciones en una base
 dedicada. CI añade un servicio Postgres al job del backend.
@@ -220,12 +220,12 @@ vencimientos, FHIR y sincronización simulador → chatbot, rate limits, barrido
 
 Ajustes hechos al cerrar la fase, tras revisar lo construido contra los no negociables:
 
-| Hallazgo | Decisión |
-| --- | --- |
+| Hallazgo                                                                                                                                                                 | Decisión                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dos envíos concurrentes con la misma `Idempotency-Key` devolvían `500`: el `P2002` de la clave abortaba la transacción de Postgres y la relectura fallaba dentro de ella | La clave se reserva al abrir la transacción (el segundo envío queda bloqueado en esa inserción hasta que el primero confirma); `IdempotencyKeyTakenError` sale de la transacción revertida y la respuesta guardada se repite fuera. El puerto gana `complete`. Suite `idempotencia` con un caso concurrente |
-| `GET /medical-records?document_number=…` dejaba el documento en los logs de acceso del proxy (no divulgación) | Se reemplaza por `POST /medical-records/search` con el documento en el cuerpo. Cambio de contrato: OpenAPI, cliente orval y `aislamiento-tenant` en la misma PR |
-| El panel repetía la regla del tope de rango | Se retira; solo se exige que haya fechas |
-| El panel no releía el tope al pegar el token | Se relee cada vez que cambia el token |
-| El simulador generaba una `Idempotency-Key` por clic | Una clave por intento (operación + cuerpo), liberada al recibir respuesta correcta |
-| El panel desplegado no alcanzaba el backend (`NEXT_PUBLIC_*` se hornea en el build sin `ARG`; backend sin CORS) | Proxy same-origin con `BACKEND_URL` en runtime. `process.env` del frontend solo en `frontend/src/config/env.ts` |
-| orval dejaba modelos huérfanos al quitar operaciones | `clean: true` en ambas salidas |
+| `GET /medical-records?document_number=…` dejaba el documento en los logs de acceso del proxy (no divulgación)                                                            | Se reemplaza por `POST /medical-records/search` con el documento en el cuerpo. Cambio de contrato: OpenAPI, cliente orval y `aislamiento-tenant` en la misma PR                                                                                                                                             |
+| El panel repetía la regla del tope de rango                                                                                                                              | Se retira; solo se exige que haya fechas                                                                                                                                                                                                                                                                    |
+| El panel no releía el tope al pegar el token                                                                                                                             | Se relee cada vez que cambia el token                                                                                                                                                                                                                                                                       |
+| El simulador generaba una `Idempotency-Key` por clic                                                                                                                     | Una clave por intento (operación + cuerpo), liberada al recibir respuesta correcta                                                                                                                                                                                                                          |
+| El panel desplegado no alcanzaba el backend (`NEXT_PUBLIC_*` se hornea en el build sin `ARG`; backend sin CORS)                                                          | Proxy same-origin con `BACKEND_URL` en runtime. `process.env` del frontend solo en `frontend/src/config/env.ts`                                                                                                                                                                                             |
+| orval dejaba modelos huérfanos al quitar operaciones                                                                                                                     | `clean: true` en ambas salidas                                                                                                                                                                                                                                                                              |

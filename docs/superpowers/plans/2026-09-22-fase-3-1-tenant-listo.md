@@ -107,11 +107,13 @@ Comandos de prueba (desde la raíz):
 ### Task 1: Esquema y migración
 
 **Files:**
+
 - Modify: `backend/prisma/schema.prisma`
 - Create: `backend/prisma/migrations/<timestamp>_fase3_1_tenant_listo/migration.sql` (generada + SQL manual)
 - Test: `backend/tests/db/esquema-chatbot-config.test.ts`
 
 **Interfaces:**
+
 - Produces: modelos Prisma `BotConfig` (`prisma.botConfig`), `WidgetKey` (`prisma.widgetKey`), `KnowledgeEntry` (`prisma.knowledgeEntry`), `WidgetSession` (`prisma.widgetSession`), `PlatformIdempotencyKey` (`prisma.platformIdempotencyKey`).
 
 - [ ] **Step 1: Write the failing test**
@@ -357,12 +359,14 @@ git commit -m "feat(db): tablas de bot-config, claves y sesiones del widget, KB 
 ### Task 2: Error `rate_limited` con `Retry-After`
 
 **Files:**
+
 - Create: `backend/src/modules/shared/domain/rate-limited-error.ts`
 - Modify: `backend/src/http/error-codes.ts`, `backend/src/http/errors.ts`
 - Regenerate: `backend/openapi.json`
 - Test: `backend/tests/contrato-api.test.ts`
 
 **Interfaces:**
+
 - Produces: `class RateLimitedError extends Error { readonly retryAfterSeconds: number; constructor(retryAfterSeconds: number) }`; código `rate_limited` → `429` con cabecera `Retry-After`.
 
 - [ ] **Step 1: Write the failing test**
@@ -471,12 +475,14 @@ git commit -m "feat(http): codigo rate_limited con cabecera Retry-After"
 ### Task 3: Dominio de `bot-config` y orígenes permitidos
 
 **Files:**
+
 - Create: `backend/src/modules/shared/domain/input.ts`
 - Create: `backend/src/modules/bot-config/domain/bot-config.ts`
 - Create: `backend/src/modules/bot-config/domain/allowed-origins.ts`
 - Test: `backend/tests/dominio/bot-config.test.ts`
 
 **Interfaces:**
+
 - Produces (`shared/domain/input.ts`, lo reusan `knowledge` y `platform`): `isRecord(value: unknown): value is Record<string, unknown>`, `asRecord(value: unknown, field: string): Record<string, unknown>` (lanza `ValidationError` «`<field>` debe ser un objeto» con `{ field }`), `requiredText(value: unknown, field: string, max: number): string` (recorta; vacío o > `max` → `ValidationError` con `{ field, max }`).
 - Produces (`bot-config.ts`):
   - `DEFAULT_TEXTS: { welcome: string; kb_see_more_label: string }`, `type TextKey`
@@ -549,8 +555,16 @@ describe("conocimiento-config: parche de bot-config", () => {
   });
 
   it("null devuelve el texto o el param al predeterminado", () => {
-    const current = { texts: { welcome: "Hola" }, params: { kb_max_results: 7 }, allowedOrigins: [] };
-    const next = applyPatch(current, { texts: { welcome: null }, params: { kb_max_results: null } }, DEV);
+    const current = {
+      texts: { welcome: "Hola" },
+      params: { kb_max_results: 7 },
+      allowedOrigins: [],
+    };
+    const next = applyPatch(
+      current,
+      { texts: { welcome: null }, params: { kb_max_results: null } },
+      DEV,
+    );
     expect(next.texts).toEqual({});
     expect(next.params).toEqual({});
   });
@@ -584,7 +598,11 @@ describe("conocimiento-config: parche de bot-config", () => {
 
   it("los rangos de los params coinciden con la spec", () => {
     expect(PARAM_SPECS.widget_key_grace_hours).toEqual({ default: 24, min: 0, max: 168 });
-    expect(PARAM_SPECS.widget_sessions_per_ip_per_minute).toEqual({ default: 10, min: 1, max: 100 });
+    expect(PARAM_SPECS.widget_sessions_per_ip_per_minute).toEqual({
+      default: 10,
+      min: 1,
+      max: 100,
+    });
   });
 });
 
@@ -616,7 +634,9 @@ describe("conocimiento-config: origenes permitidos", () => {
   });
 
   it("localhost solo fuera de produccion", () => {
-    expect(validateAllowedOrigins(["http://localhost:3000"], DEV)).toEqual(["http://localhost:3000"]);
+    expect(validateAllowedOrigins(["http://localhost:3000"], DEV)).toEqual([
+      "http://localhost:3000",
+    ]);
     expect(() => validateAllowedOrigins(["http://localhost:3000"], PROD)).toThrow(ValidationError);
   });
 
@@ -907,7 +927,12 @@ function validateText(key: TextKey, value: unknown): string {
 function validateParam(key: ParamKey, value: unknown): number {
   const spec = PARAM_SPECS[key];
   const field = `params.${key}`;
-  if (typeof value !== "number" || !Number.isInteger(value) || value < spec.min || value > spec.max) {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < spec.min ||
+    value > spec.max
+  ) {
     throw new ValidationError(`${field} debe ser un entero entre ${spec.min} y ${spec.max}`, {
       field,
       min: spec.min,
@@ -944,12 +969,14 @@ git commit -m "feat(bot-config): textos y params tipados con predeterminados y o
 ### Task 4: Dominio de claves del widget y generador
 
 **Files:**
+
 - Create: `backend/src/modules/bot-config/domain/widget-key.ts`
 - Create: `backend/src/modules/bot-config/domain/ports/widget-key-generator.ts`
 - Create: `backend/src/modules/bot-config/infrastructure/crypto-widget-key-generator.ts`
 - Test: `backend/tests/dominio/widget-key.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `type WidgetKey = { id: string; tenantId: TenantId; key: string; createdAt: Date; retiredAt: Date | null; graceUntil: Date | null }`
   - `WIDGET_KEY_PATTERN: RegExp` (`/^wk_[A-Za-z0-9_-]{43}$/`)
@@ -997,7 +1024,9 @@ describe("conocimiento-config: aceptacion de claves del widget", () => {
 
   it("la retirada se acepta solo antes de que venza su gracia", () => {
     const retired = { retiredAt: new Date(NOW.getTime() - HOUR) };
-    expect(isKeyAccepted(key({ ...retired, graceUntil: new Date(NOW.getTime() + 1) }), NOW)).toBe(true);
+    expect(isKeyAccepted(key({ ...retired, graceUntil: new Date(NOW.getTime() + 1) }), NOW)).toBe(
+      true,
+    );
     expect(isKeyAccepted(key({ ...retired, graceUntil: NOW }), NOW)).toBe(false);
     expect(isKeyAccepted(key({ ...retired, graceUntil: null }), NOW)).toBe(false);
   });
@@ -1152,6 +1181,7 @@ git commit -m "feat(bot-config): claves del widget con rotacion y gracia"
 ### Task 5: Dominio de la base de conocimiento
 
 **Files:**
+
 - Create: `backend/src/modules/knowledge/domain/normalize.ts`
 - Create: `backend/src/modules/knowledge/domain/knowledge-entry.ts`
 - Create: `backend/src/modules/knowledge/domain/search.ts`
@@ -1159,6 +1189,7 @@ git commit -m "feat(bot-config): claves del widget con rotacion y gracia"
 - Test: `backend/tests/dominio/knowledge.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `normalizeTokens(text: string): string[]`
   - `type KnowledgeEntryDraft = { category: string; question: string; answer: string; detail: string | null; keywords: readonly string[]; position: number; active: boolean }`
@@ -1273,7 +1304,10 @@ describe("conocimiento-config: busqueda por tokens", () => {
   ];
 
   it("ordena por coincidencias, luego posicion y luego id; excluye inactivas", () => {
-    expect(searchEntries(entries, "Quiero agendar una cita", 3).map((e) => e.id)).toEqual(["b", "a"]);
+    expect(searchEntries(entries, "Quiero agendar una cita", 3).map((e) => e.id)).toEqual([
+      "b",
+      "a",
+    ]);
   });
 
   it("respeta el maximo de resultados", () => {
@@ -1306,9 +1340,40 @@ Expected: FAIL: no se resuelve el módulo.
 ```ts
 /** Palabras vacias en espanol: no ayudan a distinguir una entrada de otra. */
 const STOPWORDS = new Set([
-  "a", "al", "como", "con", "cual", "cuales", "cuando", "de", "del", "donde", "el", "en",
-  "es", "hay", "la", "las", "lo", "los", "me", "mi", "o", "para", "por", "puedo", "que",
-  "quiero", "se", "su", "sus", "te", "tu", "un", "una", "y",
+  "a",
+  "al",
+  "como",
+  "con",
+  "cual",
+  "cuales",
+  "cuando",
+  "de",
+  "del",
+  "donde",
+  "el",
+  "en",
+  "es",
+  "hay",
+  "la",
+  "las",
+  "lo",
+  "los",
+  "me",
+  "mi",
+  "o",
+  "para",
+  "por",
+  "puedo",
+  "que",
+  "quiero",
+  "se",
+  "su",
+  "sus",
+  "te",
+  "tu",
+  "un",
+  "una",
+  "y",
 ]);
 
 /**
@@ -1400,7 +1465,8 @@ function validateDraft(raw: RawDraft): KnowledgeEntryDraft {
     category: requiredText(raw.category, "category", KNOWLEDGE_LIMITS.category),
     question: requiredText(raw.question, "question", KNOWLEDGE_LIMITS.question),
     answer: requiredText(raw.answer, "answer", KNOWLEDGE_LIMITS.answer),
-    detail: raw.detail === null ? null : requiredText(raw.detail, "detail", KNOWLEDGE_LIMITS.detail),
+    detail:
+      raw.detail === null ? null : requiredText(raw.detail, "detail", KNOWLEDGE_LIMITS.detail),
     keywords: keywordsOf(raw.keywords),
     position: positionOf(raw.position),
     active: booleanOf(raw.active, "active"),
@@ -1422,10 +1488,17 @@ function keywordsOf(value: unknown): string[] {
 }
 
 function positionOf(value: unknown): number {
-  if (!Number.isInteger(value) || (value as number) < 0 || (value as number) > KNOWLEDGE_LIMITS.position) {
-    throw new ValidationError(`position debe ser un entero entre 0 y ${KNOWLEDGE_LIMITS.position}`, {
-      field: "position",
-    });
+  if (
+    !Number.isInteger(value) ||
+    (value as number) < 0 ||
+    (value as number) > KNOWLEDGE_LIMITS.position
+  ) {
+    throw new ValidationError(
+      `position debe ser un entero entre 0 y ${KNOWLEDGE_LIMITS.position}`,
+      {
+        field: "position",
+      },
+    );
   }
   return value as number;
 }
@@ -1504,7 +1577,8 @@ export const DEFAULT_KNOWLEDGE_ENTRIES: readonly KnowledgeEntryDraft[] = [
   {
     category: "Citas",
     question: "¿Cómo agendo una cita?",
-    answer: "Puedes solicitar una cita desde este chat. Te pediremos tu documento para identificarte.",
+    answer:
+      "Puedes solicitar una cita desde este chat. Te pediremos tu documento para identificarte.",
     detail: null,
     keywords: ["agendar", "cita", "citas", "reservar", "turno"],
     position: 0,
@@ -1526,15 +1600,18 @@ git commit -m "feat(knowledge): entradas de la KB, normalizacion y busqueda por 
 ```
 
 ---
+
 ### Task 6: Emisor de tokens y bloqueo de `token:dev` en producción
 
 **Files:**
+
 - Create: `backend/src/modules/auth/domain/ports/token-issuer.ts`
 - Create: `backend/src/modules/auth/infrastructure/jose-token-issuer.ts`
 - Modify: `backend/scripts/token-dev.ts`
 - Test: `backend/tests/roles.test.ts`
 
 **Interfaces:**
+
 - Consumes: `JwtSettings` de `backend/src/modules/auth/infrastructure/jose-token-verifier.ts`; `createJoseTokenVerifier`.
 - Produces:
   - `type IssueTokenInput = { subject: string; tenantId: string; role: Role; sessionId?: string; issuedAt: Date; expiresAt: Date }`
@@ -1656,12 +1733,12 @@ export function createJoseTokenIssuer(settings: JwtSettings): TokenIssuer {
 En `backend/scripts/token-dev.ts`, justo después de `const config = loadConfig();`:
 
 ```ts
-  if (config.nodeEnv === "production") {
-    process.stderr.write(
-      "token:dev no se usa en produccion: emite tokens con POST /api/platform/v1/tokens\n",
-    );
-    process.exit(1);
-  }
+if (config.nodeEnv === "production") {
+  process.stderr.write(
+    "token:dev no se usa en produccion: emite tokens con POST /api/platform/v1/tokens\n",
+  );
+  process.exit(1);
+}
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -1681,6 +1758,7 @@ git commit -m "feat(auth): emisor de tokens HS256; token:dev bloqueado en produc
 ### Task 7: Repositorios Prisma de `bot-config`, claves y KB
 
 **Files:**
+
 - Create: `backend/src/modules/shared/infrastructure/prisma-errors.ts`
 - Modify: `backend/src/modules/shared/infrastructure/prisma-idempotency-store.ts` (usa `isUniqueViolation`)
 - Create: `backend/src/modules/bot-config/domain/ports/repositories.ts`
@@ -1692,6 +1770,7 @@ git commit -m "feat(auth): emisor de tokens HS256; token:dev bloqueado en produc
 - Test: `backend/tests/db/conocimiento-config-repos.test.ts`
 
 **Interfaces:**
+
 - Consumes: `BotConfigOverrides`, `sanitizeOverrides` (Task 3); `WidgetKey`, `KeyRetirement` (Task 4); `KnowledgeEntry` (Task 5).
 - Produces:
   - `isUniqueViolation(error: unknown): boolean`
@@ -1965,7 +2044,10 @@ export function createPrismaBotConfigRepository(db: PrismaExecutor): BotConfigRe
       await db.botConfig.create({ data: { tenantId, ...toData(overrides) } });
     },
     async update(tenantId, overrides) {
-      const result = await db.botConfig.updateMany({ where: { tenantId }, data: toData(overrides) });
+      const result = await db.botConfig.updateMany({
+        where: { tenantId },
+        data: toData(overrides),
+      });
       return result.count > 0;
     },
   };
@@ -2040,7 +2122,11 @@ import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-clie
 import type { KnowledgeEntry } from "../domain/knowledge-entry";
 import type { KnowledgeRepository } from "../domain/ports/knowledge-repository";
 
-type Row = Omit<KnowledgeEntry, "tenantId"> & { tenantId: string; createdAt: Date; updatedAt: Date };
+type Row = Omit<KnowledgeEntry, "tenantId"> & {
+  tenantId: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 function mapEntry(row: Row): KnowledgeEntry {
   return {
@@ -2165,6 +2251,7 @@ git commit -m "feat(db): repositorios Prisma de bot-config, claves del widget y 
 ### Task 8: `/bot-config` y rotación de clave
 
 **Files:**
+
 - Modify: `backend/src/modules/shared/domain/audit-event.ts` (añade `AuditActor`)
 - Create: `backend/src/modules/bot-config/application/bot-config.ts`
 - Create: `backend/src/modules/bot-config/application/widget-keys.ts`
@@ -2179,6 +2266,7 @@ git commit -m "feat(db): repositorios Prisma de bot-config, claves del widget y 
 - Test: `backend/tests/db/conocimiento-config-http.test.ts`, `backend/tests/db/aislamiento-tenant.test.ts`
 
 **Interfaces:**
+
 - Consumes: repositorios (Task 7), `applyPatch`, `effectiveConfig`, `parseBotConfigPatch` (Task 3), `planRotation`, `splitKeys` (Task 4), `cryptoWidgetKeyGenerator`.
 - Produces:
   - `type AuditActor = { actorSubject: string; actorRole: string; requestId: string }` en `shared/domain/audit-event.ts`
@@ -2209,7 +2297,13 @@ const ROTATE_URL = "http://localhost/api/v1/bot-config/widget-keys/rotate";
 const HOUR = 3_600_000;
 let keySeq = 0;
 
-function write(url: string, token: string, body?: unknown, key = `k-${++keySeq}`, method = "PATCH") {
+function write(
+  url: string,
+  token: string,
+  body?: unknown,
+  key = `k-${++keySeq}`,
+  method = "PATCH",
+) {
   return authedRequest(url, token, {
     method,
     headers: { "Content-Type": "application/json", "Idempotency-Key": key },
@@ -2312,12 +2406,16 @@ describe("conocimiento-config: /bot-config", () => {
     const graceUntil = new Date(body.widget_keys.grace.grace_until).getTime();
     expect(graceUntil).toBeGreaterThanOrEqual(before + 24 * HOUR);
     expect(graceUntil).toBeLessThanOrEqual(Date.now() + 24 * HOUR);
-    expect((await prisma.auditEvent.findMany()).map((e) => e.action)).toEqual(["widget_key.rotated"]);
+    expect((await prisma.auditEvent.findMany()).map((e) => e.action)).toEqual([
+      "widget_key.rotated",
+    ]);
   });
 
   it("rotar dos veces mata la que estaba en gracia", async () => {
     await rotateKey(write(ROTATE_URL, admin, undefined, "rot-1", "POST"));
-    const second = await (await rotateKey(write(ROTATE_URL, admin, undefined, "rot-2", "POST"))).json();
+    const second = await (
+      await rotateKey(write(ROTATE_URL, admin, undefined, "rot-2", "POST"))
+    ).json();
 
     expect(second.widget_keys.grace.key).not.toBe(seed.widgetKey);
     const accepted = await prisma.widgetKey.count({
@@ -2327,8 +2425,12 @@ describe("conocimiento-config: /bot-config", () => {
   });
 
   it("idempotencia: rotar con la misma Idempotency-Key no rota dos veces", async () => {
-    const first = await (await rotateKey(write(ROTATE_URL, admin, undefined, "rot-x", "POST"))).json();
-    const again = await (await rotateKey(write(ROTATE_URL, admin, undefined, "rot-x", "POST"))).json();
+    const first = await (
+      await rotateKey(write(ROTATE_URL, admin, undefined, "rot-x", "POST"))
+    ).json();
+    const again = await (
+      await rotateKey(write(ROTATE_URL, admin, undefined, "rot-x", "POST"))
+    ).json();
     expect(again).toEqual(first);
     expect(await prisma.widgetKey.count()).toBe(2);
     expect(await prisma.auditEvent.count()).toBe(1);
@@ -2495,7 +2597,9 @@ import type { WidgetKeyGenerator } from "../domain/ports/widget-key-generator";
 import { planRotation } from "../domain/widget-key";
 import { type BotConfigView, loadOverrides, viewOf } from "./bot-config";
 
-export type RotateWidgetKey = (input: AuditActor & { tenantId: TenantId }) => Promise<BotConfigView>;
+export type RotateWidgetKey = (
+  input: AuditActor & { tenantId: TenantId },
+) => Promise<BotConfigView>;
 
 type RotateDeps = {
   readonly configs: BotConfigRepository;
@@ -2642,7 +2746,9 @@ export const CHATBOT_PATHS = {
       parameters: [REQUEST_ID_PARAMETER, IDEMPOTENCY_PARAMETER],
       requestBody: {
         required: true,
-        content: { "application/json": { schema: { $ref: "#/components/schemas/BotConfigPatch" } } },
+        content: {
+          "application/json": { schema: { $ref: "#/components/schemas/BotConfigPatch" } },
+        },
       },
       responses: { ...botConfigOk, ...writeErrors },
     },
@@ -2810,6 +2916,7 @@ git commit -m "feat(api): GET/PATCH /bot-config y rotacion de la clave del widge
 ### Task 9: `/knowledge-entries`
 
 **Files:**
+
 - Create: `backend/src/modules/knowledge/application/knowledge-entries.ts`
 - Create: `backend/src/app/api/v1/knowledge-entries/route.ts`
 - Create: `backend/src/app/api/v1/knowledge-entries/[id]/route.ts`
@@ -2818,6 +2925,7 @@ git commit -m "feat(api): GET/PATCH /bot-config y rotacion de la clave del widge
 - Test: `backend/tests/db/conocimiento-config-http.test.ts`, `backend/tests/db/aislamiento-tenant.test.ts`
 
 **Interfaces:**
+
 - Consumes: `KnowledgeRepository` (Task 7), `parseEntryDraft`, `mergeEntryPatch`, `KNOWLEDGE_LIMITS`, `DEFAULT_KNOWLEDGE_ENTRIES` (Task 5), `AuditActor` (Task 8).
 - Produces:
   - `createListKnowledgeEntries(repo)`: `(input: { tenantId; category?: string; active?: boolean; cursor?: string | null; limitRaw?: string | null }) => Promise<Page<KnowledgeEntry>>`
@@ -2867,7 +2975,11 @@ describe("conocimiento-config: /knowledge-entries", () => {
   it("POST crea con keywords normalizadas, responde 201 y audita", async () => {
     const { response, body } = await create();
     expect(response.status).toBe(201);
-    expect(body).toMatchObject({ category: "Citas", keywords: ["agendar", "cita", "medica"], active: true });
+    expect(body).toMatchObject({
+      category: "Citas",
+      keywords: ["agendar", "cita", "medica"],
+      active: true,
+    });
     expect((await prisma.auditEvent.findMany()).map((e) => e.action)).toEqual([
       "knowledge_entry.created",
     ]);
@@ -2886,7 +2998,9 @@ describe("conocimiento-config: /knowledge-entries", () => {
     await create({ ...ENTRY, position: 1, active: false });
 
     const page1 = await (await listEntries(authedRequest(`${KB_URL}?limit=2`, operator))).json();
-    expect(page1.data.map((e: { category: string; position: number }) => [e.category, e.position])).toEqual([
+    expect(
+      page1.data.map((e: { category: string; position: number }) => [e.category, e.position]),
+    ).toEqual([
       ["Citas", 1],
       ["Citas", 2],
     ]);
@@ -2895,7 +3009,9 @@ describe("conocimiento-config: /knowledge-entries", () => {
     ).json();
     expect(page2.data.map((e: { category: string }) => e.category)).toEqual(["Ubicacion"]);
 
-    const activas = await (await listEntries(authedRequest(`${KB_URL}?active=true&category=Citas`, operator))).json();
+    const activas = await (
+      await listEntries(authedRequest(`${KB_URL}?active=true&category=Citas`, operator))
+    ).json();
     expect(activas.data).toHaveLength(1);
   });
 
@@ -2910,19 +3026,35 @@ describe("conocimiento-config: /knowledge-entries", () => {
       write(`${KB_URL}/${created.id}`, admin, { active: false, detail: "Más info" }),
       withId(created.id),
     );
-    expect(await patched.json()).toMatchObject({ active: false, detail: "Más info", answer: ENTRY.answer });
+    expect(await patched.json()).toMatchObject({
+      active: false,
+      detail: "Más info",
+      answer: ENTRY.answer,
+    });
 
-    const invalid = await patchEntry(write(`${KB_URL}/${created.id}`, admin, { question: "" }), withId(created.id));
+    const invalid = await patchEntry(
+      write(`${KB_URL}/${created.id}`, admin, { question: "" }),
+      withId(created.id),
+    );
     expect(invalid.status).toBe(422);
   });
 
   it("DELETE borra; un segundo DELETE con otra clave responde 404", async () => {
     const { body: created } = await create();
-    const first = await deleteEntry(write(`${KB_URL}/${created.id}`, admin, undefined, "del-1", "DELETE"), withId(created.id));
+    const first = await deleteEntry(
+      write(`${KB_URL}/${created.id}`, admin, undefined, "del-1", "DELETE"),
+      withId(created.id),
+    );
     expect(first.status).toBe(200);
-    const second = await deleteEntry(write(`${KB_URL}/${created.id}`, admin, undefined, "del-2", "DELETE"), withId(created.id));
+    const second = await deleteEntry(
+      write(`${KB_URL}/${created.id}`, admin, undefined, "del-2", "DELETE"),
+      withId(created.id),
+    );
     expect(second.status).toBe(404);
-    expect((await getEntry(authedRequest(`${KB_URL}/${created.id}`, operator), withId(created.id))).status).toBe(404);
+    expect(
+      (await getEntry(authedRequest(`${KB_URL}/${created.id}`, operator), withId(created.id)))
+        .status,
+    ).toBe(404);
   });
 
   it("con 500 entradas el alta responde 422", async () => {
@@ -2975,11 +3107,23 @@ describe("aislamiento-tenant: base de conocimiento", () => {
 
     expect((await getKnowledgeEntry(authedRequest(url, adminA), ctx)).status).toBe(404);
     expect(
-      (await patchKnowledgeEntry(authedRequest(url, adminA, writeInit("PATCH", "iso-p", { answer: "x" })), ctx)).status,
+      (
+        await patchKnowledgeEntry(
+          authedRequest(url, adminA, writeInit("PATCH", "iso-p", { answer: "x" })),
+          ctx,
+        )
+      ).status,
     ).toBe(404);
-    expect((await deleteKnowledgeEntry(authedRequest(url, adminA, writeInit("DELETE", "iso-d")), ctx)).status).toBe(404);
+    expect(
+      (await deleteKnowledgeEntry(authedRequest(url, adminA, writeInit("DELETE", "iso-d")), ctx))
+        .status,
+    ).toBe(404);
 
-    const { body } = await jsonGet(listKnowledgeEntries, "http://localhost/api/v1/knowledge-entries", adminA);
+    const { body } = await jsonGet(
+      listKnowledgeEntries,
+      "http://localhost/api/v1/knowledge-entries",
+      adminA,
+    );
     expect(idsOf(body)).toEqual([]);
     expect(await prisma.knowledgeEntry.count({ where: { id: "entry-b", answer: "A" } })).toBe(1);
   });
@@ -3015,9 +3159,18 @@ import {
 } from "../domain/knowledge-entry";
 import type { KnowledgeRepository } from "../domain/ports/knowledge-repository";
 
-type WriteDeps = { readonly repo: KnowledgeRepository; readonly audit: AuditLog; readonly clock: Clock };
+type WriteDeps = {
+  readonly repo: KnowledgeRepository;
+  readonly audit: AuditLog;
+  readonly clock: Clock;
+};
 
-async function audit(deps: WriteDeps, input: AuditActor & { tenantId: TenantId }, action: string, id: string) {
+async function audit(
+  deps: WriteDeps,
+  input: AuditActor & { tenantId: TenantId },
+  action: string,
+  id: string,
+) {
   await deps.audit.record({
     tenantId: input.tenantId,
     actorSubject: input.actorSubject,
@@ -3059,7 +3212,9 @@ export function createGetKnowledgeEntry(repo: KnowledgeRepository) {
 }
 
 export function createCreateKnowledgeEntry(deps: WriteDeps & { readonly ids: IdGenerator }) {
-  return async (input: AuditActor & { tenantId: TenantId; raw: unknown }): Promise<KnowledgeEntry> => {
+  return async (
+    input: AuditActor & { tenantId: TenantId; raw: unknown },
+  ): Promise<KnowledgeEntry> => {
     const draft = parseEntryDraft(input.raw);
     if ((await deps.repo.count(input.tenantId)) >= KNOWLEDGE_LIMITS.entriesPerTenant) {
       throw new ValidationError(
@@ -3067,7 +3222,11 @@ export function createCreateKnowledgeEntry(deps: WriteDeps & { readonly ids: IdG
         { field: "knowledge_entries", max: KNOWLEDGE_LIMITS.entriesPerTenant },
       );
     }
-    const created = await deps.repo.create({ ...draft, id: deps.ids.next(), tenantId: input.tenantId });
+    const created = await deps.repo.create({
+      ...draft,
+      id: deps.ids.next(),
+      tenantId: input.tenantId,
+    });
     await audit(deps, input, "created", created.id);
     return created;
   };
@@ -3077,7 +3236,10 @@ export function createUpdateKnowledgeEntry(deps: WriteDeps) {
   const getEntry = createGetKnowledgeEntry(deps.repo);
   return async (input: AuditActor & { tenantId: TenantId; id: string; raw: unknown }) => {
     const existing = await getEntry(input.tenantId, input.id);
-    const updated = await deps.repo.update({ ...existing, ...mergeEntryPatch(existing, input.raw) });
+    const updated = await deps.repo.update({
+      ...existing,
+      ...mergeEntryPatch(existing, input.raw),
+    });
     if (!updated) {
       throw new NotFoundError();
     }
@@ -3344,6 +3506,7 @@ git commit -m "feat(api): CRUD de la base de conocimiento"
 ### Task 10: Núcleo de idempotencia compartido y almacén de plataforma
 
 **Files:**
+
 - Create: `backend/src/http/idempotency-core.ts`
 - Modify: `backend/src/http/idempotent-route.ts` (usa el núcleo; opción `rebuild`)
 - Modify: `backend/src/modules/shared/domain/idempotency.ts` (añade `PlatformIdempotencyRecord`)
@@ -3353,6 +3516,7 @@ git commit -m "feat(api): CRUD de la base de conocimiento"
 - Test: `backend/tests/db/idempotencia-store.test.ts`; regresión: `backend/tests/db/idempotencia-http.test.ts`
 
 **Interfaces:**
+
 - Produces (`idempotency-core.ts`):
   - `IDEMPOTENCY_HEADER`, `type IdempotentResult = { status: number; body: unknown }`, `type IdempotentOutcome = IdempotentResult & { stored?: unknown }`
   - `type ScopedIdempotencyStore`, `tenantScope(store: IdempotencyStore, tenantId: TenantId)`, `platformScope(store: PlatformIdempotencyStore)`
@@ -3642,7 +3806,14 @@ export async function runIdempotent(plan: IdempotencyPlan): Promise<IdempotentRe
     return await getContainer().withWriteTransaction(async (ports) => {
       const store = plan.inside(ports);
       const { key, actorSubject, method, path, hash } = plan.request;
-      await store.reserve({ key, actorSubject, method, path, requestHash: hash, createdAt: ports.clock.now() });
+      await store.reserve({
+        key,
+        actorSubject,
+        method,
+        path,
+        requestHash: hash,
+        createdAt: ports.clock.now(),
+      });
       const outcome = await plan.execute(ports);
       await store.complete(key, outcome.status, outcome.stored ?? outcome.body);
       return { status: outcome.status, body: outcome.body };
@@ -3754,6 +3925,7 @@ git commit -m "refactor(http): nucleo de idempotencia compartido y almacen de pl
 ### Task 11: Superficie de plataforma: auth, tokens y lista de tenants
 
 **Files:**
+
 - Modify: `backend/src/config/env.ts` (`platformSecret`)
 - Modify: `backend/tests/setup-env.ts` (`PLATFORM_SECRET`)
 - Create: `backend/src/http/platform-route.ts`
@@ -3772,6 +3944,7 @@ git commit -m "refactor(http): nucleo de idempotencia compartido y almacen de pl
 - Test: `backend/tests/dominio/plataforma.test.ts`, `backend/tests/roles.test.ts`, `backend/tests/contrato-api.test.ts`, `backend/tests/db/alta-chatbot.test.ts`
 
 **Interfaces:**
+
 - Consumes: `TokenIssuer` + `createJoseTokenIssuer` (Task 6), `isUniqueViolation` (Task 7), `parseJsonBody` (Task 10), `requiredText`, `asRecord` (Task 3), `ERROR_SCHEMA`, `PAGE_SCHEMA`, etc. (Task 8).
 - Produces:
   - `AppConfig.platformSecret: string | null` (`PLATFORM_SECRET` vacío → `null`; menos de 32 caracteres → error al arrancar)
@@ -3804,12 +3977,15 @@ describe("alta-chatbot: peticion de token de plataforma", () => {
       subject: "ana",
       ttlMinutes: 480,
     });
-    expect(parseTokenRequest({ tenant_id: "t", role: "service", subject: "hermes" }).ttlMinutes).toBe(60);
+    expect(
+      parseTokenRequest({ tenant_id: "t", role: "service", subject: "hermes" }).ttlMinutes,
+    ).toBe(60);
   });
 
   it("acepta un TTL dentro del tope", () => {
     expect(
-      parseTokenRequest({ tenant_id: "t", role: "service", subject: "h", ttl_minutes: 1440 }).ttlMinutes,
+      parseTokenRequest({ tenant_id: "t", role: "service", subject: "h", ttl_minutes: 1440 })
+        .ttlMinutes,
     ).toBe(1440);
   });
 
@@ -3843,9 +4019,12 @@ describe("alta-chatbot: borrador de tenant", () => {
     });
   });
 
-  it.each(["", "Clinica", "-norte", "norte-", "norte_1", "x".repeat(51)])("rechaza el slug %j", (slug) => {
-    expect(() => parseTenantDraft({ slug, name: "N" })).toThrow(ValidationError);
-  });
+  it.each(["", "Clinica", "-norte", "norte-", "norte_1", "x".repeat(51)])(
+    "rechaza el slug %j",
+    (slug) => {
+      expect(() => parseTenantDraft({ slug, name: "N" })).toThrow(ValidationError);
+    },
+  );
 
   it("exige nombre", () => {
     expect(() => parseTenantDraft({ slug: "norte" })).toThrow(ValidationError);
@@ -3968,9 +4147,12 @@ export function parseTenantDraft(raw: unknown): TenantDraft {
   const data = asRecord(raw, "body");
   const slug = typeof data.slug === "string" ? data.slug.trim() : "";
   if (!SLUG.test(slug)) {
-    throw new ValidationError("slug: minusculas, digitos y guiones internos, de 1 a 50 caracteres", {
-      field: "slug",
-    });
+    throw new ValidationError(
+      "slug: minusculas, digitos y guiones internos, de 1 a 50 caracteres",
+      {
+        field: "slug",
+      },
+    );
   }
   return {
     slug,
@@ -4135,14 +4317,18 @@ describe("alta-chatbot: tokens de plataforma", () => {
     expect(expiresAt).toBeGreaterThanOrEqual(before + 8 * HOUR - 1000);
     expect(expiresAt).toBeLessThanOrEqual(Date.now() + 8 * HOUR);
 
-    const config = await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", body.token));
+    const config = await getBotConfig(
+      authedRequest("http://localhost/api/v1/bot-config", body.token),
+    );
     expect(config.status).toBe(200);
   });
 
   it("audita el hecho sin guardar el token", async () => {
     const { tenantId } = await insertChatbotTenant(prisma, "a");
     const body = await (
-      await issueToken(platformPost(TOKENS_URL, { tenant_id: tenantId, role: "service", subject: "hermes" }))
+      await issueToken(
+        platformPost(TOKENS_URL, { tenant_id: tenantId, role: "service", subject: "hermes" }),
+      )
     ).json();
 
     const events = await prisma.auditEvent.findMany();
@@ -4353,7 +4539,12 @@ import { isUniqueViolation } from "@/modules/shared/infrastructure/prisma-errors
 import type { TenantRegistry } from "../domain/ports/tenant-registry";
 import type { TenantSummary } from "../domain/tenant-registration";
 
-function mapTenant(row: { id: string; slug: string; name: string; createdAt: Date }): TenantSummary {
+function mapTenant(row: {
+  id: string;
+  slug: string;
+  name: string;
+  createdAt: Date;
+}): TenantSummary {
   return { id: row.id, slug: row.slug, name: row.name, createdAt: row.createdAt };
 }
 
@@ -4468,7 +4659,12 @@ import {
  * en `openapi-platform.json`.
  */
 const platformAuth = [{ platformSecret: [] }];
-const readErrors = errorResponses(["unauthorized", "not_found", "validation_failed", "internal_error"]);
+const readErrors = errorResponses([
+  "unauthorized",
+  "not_found",
+  "validation_failed",
+  "internal_error",
+]);
 
 const SCHEMAS = {
   Error: ERROR_SCHEMA,
@@ -4536,7 +4732,9 @@ export function buildPlatformOpenApiDocument(): Record<string, unknown> {
           parameters: [REQUEST_ID_PARAMETER],
           requestBody: {
             required: true,
-            content: { "application/json": { schema: { $ref: "#/components/schemas/TokenRequest" } } },
+            content: {
+              "application/json": { schema: { $ref: "#/components/schemas/TokenRequest" } },
+            },
           },
           responses: { ...okJson({ $ref: "#/components/schemas/IssuedToken" }), ...readErrors },
         },
@@ -4575,6 +4773,7 @@ git commit -m "feat(platform): superficie /api/platform/v1 con emision de tokens
 ### Task 12: Alta de tenant (`POST /api/platform/v1/tenants`)
 
 **Files:**
+
 - Create: `backend/src/modules/bot-config/application/provisioning.ts`
 - Create: `backend/src/modules/platform/domain/ports/provisioning.ts`
 - Create: `backend/src/modules/platform/application/register-tenant.ts`
@@ -4585,6 +4784,7 @@ git commit -m "feat(platform): superficie /api/platform/v1 con emision de tokens
 - Test: `backend/tests/db/alta-chatbot.test.ts`
 
 **Interfaces:**
+
 - Consumes: `applyPatch`, `EMPTY_OVERRIDES` (Task 3), repositorios (Task 7), `createSeedDefaultKnowledge` (Task 9), `runIdempotent`, `platformScope`, `readIdempotentRequest`, `idempotentJson` (Task 10), `TenantRegistry`, `PLATFORM_AUDIT_ACTOR`, `parseTenantDraft` (Task 11).
 - Produces:
   - `createProvisionBotConfig(deps: { configs; keys; generator; ids; clock; originPolicy }): (input: { tenantId: TenantId; allowedOrigins: unknown }) => Promise<{ widgetKey: string }>`
@@ -4633,14 +4833,18 @@ describe("alta-chatbot: POST /tenants", () => {
       allowedOrigins: ["https://nueva.test"],
     });
     expect(await prisma.knowledgeEntry.count({ where: { tenantId } })).toBe(3);
-    expect(await prisma.widgetKey.findFirstOrThrow({ where: { tenantId, retiredAt: null } })).toMatchObject({
+    expect(
+      await prisma.widgetKey.findFirstOrThrow({ where: { tenantId, retiredAt: null } }),
+    ).toMatchObject({
       key: body.widget_key,
     });
     expect((await prisma.auditEvent.findMany()).map((e) => e.action)).toEqual(["tenant.created"]);
   });
 
   it("idempotencia: repetir con la misma clave devuelve lo mismo sin duplicar", async () => {
-    const first = await (await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-2"))).json();
+    const first = await (
+      await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-2"))
+    ).json();
     const again = await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-2"));
     expect(again.status).toBe(201);
     expect(await again.json()).toEqual(first);
@@ -4673,11 +4877,17 @@ describe("alta-chatbot: POST /tenants", () => {
   });
 
   it("un token emitido para el tenant nuevo lee su configuracion", async () => {
-    const { tenant } = await (await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-6"))).json();
-    const { token } = await (
-      await issueToken(platformPost(TOKENS_URL, { tenant_id: tenant.id, role: "operator", subject: "op" }))
+    const { tenant } = await (
+      await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-6"))
     ).json();
-    const config = await (await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", token))).json();
+    const { token } = await (
+      await issueToken(
+        platformPost(TOKENS_URL, { tenant_id: tenant.id, role: "operator", subject: "op" }),
+      )
+    ).json();
+    const config = await (
+      await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", token))
+    ).json();
     expect(config.allowed_origins).toEqual(["https://nueva.test"]);
   });
 });
@@ -4953,6 +5163,7 @@ git commit -m "feat(platform): alta de tenant con bot-config, KB de ejemplo y cl
 ### Task 13: Sesiones del widget
 
 **Files:**
+
 - Modify: `backend/src/config/env.ts` (`trustProxy`)
 - Create: `backend/src/modules/bot-config/application/widget-access.ts`
 - Create: `backend/src/modules/widget/domain/widget-session.ts`
@@ -4970,6 +5181,7 @@ git commit -m "feat(platform): alta de tenant con bot-config, KB de ejemplo y cl
 - Test: `backend/tests/dominio/sesion-widget.test.ts`, `backend/tests/db/sesion-widget.test.ts`, `backend/tests/db/alta-chatbot.test.ts`
 
 **Interfaces:**
+
 - Consumes: `TokenIssuer` (Task 6), `WIDGET_KEY_PATTERN`, `isKeyAccepted`, `effectiveConfig` (Tasks 3–4), repositorios (Task 7), `RateLimitedError` (Task 2), núcleo de idempotencia y `idempotentRoute` con `rebuild` (Task 10).
 - Produces:
   - `AppConfig.trustProxy: boolean` (`TRUST_PROXY=true`)
@@ -4995,7 +5207,11 @@ import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { createAdmitWidget } from "@/modules/widget/application/admit-widget";
 import type { WidgetAccess } from "@/modules/widget/domain/ports/ports";
-import { isSessionActive, originAllowed, sessionExpiry } from "@/modules/widget/domain/widget-session";
+import {
+  isSessionActive,
+  originAllowed,
+  sessionExpiry,
+} from "@/modules/widget/domain/widget-session";
 import { createInMemoryRateLimiter } from "@/modules/widget/infrastructure/in-memory-rate-limiter";
 
 const NOW = new Date("2026-09-22T12:00:00.000Z");
@@ -5064,7 +5280,9 @@ describe("sesion-widget: admision", () => {
   const input = { widgetKey: "wk_ok", origin: "https://clinica-a.test", clientIp: "1.1.1.1" };
 
   it("clave desconocida o ausente → unauthorized", async () => {
-    await expect(admit({ ...input, widgetKey: "wk_no" })).rejects.toMatchObject({ reason: "unauthorized" });
+    await expect(admit({ ...input, widgetKey: "wk_no" })).rejects.toMatchObject({
+      reason: "unauthorized",
+    });
     await expect(admit({ ...input, widgetKey: 42 })).rejects.toBeInstanceOf(AuthError);
   });
 
@@ -5148,7 +5366,9 @@ export type WidgetAccess = {
 
 export type WidgetKeyResolver = (key: string, now: Date) => Promise<WidgetAccess | null>;
 
-export type WidgetSettingsReader = (tenantId: TenantId) => Promise<{ readonly sessionTtlMinutes: number }>;
+export type WidgetSettingsReader = (
+  tenantId: TenantId,
+) => Promise<{ readonly sessionTtlMinutes: number }>;
 
 export type WidgetSessionRepository = {
   create(session: WidgetSession): Promise<void>;
@@ -5222,8 +5442,17 @@ import { unauthorized } from "@/modules/auth/domain/auth-error";
 import type { Clock } from "@/modules/shared/domain/ports/clock";
 import type { IdGenerator } from "@/modules/shared/domain/ports/id-generator";
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
-import type { WidgetAccess, WidgetSessionRepository, WidgetSettingsReader } from "../domain/ports/ports";
-import { isSessionActive, sessionExpiry, sessionSubject, type WidgetSession } from "../domain/widget-session";
+import type {
+  WidgetAccess,
+  WidgetSessionRepository,
+  WidgetSettingsReader,
+} from "../domain/ports/ports";
+import {
+  isSessionActive,
+  sessionExpiry,
+  sessionSubject,
+  type WidgetSession,
+} from "../domain/widget-session";
 
 export function createStartWidgetSession(deps: {
   sessions: WidgetSessionRepository;
@@ -5246,7 +5475,10 @@ export function createStartWidgetSession(deps: {
 }
 
 /** La vigencia se evalua al leer: una sesion vencida es `unauthorized`. */
-export function createGetActiveWidgetSession(deps: { sessions: WidgetSessionRepository; clock: Clock }) {
+export function createGetActiveWidgetSession(deps: {
+  sessions: WidgetSessionRepository;
+  clock: Clock;
+}) {
   return async (tenantId: TenantId, sessionId: string): Promise<WidgetSession> => {
     const session = await deps.sessions.get(tenantId, sessionId);
     if (!session || !isSessionActive(session, deps.clock.now())) {
@@ -5266,7 +5498,11 @@ export function createRefreshWidgetSession(deps: {
     const session = await getActive(input.tenantId, input.sessionId);
     const now = deps.clock.now();
     const { sessionTtlMinutes } = await deps.settings(input.tenantId);
-    const refreshed = { ...session, lastSeenAt: now, expiresAt: sessionExpiry(now, sessionTtlMinutes) };
+    const refreshed = {
+      ...session,
+      lastSeenAt: now,
+      expiresAt: sessionExpiry(now, sessionTtlMinutes),
+    };
     await deps.sessions.extend(refreshed);
     return refreshed;
   };
@@ -5391,7 +5627,11 @@ export function createResolveWidgetKey(deps: {
       return null;
     }
     const config = effectiveConfig(overrides);
-    return { tenantId: found.tenantId, allowedOrigins: config.allowedOrigins, params: config.params };
+    return {
+      tenantId: found.tenantId,
+      allowedOrigins: config.allowedOrigins,
+      params: config.params,
+    };
   };
 }
 
@@ -5457,14 +5697,21 @@ function open(widgetKey: unknown, headers: Record<string, string> = {}) {
   return openSession(
     new Request(SESSIONS_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: ORIGIN, "Idempotency-Key": randomUUID(), ...headers },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: ORIGIN,
+        "Idempotency-Key": randomUUID(),
+        ...headers,
+      },
       body: JSON.stringify({ widget_key: widgetKey }),
     }),
   );
 }
 
 function refresh(token: string, key = randomUUID()) {
-  return refreshSession(authedRequest(REFRESH_URL, token, { method: "POST", headers: { "Idempotency-Key": key } }));
+  return refreshSession(
+    authedRequest(REFRESH_URL, token, { method: "POST", headers: { "Idempotency-Key": key } }),
+  );
 }
 
 describe("sesion-widget: apertura", () => {
@@ -5497,7 +5744,9 @@ describe("sesion-widget: apertura", () => {
     });
     const expiresAt = new Date(body.expires_at).getTime();
     expect(expiresAt).toBeGreaterThanOrEqual(before + 30 * 60_000);
-    expect(await prisma.widgetSession.findUniqueOrThrow({ where: { id: body.session_id } })).toMatchObject({
+    expect(
+      await prisma.widgetSession.findUniqueOrThrow({ where: { id: body.session_id } }),
+    ).toMatchObject({
       tenantId: seed.tenantId,
       origin: ORIGIN,
     });
@@ -5517,7 +5766,10 @@ describe("sesion-widget: apertura", () => {
     });
     expect((await open(retired)).status).toBe(201);
 
-    await prisma.widgetKey.update({ where: { id: "k-grace" }, data: { graceUntil: new Date(Date.now() - 1) } });
+    await prisma.widgetKey.update({
+      where: { id: "k-grace" },
+      data: { graceUntil: new Date(Date.now() - 1) },
+    });
     expect((await open(retired)).status).toBe(401);
     expect((await open(`wk_${"u".repeat(43)}`)).status).toBe(401);
     expect((await open("no-es-una-clave")).status).toBe(401);
@@ -5642,8 +5894,12 @@ describe("sesion-widget: renovacion y alcance", () => {
   it("operator no renueva sesiones y el widget no alcanza config ni KB", async () => {
     const operator = await signToken({ role: "operator", tenantId: seed.tenantId });
     expect((await refresh(operator)).status).toBe(403);
-    expect((await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", token))).status).toBe(403);
-    expect((await listEntries(authedRequest("http://localhost/api/v1/knowledge-entries", token))).status).toBe(403);
+    expect(
+      (await getBotConfig(authedRequest("http://localhost/api/v1/bot-config", token))).status,
+    ).toBe(403);
+    expect(
+      (await listEntries(authedRequest("http://localhost/api/v1/knowledge-entries", token))).status,
+    ).toBe(403);
   });
 });
 ```
@@ -5658,7 +5914,9 @@ describe("alta-chatbot: la primera clave abre sesion", () => {
   });
 
   it("la clave devuelta por el alta abre una sesion desde un origen permitido", async () => {
-    const { widget_key } = await (await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-w"))).json();
+    const { widget_key } = await (
+      await createTenant(platformPost(TENANTS_URL, NEW_TENANT, "alta-w"))
+    ).json();
     const response = await openWidgetSession(
       new Request("http://localhost/api/v1/widget/sessions", {
         method: "POST",
@@ -5728,7 +5986,10 @@ export async function rebuildSessionResponse(
   }
   const container = getContainer();
   const session = await container.getActiveWidgetSession(tenantId, sessionId);
-  return { status: stored.status, body: sessionTokenJson(session, await container.issueSessionToken(session)) };
+  return {
+    status: stored.status,
+    body: sessionTokenJson(session, await container.issueSessionToken(session)),
+  };
 }
 ```
 
@@ -5738,7 +5999,12 @@ export async function rebuildSessionResponse(
 import { getContainer } from "@/composition-root";
 import { clientIp } from "@/http/client-ip";
 import { errorResponse, toApiError } from "@/http/errors";
-import { idempotentJson, readIdempotentRequest, runIdempotent, tenantScope } from "@/http/idempotency-core";
+import {
+  idempotentJson,
+  readIdempotentRequest,
+  runIdempotent,
+  tenantScope,
+} from "@/http/idempotency-core";
 import { REQUEST_ID_HEADER, resolveRequestId } from "@/http/request-id";
 import { rebuildSessionResponse, sessionTokenJson } from "@/http/widget-session-response";
 import {
@@ -5749,7 +6015,9 @@ import {
 export const dynamic = "force-dynamic";
 
 function widgetKeyOf(body: unknown): unknown {
-  return typeof body === "object" && body !== null ? (body as { widget_key?: unknown }).widget_key : undefined;
+  return typeof body === "object" && body !== null
+    ? (body as { widget_key?: unknown }).widget_key
+    : undefined;
 }
 
 /** Apertura anonima: la clave publica resuelve el tenant; el cliente nunca lo elige. */
@@ -5775,7 +6043,11 @@ export async function POST(request: Request): Promise<Response> {
       execute: async (ports) => {
         const session = await ports.startWidgetSession({ access, origin });
         const issued = await container.issueSessionToken(session);
-        return { status: 201, body: sessionTokenJson(session, issued), stored: { session_id: session.id } };
+        return {
+          status: 201,
+          body: sessionTokenJson(session, issued),
+          stored: { session_id: session.id },
+        };
       },
       rebuild: (stored) => rebuildSessionResponse(stored, access.tenantId),
     });
@@ -5813,9 +6085,15 @@ export const POST = idempotentRoute(
       sessionId: sessionIdOf(actor),
     });
     const issued = await getContainer().issueSessionToken(session);
-    return { status: 200, body: sessionTokenJson(session, issued), stored: { session_id: session.id } };
+    return {
+      status: 200,
+      body: sessionTokenJson(session, issued),
+      stored: { session_id: session.id },
+    };
   },
-  { rebuild: (stored, actor) => rebuildSessionResponse(stored, actor.tenantId, sessionIdOf(actor)) },
+  {
+    rebuild: (stored, actor) => rebuildSessionResponse(stored, actor.tenantId, sessionIdOf(actor)),
+  },
 );
 ```
 
@@ -5877,7 +6155,10 @@ Run: `npm --prefix backend run openapi:generate`
 Añade `type WidgetWritePorts = ReturnType<typeof widgetWritePorts>;`, amplía `WritePorts` con `& WidgetWritePorts`, en `buildWritePorts` `...widgetWritePorts(db)`, en `Container` `readonly admitWidget: AdmitWidget; readonly issueSessionToken: (session: WidgetSession) => Promise<SessionToken>; readonly getActiveWidgetSession: (tenantId: TenantId, sessionId: string) => Promise<WidgetSession>;`, en `getContainer` `...widgetReads(prisma, config),`, y:
 
 ```ts
-function widgetKeyResolver(configs: BotConfigRepository, keys: WidgetKeyRepository): WidgetKeyResolver {
+function widgetKeyResolver(
+  configs: BotConfigRepository,
+  keys: WidgetKeyRepository,
+): WidgetKeyResolver {
   const resolve = createResolveWidgetKey({ configs, keys });
   return async (key, now) => {
     const access = await resolve(key, now);
@@ -5902,7 +6183,11 @@ function widgetSettingsReader(configs: BotConfigRepository): WidgetSettingsReade
 function widgetWritePorts(db: PrismaExecutor) {
   const sessions = createPrismaWidgetSessionRepository(db);
   return {
-    startWidgetSession: createStartWidgetSession({ sessions, ids: uuidV7Generator, clock: systemClock }),
+    startWidgetSession: createStartWidgetSession({
+      sessions,
+      ids: uuidV7Generator,
+      clock: systemClock,
+    }),
     refreshWidgetSession: createRefreshWidgetSession({
       sessions,
       settings: widgetSettingsReader(createPrismaBotConfigRepository(db)),
@@ -5953,10 +6238,12 @@ git commit -m "feat(widget): apertura y renovacion de sesiones con limite por IP
 ### Task 14: Suites `sin-ia` y `fronteras` de los módulos nuevos
 
 **Files:**
+
 - Create: `backend/tests/sin-ia.test.ts`
 - Modify: `backend/tests/fronteras.test.ts`
 
 **Interfaces:**
+
 - Consumes: estructura de carpetas de las tareas anteriores.
 - Produces: suites que fallan si entra una dependencia o un import de IA, o si un módulo nuevo importa otro módulo que no sea `shared` o `auth`.
 
@@ -6028,7 +6315,9 @@ function dependenciesOf(file: string): string[] {
 describe("sin-ia", () => {
   it("ningun package.json declara dependencias de IA ni n8n", () => {
     const offenders = PACKAGES.flatMap((file) =>
-      dependenciesOf(file).filter(isForbidden).map((name) => `${file}: ${name}`),
+      dependenciesOf(file)
+        .filter(isForbidden)
+        .map((name) => `${file}: ${name}`),
     );
     expect(offenders).toEqual([]);
   });
@@ -6049,7 +6338,9 @@ describe("sin-ia", () => {
   });
 
   it("el detector reconoce lo que debe bloquear", () => {
-    expect(["openai", "@langchain/core", "n8n-core", "ai", "@ai-sdk/openai"].every(isForbidden)).toBe(true);
+    expect(
+      ["openai", "@langchain/core", "n8n-core", "ai", "@ai-sdk/openai"].every(isForbidden),
+    ).toBe(true);
     expect(["jose", "next", "@prisma/client", "aigle"].some(isForbidden)).toBe(false);
   });
 });
@@ -6058,20 +6349,20 @@ describe("sin-ia", () => {
 Añade a `backend/tests/fronteras.test.ts`, dentro del `describe("fronteras de capas", ...)`:
 
 ```ts
-  it("los modulos de la Fase 3 solo importan shared y auth de otros modulos", () => {
-    const phase3 = ["bot-config", "knowledge", "widget", "platform"];
-    const offenders = phase3.flatMap((mod) => {
-      const allowed = new Set([mod, "shared", "auth"]);
-      return listFiles(join(MODULES_DIR, mod)).flatMap((file) =>
-        importsOf(file)
-          .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
-          .filter(({ module }) => module !== undefined && !allowed.has(module))
-          .map(({ specifier }) => `${file} -> ${specifier}`),
-      );
-    });
-
-    expect(offenders).toEqual([]);
+it("los modulos de la Fase 3 solo importan shared y auth de otros modulos", () => {
+  const phase3 = ["bot-config", "knowledge", "widget", "platform"];
+  const offenders = phase3.flatMap((mod) => {
+    const allowed = new Set([mod, "shared", "auth"]);
+    return listFiles(join(MODULES_DIR, mod)).flatMap((file) =>
+      importsOf(file)
+        .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
+        .filter(({ module }) => module !== undefined && !allowed.has(module))
+        .map(({ specifier }) => `${file} -> ${specifier}`),
+    );
   });
+
+  expect(offenders).toEqual([]);
+});
 ```
 
 - [ ] **Step 2: Run tests**
@@ -6091,12 +6382,14 @@ git commit -m "test: suite sin-ia y fronteras de los modulos de la Fase 3"
 ### Task 15: Documentación, entorno, cliente del frontend y verificación final
 
 **Files:**
+
 - Modify: `GOBERNANZA.md`, `README.md`, `backend/.env.example`, `.env.example`, `docker-compose.yml`
 - Modify (sin commitear, ver nota): `CLAUDE.md`
 - Regenerate: `frontend/src/api/**` (orval)
 - Modify: `docs/superpowers/specs/2026-09-22-fase-3-1-tenant-listo-design.md` (estado)
 
 **Interfaces:**
+
 - Consumes: todo lo anterior.
 - Produces: gobernanza y README al día, cliente orval regenerado, todas las puertas en verde.
 
@@ -6180,8 +6473,8 @@ TRUST_PROXY=false
 En `docker-compose.yml`, en `backend.environment`, tras `JWT_AUDIENCE`:
 
 ```yaml
-      PLATFORM_SECRET: ${PLATFORM_SECRET:-}
-      TRUST_PROXY: ${TRUST_PROXY:-false}
+PLATFORM_SECRET: ${PLATFORM_SECRET:-}
+TRUST_PROXY: ${TRUST_PROXY:-false}
 ```
 
 - [ ] **Step 3: `CLAUDE.md` (sin commitear)**
@@ -6215,5 +6508,6 @@ git commit -m "docs: gobernanza, README y entorno de la Fase 3.1; cliente orval 
 ```
 
 Antes de dar la sub-fase por cerrada, deja en el resumen al usuario:
+
 - Que `CLAUDE.md` queda modificado sin commitear.
 - Qué variables hay que definir en Easypanel: `PLATFORM_SECRET` (secreto largo aleatorio) y `TRUST_PROXY=true` en el servicio backend.

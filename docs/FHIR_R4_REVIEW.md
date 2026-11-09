@@ -16,20 +16,20 @@ propone.
 
 ## Resumen y prioridad
 
-| # | Hallazgo | Severidad | Dónde |
-| --- | --- | --- | --- |
-| 1 | `metadata` declara `update` y `updateCreate`, pero el `PUT` por id responde `405` | Alta | Plan 4.2, Tarea 5; spec 4.2 §2 y §5 |
-| 6 | Los parsers rechazan elementos R4 válidos (`meta`, `text`, `use`, `extension`) | Alta | `parsers/body.ts`, `parsers/patient.ts` |
-| 9 | El plan lee `Idempotency-Key` antes de enrutar: `400` en vez de `405`/`404` | Alta | Plan 4.2, Tarea 6 |
-| 2 | El `id` del cuerpo se ignora; R4 pide `400` si no coincide | Media | Spec 4.2 §2 |
-| 3 | Errores de perfil o de regla de negocio como `400` en vez de `422` | Media | Spec 4.2 §5 |
-| 4 | `412` con `issue.code` `conflict` en vez de `multiple-matches` | Media | Spec 4.2 §5; plan 4.2, Tarea 1 |
-| 5 | `Content-Type` no soportado → `400` en vez de `415`; rechaza `application/json` | Media | Plan 4.2, Tarea 6 |
-| 8 | Un apartado del chatbot bloquea cambios de Hermes (`409`) | Decisión de producto | Spec 4.2 §2 y §4.2 |
-| 7 | `Idempotency-Key` obligatoria y no estándar, sin anunciar en `metadata` | Baja | Spec 4.2 §2 |
-| 10 | `Location` se calcula dos veces | Baja | Plan 4.2, Tarea 6 |
-| 11–14 | Detalles de la 4.1: `WWW-Authenticate`, versionado, `Patient.active`, estado de la spec | Baja | 4.1 |
-| 15–17 | Puntos para la spec de la 4.3 | Para planificar | 4.3 |
+| #     | Hallazgo                                                                                | Severidad            | Dónde                                   |
+| ----- | --------------------------------------------------------------------------------------- | -------------------- | --------------------------------------- |
+| 1     | `metadata` declara `update` y `updateCreate`, pero el `PUT` por id responde `405`       | Alta                 | Plan 4.2, Tarea 5; spec 4.2 §2 y §5     |
+| 6     | Los parsers rechazan elementos R4 válidos (`meta`, `text`, `use`, `extension`)          | Alta                 | `parsers/body.ts`, `parsers/patient.ts` |
+| 9     | El plan lee `Idempotency-Key` antes de enrutar: `400` en vez de `405`/`404`             | Alta                 | Plan 4.2, Tarea 6                       |
+| 2     | El `id` del cuerpo se ignora; R4 pide `400` si no coincide                              | Media                | Spec 4.2 §2                             |
+| 3     | Errores de perfil o de regla de negocio como `400` en vez de `422`                      | Media                | Spec 4.2 §5                             |
+| 4     | `412` con `issue.code` `conflict` en vez de `multiple-matches`                          | Media                | Spec 4.2 §5; plan 4.2, Tarea 1          |
+| 5     | `Content-Type` no soportado → `400` en vez de `415`; rechaza `application/json`         | Media                | Plan 4.2, Tarea 6                       |
+| 8     | Un apartado del chatbot bloquea cambios de Hermes (`409`)                               | Decisión de producto | Spec 4.2 §2 y §4.2                      |
+| 7     | `Idempotency-Key` obligatoria y no estándar, sin anunciar en `metadata`                 | Baja                 | Spec 4.2 §2                             |
+| 10    | `Location` se calcula dos veces                                                         | Baja                 | Plan 4.2, Tarea 6                       |
+| 11–14 | Detalles de la 4.1: `WWW-Authenticate`, versionado, `Patient.active`, estado de la spec | Baja                 | 4.1                                     |
+| 15–17 | Puntos para la spec de la 4.3                                                           | Para planificar      | 4.3                                     |
 
 **Antes de seguir con la Tarea 2 de la 4.2:** los hallazgos 1, 6 y 9, porque afectan al
 contrato. El 2, el 3 y el 4 son baratos de ajustar ahora en la spec. El 8 es una decisión de
@@ -62,12 +62,12 @@ En ambos casos, la prueba de metadata exacta debe probar también el `PUT` por i
 La spec 4.2 §2 («Cuerpo») dice que el `id` del cuerpo se ignora. Las reglas del update
 condicional de R4 dicen otra cosa:
 
-| Caso | Respuesta R4 |
-| --- | --- |
-| Sin coincidencias, sin `id` en el cuerpo | Crea (`201`) |
+| Caso                                                            | Respuesta R4      |
+| --------------------------------------------------------------- | ----------------- |
+| Sin coincidencias, sin `id` en el cuerpo                        | Crea (`201`)      |
 | Una coincidencia, sin `id` o con el `id` del recurso encontrado | Actualiza (`200`) |
-| Una coincidencia, con un `id` distinto | `400` |
-| Varias coincidencias | `412` |
+| Una coincidencia, con un `id` distinto                          | `400`             |
+| Varias coincidencias                                            | `412`             |
 
 Ignorar un `id` distinto esconde que Hermes apuntó a otro recurso.
 
@@ -187,12 +187,12 @@ spec 4.2 §10.7. La sincronización de la 4.4 debe tratar el `409` como «reinte
 En `handleFhirWrite`, las comprobaciones de método, ruta y tipo van dentro del `execute` de
 `serviceFhirIdempotentRoute`, y `readIdempotentRequest` corre antes. Resultado:
 
-| Petición sin `Idempotency-Key` | Espera la spec | Da el plan |
-| --- | --- | --- |
-| `DELETE /fhir/Patient?…` | `405` | `400` |
-| `PUT /fhir/Patient/123` | `405` (`Allow: GET`) | `400` |
-| `PUT /fhir/Appointment?…` | `405` (`Allow: GET`) | `400` |
-| `PUT /fhir/Foo?…` | `404` | `400` |
+| Petición sin `Idempotency-Key` | Espera la spec       | Da el plan |
+| ------------------------------ | -------------------- | ---------- |
+| `DELETE /fhir/Patient?…`       | `405`                | `400`      |
+| `PUT /fhir/Patient/123`        | `405` (`Allow: GET`) | `400`      |
+| `PUT /fhir/Appointment?…`      | `405` (`Allow: GET`) | `400`      |
+| `PUT /fhir/Foo?…`              | `404`                | `400`      |
 
 La spec §4 fija el orden: autenticación y rol, después enrutado (`405`/`404`) y después la
 clave. Además, `readIdempotentRequest` parsea el cuerpo antes de que se valide el

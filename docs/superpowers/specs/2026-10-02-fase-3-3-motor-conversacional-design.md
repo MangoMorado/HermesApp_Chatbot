@@ -22,18 +22,18 @@ confirmación del pre-registro por Hermes vía FHIR (Fase 4).
 
 ## 2. Decisiones tomadas
 
-| Tema | Decisión | Razón |
-| --- | --- | --- |
-| Interacción | Guiada por opciones; texto libre solo en captura de datos y en la consulta a la KB | Determinista, testeable, sin clasificación de intenciones |
-| Verificación | 2 preguntas sorteadas de un banco extensible en código | Pedido del producto; agregar una pregunta no toca motor ni esquema |
-| Par fijo | El par se sortea la primera vez que se identifica un documento y se mantiene entre sesiones y tras el bloqueo; solo se re-sortea tras verificar con éxito | Re-sortear por sesión permitiría pescar el par más fácil |
-| Bloqueo | `verification_max_attempts` (3) fallos → `verification_lock_minutes` (30); salida por asesor | Resistencia a fuerza bruta sin dejar al paciente sin camino |
-| Pre-registro | Aviso de datos (Ley 1581) → nombres, apellidos, fecha de nacimiento, celular (obligatorio), correo (opcional) → confirmación | Con celular el banco tiene preguntas no derivadas de la fecha |
-| Conversación | Estado + historial con los mensajes sensibles del paciente redactados | El asesor (Fase 6) y la consola (3.4) necesitan contexto sin datos sensibles |
-| Motor | Pasos puros en `domain` que devuelven estado, mensajes y **efectos**; `application` carga hechos y ejecuta efectos | El flujo se prueba sin base de datos; respeta las fronteras hexagonales |
-| CORS | En el backend, solo rutas del widget, origen exacto validado contra `allowed_origins`, sin comodín | El widget vive en dominios de las clínicas; el proxy no sirve ahí |
-| Orígenes por API | `POST`/`DELETE /api/v1/bot-config/allowed-origins` (rol `admin`); `PATCH` sigue reemplazando la lista | Evita la carrera de leer-modificar-escribir la lista entera |
-| Errores | Sin códigos nuevos: `409 conflict` con `details.reason` | El contrato de errores REST no cambia |
+| Tema             | Decisión                                                                                                                                                  | Razón                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Interacción      | Guiada por opciones; texto libre solo en captura de datos y en la consulta a la KB                                                                        | Determinista, testeable, sin clasificación de intenciones                    |
+| Verificación     | 2 preguntas sorteadas de un banco extensible en código                                                                                                    | Pedido del producto; agregar una pregunta no toca motor ni esquema           |
+| Par fijo         | El par se sortea la primera vez que se identifica un documento y se mantiene entre sesiones y tras el bloqueo; solo se re-sortea tras verificar con éxito | Re-sortear por sesión permitiría pescar el par más fácil                     |
+| Bloqueo          | `verification_max_attempts` (3) fallos → `verification_lock_minutes` (30); salida por asesor                                                              | Resistencia a fuerza bruta sin dejar al paciente sin camino                  |
+| Pre-registro     | Aviso de datos (Ley 1581) → nombres, apellidos, fecha de nacimiento, celular (obligatorio), correo (opcional) → confirmación                              | Con celular el banco tiene preguntas no derivadas de la fecha                |
+| Conversación     | Estado + historial con los mensajes sensibles del paciente redactados                                                                                     | El asesor (Fase 6) y la consola (3.4) necesitan contexto sin datos sensibles |
+| Motor            | Pasos puros en `domain` que devuelven estado, mensajes y **efectos**; `application` carga hechos y ejecuta efectos                                        | El flujo se prueba sin base de datos; respeta las fronteras hexagonales      |
+| CORS             | En el backend, solo rutas del widget, origen exacto validado contra `allowed_origins`, sin comodín                                                        | El widget vive en dominios de las clínicas; el proxy no sirve ahí            |
+| Orígenes por API | `POST`/`DELETE /api/v1/bot-config/allowed-origins` (rol `admin`); `PATCH` sigue reemplazando la lista                                                     | Evita la carrera de leer-modificar-escribir la lista entera                  |
+| Errores          | Sin códigos nuevos: `409 conflict` con `details.reason`                                                                                                   | El contrato de errores REST no cambia                                        |
 
 ## 3. Arquitectura del backend
 
@@ -64,16 +64,16 @@ backend/src/http/
 ```ts
 type Step = {
   readonly id: StepId;
-  needs(context: ConversationContext): FactRequest[];          // qué cargar antes
+  needs(context: ConversationContext): FactRequest[]; // qué cargar antes
   handle(input: PatientInput, context: ConversationContext, facts: Facts): StepResult;
 };
 
 type StepResult = {
   readonly next: StepId;
-  readonly context: ConversationContext;   // nuevo contexto (sin respuestas de verificación)
-  readonly turns: BotTurn[];               // clave de texto + parámetros + opciones
-  readonly effects: Effect[];              // ejecutados por application, en una transacción
-  readonly redactInput: boolean;           // el mensaje del paciente se guarda como [redactado]
+  readonly context: ConversationContext; // nuevo contexto (sin respuestas de verificación)
+  readonly turns: BotTurn[]; // clave de texto + parámetros + opciones
+  readonly effects: Effect[]; // ejecutados por application, en una transacción
+  readonly redactInput: boolean; // el mensaje del paciente se guarda como [redactado]
 };
 ```
 
@@ -92,43 +92,43 @@ Un paso por archivo; cada `handle` ≤ 40 líneas y complejidad cognitiva ≤ 15
 
 `conversations`
 
-| Campo | Notas |
-| --- | --- |
-| `id`, `tenant_id` | UUID v7 |
-| `widget_session_id` | Único por `(tenant_id, widget_session_id)`; FK compuesta |
-| `step` | `StepId` actual |
-| `context` | JSON: opciones vigentes del turno, selección en curso, borrador del pre-registro (se borra al confirmar o abandonar) |
-| `medical_record_id` | Nulo hasta verificar o pre-registrar |
-| `created_at`, `updated_at` | |
+| Campo                      | Notas                                                                                                                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `id`, `tenant_id`          | UUID v7                                                                                                              |
+| `widget_session_id`        | Único por `(tenant_id, widget_session_id)`; FK compuesta                                                             |
+| `step`                     | `StepId` actual                                                                                                      |
+| `context`                  | JSON: opciones vigentes del turno, selección en curso, borrador del pre-registro (se borra al confirmar o abandonar) |
+| `medical_record_id`        | Nulo hasta verificar o pre-registrar                                                                                 |
+| `created_at`, `updated_at` |                                                                                                                      |
 
 `conversation_messages`
 
-| Campo | Notas |
-| --- | --- |
-| `id`, `tenant_id`, `conversation_id` | |
-| `author` | enum `bot` · `patient` |
-| `text` | Texto mostrado; `[redactado]` si `redacted` |
-| `redacted` | Respuestas de verificación y datos del pre-registro |
-| `created_at` | |
+| Campo                                | Notas                                               |
+| ------------------------------------ | --------------------------------------------------- |
+| `id`, `tenant_id`, `conversation_id` |                                                     |
+| `author`                             | enum `bot` · `patient`                              |
+| `text`                               | Texto mostrado; `[redactado]` si `redacted`         |
+| `redacted`                           | Respuestas de verificación y datos del pre-registro |
+| `created_at`                         |                                                     |
 
 `verification_challenges`
 
-| Campo | Notas |
-| --- | --- |
-| `tenant_id`, `medical_record_id` | Único por ambos |
-| `question_ids` | `text[]` de longitud 2 |
+| Campo                             | Notas                            |
+| --------------------------------- | -------------------------------- |
+| `tenant_id`, `medical_record_id`  | Único por ambos                  |
+| `question_ids`                    | `text[]` de longitud 2           |
 | `failed_attempts`, `locked_until` | `locked_until` se evalúa al leer |
-| `created_at`, `updated_at` | |
+| `created_at`, `updated_at`        |                                  |
 
 `handoff_tickets`
 
-| Campo | Notas |
-| --- | --- |
-| `id`, `tenant_id`, `conversation_id` | |
-| `reason` | enum `requested` · `verification_locked` · `unverifiable` |
-| `status` | enum `open` (la Fase 6 añade los demás) |
-| `medical_record_id` | Si ya se conoce |
-| `created_at` | |
+| Campo                                | Notas                                                     |
+| ------------------------------------ | --------------------------------------------------------- |
+| `id`, `tenant_id`, `conversation_id` |                                                           |
+| `reason`                             | enum `requested` · `verification_locked` · `unverifiable` |
+| `status`                             | enum `open` (la Fase 6 añade los demás)                   |
+| `medical_record_id`                  | Si ya se conoce                                           |
+| `created_at`                         |                                                           |
 
 Ninguna tabla guarda respuestas de verificación. Las FK son compuestas `(tenant_id, …)` como en
 el resto del esquema.
@@ -137,9 +137,9 @@ el resto del esquema.
 
 ### 4.1 Chat (`/api/v1`, rol `widget`)
 
-| Método y ruta | Uso |
-| --- | --- |
-| `GET /widget/conversation` | Turno actual + historial redactado; crea la conversación con `welcome` si no existe |
+| Método y ruta                        | Uso                                                                                               |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `GET /widget/conversation`           | Turno actual + historial redactado; crea la conversación con `welcome` si no existe               |
 | `POST /widget/conversation/messages` | `{ "option_id": "…" }` o `{ "text": "…" }`; `Idempotency-Key`; responde los turnos nuevos del bot |
 
 - La conversación sale del `session_id` del token; no hay id en la ruta ni en el cuerpo.
@@ -150,10 +150,10 @@ el resto del esquema.
 
 ### 4.2 Orígenes permitidos (`/api/v1`, rol `admin`)
 
-| Método y ruta | Uso |
-| --- | --- |
-| `POST /bot-config/allowed-origins` | `{ "origin": "https://…" }`; si ya existe, 200 sin cambios; `Idempotency-Key` |
-| `DELETE /bot-config/allowed-origins/{origin}` | Quita uno (origen codificado en la URL); si no existe, `404` |
+| Método y ruta                                 | Uso                                                                           |
+| --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `POST /bot-config/allowed-origins`            | `{ "origin": "https://…" }`; si ya existe, 200 sin cambios; `Idempotency-Key` |
+| `DELETE /bot-config/allowed-origins/{origin}` | Quita uno (origen codificado en la URL); si no existe, `404`                  |
 
 Mismas reglas que el `PATCH`: máximo 20, origen exacto `https://host[:puerto]`, `http://localhost:*`
 fuera de producción. Responden la configuración efectiva.
@@ -211,14 +211,14 @@ Banco en `verification/domain/questions.ts`, un registro de objetos:
 
 ```ts
 type VerificationQuestion = {
-  readonly id: string;                       // p. ej. "birth_month"
+  readonly id: string; // p. ej. "birth_month"
   readonly source: "birth_date" | "phone" | "email";
-  readonly textKey: TextKey;                 // redacción configurable por tenant
+  readonly textKey: TextKey; // redacción configurable por tenant
   readonly input: "text" | "options";
   isAvailable(record: VerifiableRecord): boolean;
-  expected(record: VerifiableRecord): string;  // ya normalizado
+  expected(record: VerifiableRecord): string; // ya normalizado
   normalize(raw: string): string;
-  options?(record: VerifiableRecord, random: Random): string[];  // si input = options
+  options?(record: VerifiableRecord, random: Random): string[]; // si input = options
 };
 ```
 
@@ -252,10 +252,10 @@ verificada. Documento ya existente por carrera → se trata como identificación
 
 Parámetros nuevos:
 
-| `params` | Defecto | Rango |
-| --- | --- | --- |
-| `verification_max_attempts` | 3 | 1–5 |
-| `verification_lock_minutes` | 30 | 5–1440 |
+| `params`                    | Defecto | Rango  |
+| --------------------------- | ------- | ------ |
+| `verification_max_attempts` | 3       | 1–5    |
+| `verification_lock_minutes` | 30      | 5–1440 |
 
 Textos nuevos (≈ 40 claves) con predeterminado en `DEFAULT_TEXTS`: menú, KB, identificación,
 preguntas de verificación, pre-registro, agenda, errores y cierre. Marcadores admitidos
@@ -277,17 +277,17 @@ clave.
 
 ## 7. Pruebas
 
-| Suite | Cubre |
-| --- | --- |
-| `flujo` (pura) | Tablas de transición de cada paso: menú, KB, identificación, pre-registro, agendar, reprogramar, cancelar, handoff, opción inválida y vencida, errores de la pre-agenda |
+| Suite                      | Cubre                                                                                                                                                                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `flujo` (pura)             | Tablas de transición de cada paso: menú, KB, identificación, pre-registro, agendar, reprogramar, cancelar, handoff, opción inválida y vencida, errores de la pre-agenda                                                                     |
 | `verificacion` (pura + BD) | Sorteo con fuentes distintas, par fijo entre sesiones, bloqueo y desbloqueo con el mismo par, re-sorteo tras éxito, `unverifiable`, registro extensible; búsqueda del valor de la respuesta en todas las tablas y en la auditoría → ausente |
-| `flujo-http` (BD) | Recorrido por HTTP: sesión → pre-registro → agendar → la solicitud aparece en la bandeja del simulador; y paciente existente → verificación → cancelar |
-| `aislamiento-tenant` | Se amplía al chat: token de otra sesión u otro tenant → `404` |
-| `idempotencia` | Se amplía a `messages` y `allowed-origins` |
-| `roles` | `widget` solo `/widget/conversation*`; `operator` no gestiona orígenes |
-| `contrato-api` | Rutas nuevas declaradas en OpenAPI |
-| `cors` | Origen permitido / denegado / distinto al de la sesión, `OPTIONS`, sin comodín |
-| `fronteras` | `conversation` no importa otros módulos; `domain` sin Next/Prisma/`node:*` |
+| `flujo-http` (BD)          | Recorrido por HTTP: sesión → pre-registro → agendar → la solicitud aparece en la bandeja del simulador; y paciente existente → verificación → cancelar                                                                                      |
+| `aislamiento-tenant`       | Se amplía al chat: token de otra sesión u otro tenant → `404`                                                                                                                                                                               |
+| `idempotencia`             | Se amplía a `messages` y `allowed-origins`                                                                                                                                                                                                  |
+| `roles`                    | `widget` solo `/widget/conversation*`; `operator` no gestiona orígenes                                                                                                                                                                      |
+| `contrato-api`             | Rutas nuevas declaradas en OpenAPI                                                                                                                                                                                                          |
+| `cors`                     | Origen permitido / denegado / distinto al de la sesión, `OPTIONS`, sin comodín                                                                                                                                                              |
+| `fronteras`                | `conversation` no importa otros módulos; `domain` sin Next/Prisma/`node:*`                                                                                                                                                                  |
 
 ## 8. Fuera de alcance
 
@@ -315,7 +315,7 @@ clave.
 14. **Validación del pre-registro duplicada a propósito:** `conversation` valida campo a campo para la UX y `patients` valida el conjunto (autoritativo). DRY al tercer uso.
 15. **Hash con clave en `idempotency_keys` para el chat.** El hash SHA-256 del cuerpo permitiría recuperar por fuerza bruta una respuesta de 4 dígitos. La ruta de mensajes usa HMAC-SHA256 (clave: el secreto JWT) y guarda la respuesta con las líneas redactadas.
 16. **Sesión de otro tenant → `401`**, no `404`: el token apunta a una sesión que no existe para su tenant, igual que en `POST /widget/sessions/refresh`.
-17. **`then` → `onOutcome`.** La continuación pura de cada paso se llama `onOutcome(outcome)`: recibe el resultado del efecto (o su fallo traducido) y `then` se confundía con el método de las promesas (los objetos con `then` se tratan como *thenables*).
+17. **`then` → `onOutcome`.** La continuación pura de cada paso se llama `onOutcome(outcome)`: recibe el resultado del efecto (o su fallo traducido) y `then` se confundía con el método de las promesas (los objetos con `then` se tratan como _thenables_).
 18. **`guard` en `idempotentRoute`.** Las rutas con token del widget pasan un `guard` que comprueba sesión y origen también en las repeticiones idempotentes; sin él, una respuesta guardada se serviría sin esa comprobación.
 19. **Lista de días de agendamiento acotada:** lee como máximo 200 cupos libres dentro de 30 días.
 20. **Un ticket de handoff por conversación** (`handoffRequested` en el contexto): elegir Asesor otra vez cierra sin crear otro ticket.

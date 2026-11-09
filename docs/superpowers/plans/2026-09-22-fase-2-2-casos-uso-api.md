@@ -24,28 +24,29 @@
 
 ## Mapa de archivos
 
-| Archivo | Responsabilidad |
-| --- | --- |
-| `src/http/error-codes.ts` | Añade `conflict` 409 |
-| `src/http/idempotent-route.ts` | Envoltorio de escrituras con `Idempotency-Key` |
-| `src/http/openapi.ts` + `openapi-sim.ts` | Contratos REST |
-| `src/config/env.ts` | `HERMES_SIMULATOR_ENABLED` |
-| `scripts/token-dev.ts` | Firma JWT de desarrollo |
-| `src/modules/shared/domain/date-range.ts` | Parseo `from`/`to` + tope de rango |
-| `src/modules/scheduling/**` | Lectura agenda/cupos/citas |
-| `src/modules/patients/**` | Expedientes + historial |
-| `src/modules/tenancy/application/**` | GET/PATCH settings |
-| `src/modules/hermes-simulator/**` | CRUD + generate slots |
-| `src/app/api/v1/**` | Rutas chatbot |
-| `src/app/api/sim/v1/**` | Rutas simulador |
-| `src/composition-root.ts` | Cableado |
-| `tests/dominio/**`, `tests/db/**`, `tests/roles`, `contrato-api`, `fronteras` | Suites |
+| Archivo                                                                       | Responsabilidad                                |
+| ----------------------------------------------------------------------------- | ---------------------------------------------- |
+| `src/http/error-codes.ts`                                                     | Añade `conflict` 409                           |
+| `src/http/idempotent-route.ts`                                                | Envoltorio de escrituras con `Idempotency-Key` |
+| `src/http/openapi.ts` + `openapi-sim.ts`                                      | Contratos REST                                 |
+| `src/config/env.ts`                                                           | `HERMES_SIMULATOR_ENABLED`                     |
+| `scripts/token-dev.ts`                                                        | Firma JWT de desarrollo                        |
+| `src/modules/shared/domain/date-range.ts`                                     | Parseo `from`/`to` + tope de rango             |
+| `src/modules/scheduling/**`                                                   | Lectura agenda/cupos/citas                     |
+| `src/modules/patients/**`                                                     | Expedientes + historial                        |
+| `src/modules/tenancy/application/**`                                          | GET/PATCH settings                             |
+| `src/modules/hermes-simulator/**`                                             | CRUD + generate slots                          |
+| `src/app/api/v1/**`                                                           | Rutas chatbot                                  |
+| `src/app/api/sim/v1/**`                                                       | Rutas simulador                                |
+| `src/composition-root.ts`                                                     | Cableado                                       |
+| `tests/dominio/**`, `tests/db/**`, `tests/roles`, `contrato-api`, `fronteras` | Suites                                         |
 
 ---
 
 ### Task 1: Infra HTTP — conflict, env, token:dev, date-range, idempotentRoute
 
 **Files:**
+
 - Modify: `src/http/error-codes.ts`, `src/http/errors.ts`, `src/config/env.ts`, `backend/.env.example`, `backend/package.json`, `scripts/generate-openapi.ts`
 - Create: `src/http/idempotent-route.ts`, `src/modules/shared/domain/date-range.ts`, `scripts/token-dev.ts`
 - Test: `tests/dominio/date-range.test.ts`, ampliar `tests/contrato-api` para conflict
@@ -80,14 +81,14 @@
 
 ## Cobertura de la spec (sub-proyecto 2)
 
-| Spec | Task |
-| --- | --- |
-| §4.1 módulos scheduling/patients/hermes-simulator | 2–6 |
-| §4.2–4.3 paginación y fechas | 1–2 |
-| §5.1 `/api/v1` | 5 |
-| §5.2 `/api/sim/v1` | 6 |
-| §5.3 idempotentRoute | 1, 5–6 |
-| §5.4 conflict 409 | 1 |
-| §8 suites | 7 |
-| token:dev (decisión §2) | 1 |
-| HERMES_SIMULATOR_ENABLED | 1, 6 |
+| Spec                                              | Task   |
+| ------------------------------------------------- | ------ |
+| §4.1 módulos scheduling/patients/hermes-simulator | 2–6    |
+| §4.2–4.3 paginación y fechas                      | 1–2    |
+| §5.1 `/api/v1`                                    | 5      |
+| §5.2 `/api/sim/v1`                                | 6      |
+| §5.3 idempotentRoute                              | 1, 5–6 |
+| §5.4 conflict 409                                 | 1      |
+| §8 suites                                         | 7      |
+| token:dev (decisión §2)                           | 1      |
+| HERMES_SIMULATOR_ENABLED                          | 1, 6   |

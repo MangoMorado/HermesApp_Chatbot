@@ -93,6 +93,7 @@ backend/src/app/api/v1/widget/conversation/messages/route.ts  (T14)
 ### Task 1: Esquema, migración y refinamientos de la spec
 
 **Files:**
+
 - Modify: `backend/prisma/schema.prisma`
 - Create: `backend/prisma/migrations/<timestamp>_fase3_3_conversacion/migration.sql` (generada y ampliada)
 - Modify: `backend/prisma/seed/write-chatbot.ts:17-25`
@@ -100,6 +101,7 @@ backend/src/app/api/v1/widget/conversation/messages/route.ts  (T14)
 - Modify: `docs/superpowers/specs/2026-10-02-fase-3-3-motor-conversacional-design.md` (§9 nueva)
 
 **Interfaces:**
+
 - Produces: modelos Prisma `Conversation` (`db.conversation`), `ConversationMessage` (`db.conversationMessage`), `VerificationChallenge` (`db.verificationChallenge`), `HandoffTicket` (`db.handoffTicket`); enums `ConversationMessageAuthor` (`bot`·`patient`), `HandoffReason` (`requested`·`verification_locked`·`unverifiable`), `HandoffStatus` (`open`).
 
 - [ ] **Step 1: Escribir la §9 de la spec**
@@ -215,9 +217,16 @@ describe("conversacion: esquema", () => {
 
   it("el desafio guarda exactamente dos preguntas y uno por expediente", async () => {
     const s = await seedSession("a");
-    const base = { tenantId: s.tenantId, medicalRecordId: s.recordId, createdAt: new Date(), updatedAt: new Date() };
+    const base = {
+      tenantId: s.tenantId,
+      medicalRecordId: s.recordId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     await expect(
-      prisma.verificationChallenge.create({ data: { ...base, id: "v0", questionIds: ["birth_day"] } }),
+      prisma.verificationChallenge.create({
+        data: { ...base, id: "v0", questionIds: ["birth_day"] },
+      }),
     ).rejects.toThrow();
     await prisma.verificationChallenge.create({
       data: { ...base, id: "v1", questionIds: ["birth_day", "phone_last_4"] },
@@ -233,7 +242,13 @@ describe("conversacion: esquema", () => {
     const s = await seedSession("a");
     await prisma.conversation.create({ data: conversationData(s.tenantId, s.sessionId, "c1") });
     const ticket = await prisma.handoffTicket.create({
-      data: { id: "h1", tenantId: s.tenantId, conversationId: "c1", reason: "requested", createdAt: new Date() },
+      data: {
+        id: "h1",
+        tenantId: s.tenantId,
+        conversationId: "c1",
+        reason: "requested",
+        createdAt: new Date(),
+      },
     });
     expect(ticket.status).toBe("open");
     expect(ticket.medicalRecordId).toBeNull();
@@ -363,6 +378,7 @@ model HandoffTicket {
 ```
 
 Relaciones inversas: en `Tenant` añade
+
 ```prisma
   conversations          Conversation[]
   conversationMessages   ConversationMessage[]
@@ -370,6 +386,7 @@ Relaciones inversas: en `Tenant` añade
   handoffTickets         HandoffTicket[]
 ```
 en `WidgetSession` añade `conversation Conversation?`, y en `MedicalRecord` añade
+
 ```prisma
   conversations          Conversation[]
   verificationChallenges VerificationChallenge[]
@@ -450,11 +467,13 @@ git commit -m "feat(conversation): tablas de conversaciones, mensajes, desafios 
 ### Task 2: Textos y parámetros de `bot-config` para el chat
 
 **Files:**
+
 - Create: `backend/src/modules/bot-config/domain/default-texts.ts`
 - Modify: `backend/src/modules/bot-config/domain/bot-config.ts` (textos, marcadores por clave, params)
 - Modify: `backend/tests/dominio/bot-config.test.ts`
 
 **Interfaces:**
+
 - Produces: `DEFAULT_TEXTS` (re-exportado desde `bot-config.ts`, ahora ~75 claves), `TextKey`, `TEXT_PLACEHOLDERS: Record<TextKey, readonly string[]>`, params `verification_max_attempts` y `verification_lock_minutes` en `PARAM_SPECS`/`BotParams`.
 
 - [ ] **Step 1: Pruebas (fallan)**
@@ -486,7 +505,10 @@ describe("conocimiento-config: textos del chat", () => {
     for (const [key, value] of Object.entries(DEFAULT_TEXTS)) {
       const used = [...value.matchAll(/\{([^{}]*)\}/g)].map((m) => m[1]);
       const allowed = ["clinic_name", ...TEXT_PLACEHOLDERS[key as keyof typeof DEFAULT_TEXTS]];
-      expect(used.filter((name) => !allowed.includes(name ?? "")), key).toEqual([]);
+      expect(
+        used.filter((name) => !allowed.includes(name ?? "")),
+        key,
+      ).toEqual([]);
     }
   });
 
@@ -625,22 +647,24 @@ import { DEFAULT_TEXTS, TEXT_PLACEHOLDERS, type TextKey } from "./default-texts"
 
 export { DEFAULT_TEXTS, TEXT_PLACEHOLDERS, type TextKey };
 ```
+
 2. En `PARAM_SPECS` añade al final:
 ```ts
   verification_max_attempts: { default: 3, min: 1, max: 5 },
   verification_lock_minutes: { default: 30, min: 5, max: 1440 },
 ```
+
 3. En `validateText`, sustituye el bucle de marcadores por:
 ```ts
-  const allowed = new Set(["clinic_name", ...TEXT_PLACEHOLDERS[key]]);
-  for (const match of value.matchAll(PLACEHOLDER)) {
-    if (!allowed.has(match[1] ?? "")) {
-      throw new ValidationError(`Marcador desconocido en ${field}: {${match[1] ?? ""}}`, {
-        field,
-        allowed: [...allowed],
-      });
-    }
+const allowed = new Set(["clinic_name", ...TEXT_PLACEHOLDERS[key]]);
+for (const match of value.matchAll(PLACEHOLDER)) {
+  if (!allowed.has(match[1] ?? "")) {
+    throw new ValidationError(`Marcador desconocido en ${field}: {${match[1] ?? ""}}`, {
+      field,
+      allowed: [...allowed],
+    });
   }
+}
 ```
 
 - [ ] **Step 4: Correr pruebas**
@@ -648,7 +672,7 @@ export { DEFAULT_TEXTS, TEXT_PLACEHOLDERS, type TextKey };
 Run: `npm --prefix backend exec vitest run tests/dominio/bot-config.test.ts` → PASS.
 Run: `npm --prefix backend run typecheck` → sin errores (el frontend lee `texts` como mapa: no cambia).
 
-- [ ] **Step 5: Regenerar OpenAPI si cambió** 
+- [ ] **Step 5: Regenerar OpenAPI si cambió**
 
 Run: `npm --prefix backend run openapi:generate` y `npm --prefix backend exec vitest run tests/contrato-api.test.ts` → PASS (el esquema `BotConfig` usa `additionalProperties`, no debería cambiar; si cambia, commitea `openapi.json`).
 
@@ -664,6 +688,7 @@ git commit -m "feat(bot-config): textos del chat, marcadores por clave y params 
 ### Task 3: Alta y baja individual de orígenes permitidos
 
 **Files:**
+
 - Modify: `backend/src/modules/bot-config/domain/allowed-origins.ts`
 - Modify: `backend/src/modules/bot-config/domain/ports/repositories.ts`
 - Modify: `backend/src/modules/bot-config/infrastructure/prisma-bot-config-repository.ts`
@@ -676,6 +701,7 @@ git commit -m "feat(bot-config): textos del chat, marcadores por clave y params 
 - Test: `backend/tests/dominio/bot-config.test.ts`, `backend/tests/db/conocimiento-config-http.test.ts`
 
 **Interfaces:**
+
 - Produces: `addOrigin(current: readonly string[], raw: unknown, policy: OriginPolicy): string[]`, `removeOrigin(current: readonly string[], raw: unknown): string[]` (lanza `NotFoundError` si no está); `BotConfigRepository.lock(tenantId): Promise<boolean>`; casos de uso `AddAllowedOrigin` / `RemoveAllowedOrigin` (`(input: AuditActor & { tenantId; origin: unknown }) => Promise<BotConfigView>`) en `WritePorts` como `addAllowedOrigin` / `removeAllowedOrigin`; `CONVERSATION_PATHS` y `CONVERSATION_SCHEMAS` en `openapi-paths-conversation.ts` (la Tarea 14 los amplía).
 
 - [ ] **Step 1: Pruebas de dominio (fallan)**
@@ -716,7 +742,11 @@ Añade al final de `backend/src/modules/bot-config/domain/allowed-origins.ts` (e
 
 ```ts
 /** Agrega un origen a la lista; si ya esta, la lista no cambia. */
-export function addOrigin(current: readonly string[], raw: unknown, policy: OriginPolicy): string[] {
+export function addOrigin(
+  current: readonly string[],
+  raw: unknown,
+  policy: OriginPolicy,
+): string[] {
   const origin = validateOrigin(raw, 0, policy);
   if (current.includes(origin)) {
     return [...current];
@@ -741,11 +771,13 @@ Run: `npm --prefix backend exec vitest run tests/dominio/bot-config.test.ts` →
 - [ ] **Step 3: Bloqueo de la fila en el repositorio**
 
 En `ports/repositories.ts`, dentro de `BotConfigRepository`:
+
 ```ts
   /** `SELECT ... FOR UPDATE` de la fila del tenant; `false` si no existe. Solo en transaccion. */
   lock(tenantId: TenantId): Promise<boolean>;
 ```
 En `prisma-bot-config-repository.ts`, dentro del objeto devuelto:
+
 ```ts
     async lock(tenantId) {
       const rows = await db.$queryRaw<{ tenant_id: string }[]>`
@@ -768,7 +800,10 @@ import { addOrigin, type OriginPolicy, removeOrigin } from "../domain/allowed-or
 import type { BotConfigRepository, WidgetKeyRepository } from "../domain/ports/repositories";
 import { type BotConfigView, loadOverrides, viewOf } from "./bot-config";
 
-export type OriginChangeInput = AuditActor & { readonly tenantId: TenantId; readonly origin: unknown };
+export type OriginChangeInput = AuditActor & {
+  readonly tenantId: TenantId;
+  readonly origin: unknown;
+};
 export type ChangeAllowedOrigin = (input: OriginChangeInput) => Promise<BotConfigView>;
 
 type Deps = {
@@ -785,7 +820,11 @@ type Change = (current: readonly string[], raw: unknown, policy: OriginPolicy) =
  * Cambia un solo origen con la fila bloqueada: dos administradores que agregan a la vez no se
  * pisan (a diferencia del PATCH, que reemplaza la lista entera).
  */
-function createChangeAllowedOrigin(deps: Deps, change: Change, action: string): ChangeAllowedOrigin {
+function createChangeAllowedOrigin(
+  deps: Deps,
+  change: Change,
+  action: string,
+): ChangeAllowedOrigin {
   return async (input) => {
     if (!(await deps.configs.lock(input.tenantId))) {
       throw new NotFoundError();
@@ -971,7 +1010,10 @@ describe("conocimiento-config: origenes por API", () => {
     );
     expect(removed.status).toBe(200);
     expect((await removed.json()).allowed_origins).not.toContain("https://nueva.test");
-    const actions = await prisma.auditEvent.findMany({ where: { tenantId }, select: { action: true } });
+    const actions = await prisma.auditEvent.findMany({
+      where: { tenantId },
+      select: { action: true },
+    });
     expect(actions.map((a) => a.action)).toEqual(
       expect.arrayContaining(["bot_config.origin_added", "bot_config.origin_removed"]),
     );
@@ -997,6 +1039,7 @@ git commit -m "feat(bot-config): alta y baja individual de origenes permitidos"
 ### Task 4: CORS en las rutas del widget
 
 **Files:**
+
 - Create: `backend/src/http/cors.ts`
 - Modify: `backend/src/modules/bot-config/domain/ports/repositories.ts` + `infrastructure/prisma-bot-config-repository.ts` (`isOriginRegistered`)
 - Modify: `backend/src/composition/widget-wiring.ts` (`widgetReads`), `backend/src/composition-root.ts` (`Container`)
@@ -1004,6 +1047,7 @@ git commit -m "feat(bot-config): alta y baja individual de origenes permitidos"
 - Create: `backend/tests/db/cors.test.ts`
 
 **Interfaces:**
+
 - Produces: `withWidgetCors(handler: (request: Request, context?: unknown) => Promise<Response>)`, `widgetPreflight(request: Request): Promise<Response>`, `assertSessionOrigin(request: Request, session: { origin: string }): void` (lanza `AuthError` `forbidden`); `Container.isWidgetOriginRegistered(origin: string): Promise<boolean>`. La Tarea 14 los usa en las rutas de conversación.
 
 - [ ] **Step 1: Prueba (falla)**
@@ -1032,7 +1076,11 @@ function open(seed: ChatbotTenantSeed, origin = ORIGIN) {
   return openSession(
     new Request(URL_OPEN, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: origin, "Idempotency-Key": randomUUID() },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: origin,
+        "Idempotency-Key": randomUUID(),
+      },
       body: JSON.stringify({ widget_key: seed.widgetKey }),
     }),
   );
@@ -1110,11 +1158,13 @@ Run: `npm --prefix backend run test:db -- cors` → FAIL (`OPTIONS` no exportado
 - [ ] **Step 2: Consulta de origen registrado**
 
 `BotConfigRepository` (puerto):
+
 ```ts
   /** Algun tenant tiene este origen entre sus permitidos (CORS de la peticion previa). */
   isOriginRegistered(origin: string): Promise<boolean>;
 ```
 Adaptador Prisma:
+
 ```ts
     async isOriginRegistered(origin) {
       const found = await db.botConfig.findFirst({
@@ -1125,6 +1175,7 @@ Adaptador Prisma:
     },
 ```
 En `widgetReads` (`composition/widget-wiring.ts`) añade:
+
 ```ts
     isWidgetOriginRegistered: (origin: string) =>
       createPrismaBotConfigRepository(prisma).isOriginRegistered(origin),
@@ -1239,9 +1290,11 @@ git commit -m "feat(widget): CORS con origen exacto en las rutas del widget"
 ```
 
 ---
+
 ### Task 5: Banco de preguntas, sorteo y reglas del bloqueo (`verification/domain`)
 
 **Files:**
+
 - Create: `backend/src/modules/shared/domain/ports/random.ts`
 - Create: `backend/src/modules/shared/infrastructure/crypto-random.ts`
 - Create: `backend/src/modules/verification/domain/questions.ts`
@@ -1251,6 +1304,7 @@ git commit -m "feat(widget): CORS con origen exacto en las rutas del widget"
 - Modify: `backend/tests/fronteras.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `Random = { int(maxExclusive: number): number }`; `cryptoRandom: Random`.
   - `VerifiableRecord = { id: string; birthDate: string /* YYYY-MM-DD */; phone: string | null; email: string | null }`.
@@ -1287,7 +1341,12 @@ const FULL: VerifiableRecord = {
   phone: "+57 300 123 4567",
   email: "juana.perez@gmail.com",
 };
-const DATE_ONLY: VerifiableRecord = { id: "mr-2", birthDate: "1985-12-24", phone: null, email: null };
+const DATE_ONLY: VerifiableRecord = {
+  id: "mr-2",
+  birthDate: "1985-12-24",
+  phone: null,
+  email: null,
+};
 
 function sequence(...values: number[]): Random {
   let i = 0;
@@ -1404,6 +1463,7 @@ Run: `npm --prefix backend exec vitest run tests/dominio/verificacion.test.ts` �
 - [ ] **Step 2: Puerto `Random` y adaptador**
 
 `backend/src/modules/shared/domain/ports/random.ts`:
+
 ```ts
 /** Puerto de azar: el nucleo nunca llama a Math.random ni a node:crypto. */
 export type Random = {
@@ -1413,6 +1473,7 @@ export type Random = {
 ```
 
 `backend/src/modules/shared/infrastructure/crypto-random.ts`:
+
 ```ts
 import { randomInt } from "node:crypto";
 import type { Random } from "../domain/ports/random";
@@ -1601,10 +1662,7 @@ export function drawPair(record: VerifiableRecord, random: Random): QuestionPair
 
 /** El par guardado sigue sirviendo si ambas preguntas existen y aplican al expediente. */
 export function pairUsable(pair: readonly string[], record: VerifiableRecord): boolean {
-  return (
-    pair.length === 2 &&
-    pair.every((id) => questionById(id)?.isAvailable(record) === true)
-  );
+  return pair.length === 2 && pair.every((id) => questionById(id)?.isAvailable(record) === true);
 }
 ```
 
@@ -1692,21 +1750,31 @@ export function applyAttempt(
 En `backend/tests/fronteras.test.ts`, en el test «los modulos de la Fase 3 solo importan shared y auth de otros modulos», amplía la lista y la excepción:
 
 ```ts
-    const phase3 = ["bot-config", "knowledge", "widget", "platform", "verification", "handoff", "conversation"];
-    // conversation evalua respuestas con el dominio puro de verification (refinamiento 4).
-    const extra: Record<string, RegExp> = { conversation: /modules\/verification\/domain\// };
+const phase3 = [
+  "bot-config",
+  "knowledge",
+  "widget",
+  "platform",
+  "verification",
+  "handoff",
+  "conversation",
+];
+// conversation evalua respuestas con el dominio puro de verification (refinamiento 4).
+const extra: Record<string, RegExp> = { conversation: /modules\/verification\/domain\// };
 ```
 y en el filtro, además de `!allowed.has(module)`, excluye los especificadores que cumplan `extra[mod]?.test(specifier)`. Añade un test:
 
 ```ts
-  it("conversation solo toma el dominio de verification", () => {
-    const offenders = listFiles(join(MODULES_DIR, "conversation")).flatMap((file) =>
-      importsOf(file)
-        .filter((specifier) => /modules\/verification\/(application|infrastructure)\//.test(specifier))
-        .map((specifier) => `${file} -> ${specifier}`),
-    );
-    expect(offenders).toEqual([]);
-  });
+it("conversation solo toma el dominio de verification", () => {
+  const offenders = listFiles(join(MODULES_DIR, "conversation")).flatMap((file) =>
+    importsOf(file)
+      .filter((specifier) =>
+        /modules\/verification\/(application|infrastructure)\//.test(specifier),
+      )
+      .map((specifier) => `${file} -> ${specifier}`),
+  );
+  expect(offenders).toEqual([]);
+});
 ```
 
 - [ ] **Step 7: Correr pruebas**
@@ -1725,12 +1793,14 @@ git commit -m "feat(verification): banco de preguntas, sorteo de par fijo y regl
 ### Task 6: Persistencia y casos de uso de la verificación
 
 **Files:**
+
 - Create: `backend/src/modules/verification/domain/ports.ts`
 - Create: `backend/src/modules/verification/application/verification.ts`
 - Create: `backend/src/modules/verification/infrastructure/prisma-challenge-repository.ts`
 - Create: `backend/tests/db/verificacion.test.ts`
 
 **Interfaces:**
+
 - Consumes: Tarea 5 (`Challenge`, `applyAttempt`, `drawPair`, `pairUsable`, `VerificationPolicy`, `VerifiableRecord`, `QuestionPair`, `Random`).
 - Produces:
   - `ChallengeRepository = { find(tenantId, medicalRecordId): Promise<Challenge | null>; insertIfAbsent(challenge: Challenge, now: Date): Promise<void>; findForUpdate(tenantId, medicalRecordId): Promise<Challenge | null>; update(challenge: Challenge, now: Date): Promise<void> }`.
@@ -1810,8 +1880,16 @@ describe("verificacion: persistencia", () => {
 
   it("el primer par guardado gana y se mantiene entre sesiones", async () => {
     const { open } = deps(prisma);
-    const first = await open({ tenantId, medicalRecordId: recordId, questionIds: ["birth_day", "phone_last_4"] });
-    const second = await open({ tenantId, medicalRecordId: recordId, questionIds: ["birth_year", "phone_first_3"] });
+    const first = await open({
+      tenantId,
+      medicalRecordId: recordId,
+      questionIds: ["birth_day", "phone_last_4"],
+    });
+    const second = await open({
+      tenantId,
+      medicalRecordId: recordId,
+      questionIds: ["birth_year", "phone_first_3"],
+    });
     expect(first).toEqual(["birth_day", "phone_last_4"]);
     expect(second).toEqual(first);
   });
@@ -1821,11 +1899,16 @@ describe("verificacion: persistencia", () => {
     await open({ tenantId, medicalRecordId: recordId, questionIds: ["birth_day", "phone_last_4"] });
     const results = [];
     for (let i = 0; i < 3; i++) {
-      results.push((await attempt({ ...ACTOR, tenantId, medicalRecordId: recordId, success: false })).result);
+      results.push(
+        (await attempt({ ...ACTOR, tenantId, medicalRecordId: recordId, success: false })).result,
+      );
     }
     expect(results).toEqual(["failed", "failed", "locked"]);
     expect((await read(tenantId, recordId))?.lockedUntil).not.toBeNull();
-    const actions = await prisma.auditEvent.findMany({ where: { tenantId }, orderBy: { occurredAt: "asc" } });
+    const actions = await prisma.auditEvent.findMany({
+      where: { tenantId },
+      orderBy: { occurredAt: "asc" },
+    });
     expect(actions.map((a) => a.action)).toEqual([
       "verification.failed",
       "verification.failed",
@@ -1835,7 +1918,11 @@ describe("verificacion: persistencia", () => {
   });
 
   it("dos intentos simultaneos no pierden incrementos", async () => {
-    await deps(prisma).open({ tenantId, medicalRecordId: recordId, questionIds: ["birth_day", "phone_last_4"] });
+    await deps(prisma).open({
+      tenantId,
+      medicalRecordId: recordId,
+      questionIds: ["birth_day", "phone_last_4"],
+    });
     const attemptInTx = () =>
       prisma.$transaction((tx) =>
         deps(tx).attempt({ ...ACTOR, tenantId, medicalRecordId: recordId, success: false }),
@@ -1853,7 +1940,11 @@ describe("verificacion: persistencia", () => {
       await attempt({ ...ACTOR, tenantId, medicalRecordId: recordId, success: false });
     }
     const challenge = await deps(prisma).read(tenantId, recordId);
-    expect(challenge).toMatchObject({ failedAttempts: 0, lockedUntil: null, questionIds: ["birth_day", "phone_last_4"] });
+    expect(challenge).toMatchObject({
+      failedAttempts: 0,
+      lockedUntil: null,
+      questionIds: ["birth_day", "phone_last_4"],
+    });
   });
 });
 ```
@@ -1863,6 +1954,7 @@ Run: `npm --prefix backend run test:db -- verificacion` → FAIL (módulos inexi
 - [ ] **Step 2: Puertos**
 
 `backend/src/modules/verification/domain/ports.ts`:
+
 ```ts
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
 import type { Challenge, VerificationPolicy } from "./challenge";
@@ -1892,7 +1984,12 @@ import type { Clock } from "@/modules/shared/domain/ports/clock";
 import type { IdGenerator } from "@/modules/shared/domain/ports/id-generator";
 import type { Random } from "@/modules/shared/domain/ports/random";
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
-import { type AttemptOutcome, applyAttempt, type Challenge, effectiveChallenge } from "../domain/challenge";
+import {
+  type AttemptOutcome,
+  applyAttempt,
+  type Challenge,
+  effectiveChallenge,
+} from "../domain/challenge";
 import { drawPair, type QuestionPair } from "../domain/draw";
 import type { ChallengeRepository, VerificationPolicyReader } from "../domain/ports";
 import type { VerifiableRecord } from "../domain/questions";
@@ -1930,9 +2027,15 @@ export function createOpenChallenge(deps: {
   };
 }
 
-export type ReadChallenge = (tenantId: TenantId, medicalRecordId: string) => Promise<Challenge | null>;
+export type ReadChallenge = (
+  tenantId: TenantId,
+  medicalRecordId: string,
+) => Promise<Challenge | null>;
 
-export function createReadChallenge(deps: { repo: ChallengeRepository; clock: Clock }): ReadChallenge {
+export function createReadChallenge(deps: {
+  repo: ChallengeRepository;
+  clock: Clock;
+}): ReadChallenge {
   return async (tenantId, medicalRecordId) => {
     const stored = await deps.repo.find(tenantId, medicalRecordId);
     return stored && effectiveChallenge(stored, deps.clock.now());
@@ -2091,6 +2194,7 @@ git commit -m "feat(verification): par fijo persistido, intentos con bloqueo de 
 ### Task 7: Pre-registro de pacientes y tickets de handoff
 
 **Files:**
+
 - Create: `backend/src/modules/patients/domain/pre-registration.ts`
 - Modify: `backend/src/modules/patients/domain/ports/repositories.ts`
 - Modify: `backend/src/modules/patients/infrastructure/prisma-medical-record-repository.ts`
@@ -2103,6 +2207,7 @@ git commit -m "feat(verification): par fijo persistido, intentos con bloqueo de 
 - Create: `backend/tests/db/pre-registro-handoff.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `PRE_REGISTRATION_SYSTEM = "urn:ingenius:pre-registration"`; `PreRegistrationData = { documentType: DocumentType; documentNumber: string; givenNames: string; familyNames: string; birthDate: string; phone: string; email: string | null }`; `validatePreRegistration(raw: PreRegistrationData, today: string): PreRegistrationData` (lanza `ValidationError` con `field`).
   - `MedicalRecordRepository.insertPreRegistered(record: MedicalRecord): Promise<void>` (lanza `ConflictError` `{ reason: "document_taken" }` si el documento ya existe).
@@ -2149,12 +2254,24 @@ describe("pre-registro: validacion autoritativa", () => {
   });
 
   it("rechaza cada campo invalido con su nombre", () => {
-    expect(fieldOf(() => validatePreRegistration({ ...VALID, documentNumber: "12" }, TODAY))).toBe("document_number");
-    expect(fieldOf(() => validatePreRegistration({ ...VALID, givenNames: "Ana3" }, TODAY))).toBe("given_names");
-    expect(fieldOf(() => validatePreRegistration({ ...VALID, birthDate: "2027-01-01" }, TODAY))).toBe("birth_date");
-    expect(fieldOf(() => validatePreRegistration({ ...VALID, birthDate: "1990-02-30" }, TODAY))).toBe("birth_date");
-    expect(fieldOf(() => validatePreRegistration({ ...VALID, phone: "6011234567" }, TODAY))).toBe("phone");
-    expect(fieldOf(() => validatePreRegistration({ ...VALID, email: "sin-arroba" }, TODAY))).toBe("email");
+    expect(fieldOf(() => validatePreRegistration({ ...VALID, documentNumber: "12" }, TODAY))).toBe(
+      "document_number",
+    );
+    expect(fieldOf(() => validatePreRegistration({ ...VALID, givenNames: "Ana3" }, TODAY))).toBe(
+      "given_names",
+    );
+    expect(
+      fieldOf(() => validatePreRegistration({ ...VALID, birthDate: "2027-01-01" }, TODAY)),
+    ).toBe("birth_date");
+    expect(
+      fieldOf(() => validatePreRegistration({ ...VALID, birthDate: "1990-02-30" }, TODAY)),
+    ).toBe("birth_date");
+    expect(fieldOf(() => validatePreRegistration({ ...VALID, phone: "6011234567" }, TODAY))).toBe(
+      "phone",
+    );
+    expect(fieldOf(() => validatePreRegistration({ ...VALID, email: "sin-arroba" }, TODAY))).toBe(
+      "email",
+    );
   });
 
   it("el correo es opcional", () => {
@@ -2226,7 +2343,10 @@ function email(raw: string | null): string | null {
 }
 
 /** Validacion autoritativa del pre-registro (la del chat es solo UX, refinamiento 14). */
-export function validatePreRegistration(raw: PreRegistrationData, today: string): PreRegistrationData {
+export function validatePreRegistration(
+  raw: PreRegistrationData,
+  today: string,
+): PreRegistrationData {
   const documentNumber = raw.documentNumber.trim().toUpperCase();
   if (!DOCUMENT.test(documentNumber)) {
     fail("document_number", "document_number debe tener de 3 a 20 letras o digitos");
@@ -2248,12 +2368,14 @@ Run: `npm --prefix backend exec vitest run tests/dominio/pre-registro.test.ts` �
 - [ ] **Step 3: Repositorio de expedientes**
 
 En `patients/domain/ports/repositories.ts`, dentro de `MedicalRecordRepository`:
+
 ```ts
   /** Inserta un expediente `pre_registered`. Documento ya existente → ConflictError document_taken. */
   insertPreRegistered(record: MedicalRecord): Promise<void>;
 ```
 
 En `prisma-medical-record-repository.ts` (importa `ConflictError` y `isUniqueViolation`):
+
 ```ts
     async insertPreRegistered(record) {
       try {
@@ -2341,6 +2463,7 @@ export function createPreRegisterPatient(deps: {
 - [ ] **Step 5: Módulo `handoff`**
 
 `handoff/domain/handoff-ticket.ts`:
+
 ```ts
 import type { TenantId } from "@/modules/shared/domain/tenant-id";
 
@@ -2359,6 +2482,7 @@ export type HandoffTicket = {
 ```
 
 `handoff/domain/ports.ts`:
+
 ```ts
 import type { HandoffTicket } from "./handoff-ticket";
 
@@ -2366,6 +2490,7 @@ export type HandoffRepository = { insert(ticket: HandoffTicket): Promise<void> }
 ```
 
 `handoff/application/create-handoff-ticket.ts`:
+
 ```ts
 import type { AuditActor } from "@/modules/shared/domain/audit-event";
 import type { AuditLog } from "@/modules/shared/domain/ports/audit-log";
@@ -2416,6 +2541,7 @@ export function createCreateHandoffTicket(deps: {
 ```
 
 `handoff/infrastructure/prisma-handoff-repository.ts`:
+
 ```ts
 import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
 import type { HandoffRepository } from "../domain/ports";
@@ -2511,10 +2637,25 @@ describe("pre-registro y handoff: persistencia", () => {
   it("el ticket de handoff nace abierto y se audita", async () => {
     const now = new Date();
     await prisma.widgetSession.create({
-      data: { id: "ws", tenantId, origin: "https://c.test", createdAt: now, expiresAt: now, lastSeenAt: now },
+      data: {
+        id: "ws",
+        tenantId,
+        origin: "https://c.test",
+        createdAt: now,
+        expiresAt: now,
+        lastSeenAt: now,
+      },
     });
     await prisma.conversation.create({
-      data: { id: "c1", tenantId, widgetSessionId: "ws", step: "main_menu", context: {}, createdAt: now, updatedAt: now },
+      data: {
+        id: "c1",
+        tenantId,
+        widgetSessionId: "ws",
+        step: "main_menu",
+        context: {},
+        createdAt: now,
+        updatedAt: now,
+      },
     });
     const create = createCreateHandoffTicket({
       repo: createPrismaHandoffRepository(prisma),
@@ -2522,12 +2663,22 @@ describe("pre-registro y handoff: persistencia", () => {
       clock: systemClock,
       audit: createPrismaAuditLog(prisma, uuidV7Generator),
     });
-    const ticket = await create({ ...ACTOR, tenantId, conversationId: "c1", reason: "requested", medicalRecordId: null });
-    expect(await prisma.handoffTicket.findUniqueOrThrow({ where: { id: ticket.id } })).toMatchObject({
+    const ticket = await create({
+      ...ACTOR,
+      tenantId,
+      conversationId: "c1",
+      reason: "requested",
+      medicalRecordId: null,
+    });
+    expect(
+      await prisma.handoffTicket.findUniqueOrThrow({ where: { id: ticket.id } }),
+    ).toMatchObject({
       status: "open",
       reason: "requested",
     });
-    expect((await prisma.auditEvent.findFirstOrThrow({ where: { tenantId } })).action).toBe("handoff.created");
+    expect((await prisma.auditEvent.findFirstOrThrow({ where: { tenantId } })).action).toBe(
+      "handoff.created",
+    );
   });
 });
 ```
@@ -2543,9 +2694,11 @@ git commit -m "feat(patients,handoff): pre-registro autoritativo y creacion de t
 ```
 
 ---
+
 ### Task 8: Núcleo del motor (`conversation/domain`)
 
 **Files:**
+
 - Create: `backend/src/modules/conversation/domain/document.ts`
 - Create: `backend/src/modules/conversation/domain/text.ts`
 - Create: `backend/src/modules/conversation/domain/reads.ts`
@@ -2558,6 +2711,7 @@ git commit -m "feat(patients,handoff): pre-registro autoritativo y creacion de t
 - Create: `backend/tests/dominio/flujo-motor.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Random` (T5), `Challenge`, `isLocked` (T5), `VerifiableRecord` (T5), `QuestionPair` (T5), `startOfDayInZone` (`shared/domain/date-range`), `ConflictError`, `ValidationError`, `asRecord`, `requiredText`.
 - Produces (los usan T9–T14):
   - `document.ts`: `DocumentType`, `DOCUMENT_TYPES`, `isDocumentType(value: string): value is DocumentType`.
@@ -2572,6 +2726,7 @@ git commit -m "feat(patients,handoff): pre-registro autoritativo y creacion de t
 - [ ] **Step 1: `document.ts` y `text.ts`**
 
 `document.ts`:
+
 ```ts
 export type DocumentType = "CC" | "TI" | "CE" | "PA" | "RC";
 
@@ -2583,6 +2738,7 @@ export function isDocumentType(value: string): value is DocumentType {
 ```
 
 `text.ts`:
+
 ```ts
 /**
  * Referencias a textos del bot. El motor nunca escribe texto propio: usa claves de bot-config
@@ -2591,24 +2747,80 @@ export function isDocumentType(value: string): value is DocumentType {
 export const REDACTED = "[redactado]";
 
 export const CONVERSATION_TEXT_KEYS = [
-  "welcome", "kb_see_more_label", "menu_prompt", "option_appointments", "option_kb",
-  "option_advisor", "option_menu", "option_cancel", "option_confirm", "option_accept",
-  "option_decline", "option_skip", "option_restart", "option_more", "invalid_option",
-  "generic_error", "kb_prompt", "kb_no_results", "kb_results_prompt", "kb_another",
-  "handoff_created", "closed_prompt", "id_document_type_prompt", "doc_type_cc", "doc_type_ti",
-  "doc_type_ce", "doc_type_pa", "doc_type_rc", "id_document_number_prompt",
-  "id_document_number_invalid", "verify_intro", "verify_q_birth_day", "verify_q_birth_month",
-  "verify_q_birth_year", "verify_q_phone_last_4", "verify_q_phone_first_3",
-  "verify_q_email_hint", "verify_success", "verify_failed", "verify_locked",
-  "verify_unverifiable", "prereg_not_found", "privacy_notice", "privacy_declined",
-  "prereg_given_names_prompt", "prereg_family_names_prompt", "prereg_birth_date_prompt",
-  "prereg_phone_prompt", "prereg_email_prompt", "prereg_invalid", "prereg_confirm_prompt",
-  "prereg_done", "prereg_document_taken", "appointments_menu_prompt", "option_book",
-  "option_reschedule", "option_cancel_appointment", "book_service_prompt", "book_no_services",
-  "book_practitioner_prompt", "option_any_practitioner", "book_day_prompt", "book_no_days",
-  "book_slot_prompt", "book_confirm_prompt", "request_created", "slot_taken", "pending_limit",
-  "change_pending", "appointment_unavailable", "no_upcoming_appointments",
-  "pick_appointment_prompt", "cancel_confirm_prompt", "cancel_request_created",
+  "welcome",
+  "kb_see_more_label",
+  "menu_prompt",
+  "option_appointments",
+  "option_kb",
+  "option_advisor",
+  "option_menu",
+  "option_cancel",
+  "option_confirm",
+  "option_accept",
+  "option_decline",
+  "option_skip",
+  "option_restart",
+  "option_more",
+  "invalid_option",
+  "generic_error",
+  "kb_prompt",
+  "kb_no_results",
+  "kb_results_prompt",
+  "kb_another",
+  "handoff_created",
+  "closed_prompt",
+  "id_document_type_prompt",
+  "doc_type_cc",
+  "doc_type_ti",
+  "doc_type_ce",
+  "doc_type_pa",
+  "doc_type_rc",
+  "id_document_number_prompt",
+  "id_document_number_invalid",
+  "verify_intro",
+  "verify_q_birth_day",
+  "verify_q_birth_month",
+  "verify_q_birth_year",
+  "verify_q_phone_last_4",
+  "verify_q_phone_first_3",
+  "verify_q_email_hint",
+  "verify_success",
+  "verify_failed",
+  "verify_locked",
+  "verify_unverifiable",
+  "prereg_not_found",
+  "privacy_notice",
+  "privacy_declined",
+  "prereg_given_names_prompt",
+  "prereg_family_names_prompt",
+  "prereg_birth_date_prompt",
+  "prereg_phone_prompt",
+  "prereg_email_prompt",
+  "prereg_invalid",
+  "prereg_confirm_prompt",
+  "prereg_done",
+  "prereg_document_taken",
+  "appointments_menu_prompt",
+  "option_book",
+  "option_reschedule",
+  "option_cancel_appointment",
+  "book_service_prompt",
+  "book_no_services",
+  "book_practitioner_prompt",
+  "option_any_practitioner",
+  "book_day_prompt",
+  "book_no_days",
+  "book_slot_prompt",
+  "book_confirm_prompt",
+  "request_created",
+  "slot_taken",
+  "pending_limit",
+  "change_pending",
+  "appointment_unavailable",
+  "no_upcoming_appointments",
+  "pick_appointment_prompt",
+  "cancel_confirm_prompt",
+  "cancel_request_created",
 ] as const;
 
 export type ConversationTextKey = (typeof CONVERSATION_TEXT_KEYS)[number];
@@ -2913,6 +3125,7 @@ export type StepRegistry = Readonly<Record<StepId, Step>>;
 - [ ] **Step 4: `format.ts` y `message-input.ts`**
 
 `format.ts`:
+
 ```ts
 import { startOfDayInZone } from "@/modules/shared/domain/date-range";
 
@@ -2973,6 +3186,7 @@ export function maskDocument(type: string | undefined, raw: string): string {
 ```
 
 `message-input.ts`:
+
 ```ts
 import { asRecord, requiredText } from "@/modules/shared/domain/input";
 import { ValidationError } from "@/modules/shared/domain/validation-error";
@@ -3083,6 +3297,7 @@ export function isOption(input: PatientInput, value: string): boolean {
 - [ ] **Step 6: Soporte de pruebas del flujo**
 
 `backend/tests/dominio/flujo-support.ts`:
+
 ```ts
 import type { ConversationReads } from "@/modules/conversation/domain/reads";
 import type { BotLine } from "@/modules/conversation/domain/text";
@@ -3114,7 +3329,10 @@ export function fakeReads(overrides: Partial<ConversationReads> = {}): Conversat
   };
 }
 
-export function makeEnv(reads: ConversationReads = fakeReads(), overrides: Partial<StepEnv> = {}): StepEnv {
+export function makeEnv(
+  reads: ConversationReads = fakeReads(),
+  overrides: Partial<StepEnv> = {},
+): StepEnv {
   return {
     tenantId: "tenant-1",
     now: NOW,
@@ -3130,7 +3348,11 @@ export function ctx(extra: Partial<ConversationContext> = {}): ConversationConte
   return { turn: 1, options: [], input: "none", ...extra };
 }
 
-export const opt = (value: string): PatientInput => ({ kind: "option", value, label: { literal: value } });
+export const opt = (value: string): PatientInput => ({
+  kind: "option",
+  value,
+  label: { literal: value },
+});
 export const text = (value: string): PatientInput => ({ kind: "text", text: value });
 
 /** Claves de los mensajes (o `literal:<texto>`), para comparar sin renderizar. */
@@ -3138,7 +3360,9 @@ export function keysOf(lines: readonly BotLine[]): string[] {
   return lines.map((l) => ("key" in l.text ? l.text.key : `literal:${l.text.literal}`));
 }
 
-export const okOutcome = (extra: Partial<Extract<EffectOutcome, { ok: true }>> = {}): EffectOutcome => ({
+export const okOutcome = (
+  extra: Partial<Extract<EffectOutcome, { ok: true }>> = {},
+): EffectOutcome => ({
   ok: true,
   ...extra,
 });
@@ -3165,14 +3389,17 @@ const menu: Step = {
   echo: "label",
   enter: async (c) => prompt(c, [line("menu_prompt")], [choice("menu:kb", t("option_kb"))]),
   handle: async (input, c) =>
-    input.kind === "option" && input.value === "menu:kb" ? go("kb_query", c) : retry("main_menu", c),
+    input.kind === "option" && input.value === "menu:kb"
+      ? go("kb_query", c)
+      : retry("main_menu", c),
 };
 const query: Step = {
   id: "kb_query",
   globals: "full",
   echo: "redacted",
   enter: async (c) => prompt(c, [line("kb_prompt")], [], "text"),
-  handle: async (input, c) => go("kb_query", c, [{ text: literal(input.kind === "text" ? "eco" : "?") }]),
+  handle: async (input, c) =>
+    go("kb_query", c, [{ text: literal(input.kind === "text" ? "eco" : "?") }]),
 };
 const closed: Step = {
   id: "closed",
@@ -3196,7 +3423,9 @@ describe("flujo: motor", () => {
 
   it("una opcion de otro turno es stale_option y no toca el estado", async () => {
     const start = await startConversation(makeEnv(), steps);
-    await expect(runTurn(start.state, { optionId: "9.1" }, makeEnv(), noEffect, steps)).rejects.toMatchObject({
+    await expect(
+      runTurn(start.state, { optionId: "9.1" }, makeEnv(), noEffect, steps),
+    ).rejects.toMatchObject({
       constructor: ConflictError,
       details: { reason: "stale_option" },
     });
@@ -3216,7 +3445,13 @@ describe("flujo: motor", () => {
     expect(toQuery.echo).toEqual({ text: t("option_kb"), redacted: false });
     expect(toQuery.state.context.input).toBe("text");
     expect(toQuery.state.context.options.map((o) => o.value)).toEqual([NAV.menu, NAV.advisor]);
-    const typed = await runTurn(toQuery.state, { text: "dolor de pecho" }, makeEnv(), noEffect, steps);
+    const typed = await runTurn(
+      toQuery.state,
+      { text: "dolor de pecho" },
+      makeEnv(),
+      noEffect,
+      steps,
+    );
     expect(typed.echo?.redacted).toBe(true);
   });
 
@@ -3224,7 +3459,11 @@ describe("flujo: motor", () => {
     const start = await startConversation(makeEnv(), steps);
     const runEffect = vi.fn(async () => ({ ok: true as const }));
     const out = await runTurn(start.state, { optionId: "1.2" }, makeEnv(), runEffect, steps);
-    expect(runEffect).toHaveBeenCalledWith({ kind: "handoff", reason: "requested", medicalRecordId: null });
+    expect(runEffect).toHaveBeenCalledWith({
+      kind: "handoff",
+      reason: "requested",
+      medicalRecordId: null,
+    });
     expect(out.state.step).toBe("closed");
     expect(keysOf(out.lines)).toEqual(["handoff_created", "closed_prompt"]);
   });
@@ -3417,14 +3656,17 @@ git commit -m "feat(conversation): motor determinista con opciones vigentes, nav
 ```
 
 ---
+
 ### Task 9: Pasos de menú, consultas a la KB y cierre
 
 **Files:**
+
 - Create: `backend/src/modules/conversation/domain/steps/menu.ts`
 - Create: `backend/src/modules/conversation/domain/steps/knowledge.ts`
 - Create: `backend/tests/dominio/flujo-menu-kb.test.ts`
 
 **Interfaces:**
+
 - Consumes: T8 (`Step`, `step-kit`, `text`, `KnowledgeHit`).
 - Produces: `mainMenu`, `closed`, `verificationBlocked` (en `menu.ts`); `kbQuery`, `kbResults` (en `knowledge.ts`).
 
@@ -3436,18 +3678,30 @@ import { closed, mainMenu, verificationBlocked } from "@/modules/conversation/do
 import { kbQuery, kbResults } from "@/modules/conversation/domain/steps/knowledge";
 import { ctx, fakeReads, keysOf, makeEnv, opt, text } from "./flujo-support";
 
-const HOURS = { id: "kb1", question: "¿Horarios?", answer: "Lunes a viernes 7 a 17", detail: "Sabados 8 a 12" };
+const HOURS = {
+  id: "kb1",
+  question: "¿Horarios?",
+  answer: "Lunes a viernes 7 a 17",
+  detail: "Sabados 8 a 12",
+};
 const PARKING = { id: "kb2", question: "¿Parqueadero?", answer: "Sí, gratuito", detail: null };
 
 describe("flujo: menu principal", () => {
   it("ofrece Mis citas y Consultas", async () => {
     const entered = await mainMenu.enter(ctx(), makeEnv());
-    expect(entered.kind === "prompt" && entered.options.map((o) => o.value)).toEqual(["menu:appointments", "menu:kb"]);
+    expect(entered.kind === "prompt" && entered.options.map((o) => o.value)).toEqual([
+      "menu:appointments",
+      "menu:kb",
+    ]);
   });
 
   it("Mis citas pide documento si no hay paciente verificado y va directo si lo hay", async () => {
-    expect((await mainMenu.handle(opt("menu:appointments"), ctx(), makeEnv())).goto).toBe("id_document_type");
-    expect((await mainMenu.handle(opt("menu:appointments"), ctx({ patientId: "mr" }), makeEnv())).goto).toBe("appointments_menu");
+    expect((await mainMenu.handle(opt("menu:appointments"), ctx(), makeEnv())).goto).toBe(
+      "id_document_type",
+    );
+    expect(
+      (await mainMenu.handle(opt("menu:appointments"), ctx({ patientId: "mr" }), makeEnv())).goto,
+    ).toBe("appointments_menu");
     expect((await mainMenu.handle(opt("menu:kb"), ctx(), makeEnv())).goto).toBe("kb_query");
   });
 
@@ -3462,7 +3716,8 @@ describe("flujo: menu principal", () => {
 describe("flujo: consultas generales", () => {
   const env = makeEnv(
     fakeReads({
-      searchKnowledge: async (_t, query, max) => (query.includes("horario") ? [HOURS, PARKING].slice(0, max) : []),
+      searchKnowledge: async (_t, query, max) =>
+        query.includes("horario") ? [HOURS, PARKING].slice(0, max) : [],
       getKnowledge: async (_t, id) => [HOURS, PARKING].find((e) => e.id === id) ?? null,
     }),
   );
@@ -3593,7 +3848,11 @@ export const kbResults: Step = {
     const details = (context.kbResults ?? []).map((result) =>
       choice(`kb:detail:${result.id}`, { key: "kb_see_more_label", append: result.question }),
     );
-    return prompt(context, [line("kb_results_prompt")], [...details, choice("kb:another", t("kb_another"))]);
+    return prompt(
+      context,
+      [line("kb_results_prompt")],
+      [...details, choice("kb:another", t("kb_another"))],
+    );
   },
   async handle(input, context, env) {
     const id = optionValue(input, "kb:detail:");
@@ -3624,11 +3883,13 @@ git commit -m "feat(conversation): menu principal, consultas a la KB y cierre"
 ### Task 10: Pasos de identificación y verificación
 
 **Files:**
+
 - Create: `backend/src/modules/conversation/domain/steps/identification.ts`
 - Create: `backend/src/modules/conversation/domain/steps/verification.ts`
 - Create: `backend/tests/dominio/flujo-verificacion.test.ts`
 
 **Interfaces:**
+
 - Consumes: T5 (`drawPair`, `pairUsable`, `isLocked`, `questionById`, `answerMatches`), T8.
 - Produces: `idDocumentType`, `idDocumentNumber`, `normalizeDocumentNumber(raw): string`; `verifyQuestion`.
 
@@ -3636,7 +3897,10 @@ git commit -m "feat(conversation): menu principal, consultas a la KB y cierre"
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { idDocumentNumber, idDocumentType } from "@/modules/conversation/domain/steps/identification";
+import {
+  idDocumentNumber,
+  idDocumentType,
+} from "@/modules/conversation/domain/steps/identification";
 import { verifyQuestion } from "@/modules/conversation/domain/steps/verification";
 import type { Challenge } from "@/modules/verification/domain/challenge";
 import { ctx, fakeReads, keysOf, makeEnv, NOW, okOutcome, opt, text } from "./flujo-support";
@@ -3652,7 +3916,8 @@ const CHALLENGE: Challenge = {
 };
 const reads = (challenge: Challenge | null = null) =>
   fakeReads({
-    findPatient: async (_t, type, number) => (type === "CC" && number === "1020304050" ? RECORD : null),
+    findPatient: async (_t, type, number) =>
+      type === "CC" && number === "1020304050" ? RECORD : null,
     getPatient: async (_t, id) => (id === RECORD.id ? RECORD : null),
     challenge: async () => challenge,
   });
@@ -3661,19 +3926,35 @@ describe("flujo: identificacion", () => {
   it("elige tipo y normaliza el numero", async () => {
     const typed = await idDocumentType.handle(opt("doc:CC"), ctx(), makeEnv());
     expect(typed).toMatchObject({ goto: "id_document_number", context: { documentType: "CC" } });
-    const handled = await idDocumentNumber.handle(text("1.020.304.050"), typed.context, makeEnv(reads(CHALLENGE)));
+    const handled = await idDocumentNumber.handle(
+      text("1.020.304.050"),
+      typed.context,
+      makeEnv(reads(CHALLENGE)),
+    );
     expect(handled.goto).toBe("verify_question");
-    expect(handled.context.verification).toEqual({ medicalRecordId: "mr-1", questionIds: CHALLENGE.questionIds, index: 0 });
+    expect(handled.context.verification).toEqual({
+      medicalRecordId: "mr-1",
+      questionIds: CHALLENGE.questionIds,
+      index: 0,
+    });
     expect(handled.effect).toBeUndefined();
   });
 
   it("un numero invalido repite con su aviso", async () => {
-    const handled = await idDocumentNumber.handle(text("12"), ctx({ documentType: "CC" }), makeEnv(reads()));
+    const handled = await idDocumentNumber.handle(
+      text("12"),
+      ctx({ documentType: "CC" }),
+      makeEnv(reads()),
+    );
     expect(keysOf(handled.lines)).toEqual(["id_document_number_invalid"]);
   });
 
   it("sin desafio sortea y lo abre con un efecto; el par guardado gana", async () => {
-    const handled = await idDocumentNumber.handle(text("1020304050"), ctx({ documentType: "CC" }), makeEnv(reads()));
+    const handled = await idDocumentNumber.handle(
+      text("1020304050"),
+      ctx({ documentType: "CC" }),
+      makeEnv(reads()),
+    );
     expect(handled.effect).toMatchObject({ kind: "open_challenge", medicalRecordId: "mr-1" });
     const stored = ["birth_year", "phone_first_3"] as const;
     const next = handled.then?.(okOutcome({ questionIds: stored }));
@@ -3681,54 +3962,104 @@ describe("flujo: identificacion", () => {
   });
 
   it("bloqueado o sin preguntas posibles va al bloqueo con su motivo", async () => {
-    const locked = { ...CHALLENGE, failedAttempts: 3, lockedUntil: new Date(NOW.getTime() + 60_000) };
-    const blocked = await idDocumentNumber.handle(text("1020304050"), ctx({ documentType: "CC" }), makeEnv(reads(locked)));
-    expect(blocked).toMatchObject({ goto: "verification_blocked", context: { handoffReason: "verification_locked" } });
+    const locked = {
+      ...CHALLENGE,
+      failedAttempts: 3,
+      lockedUntil: new Date(NOW.getTime() + 60_000),
+    };
+    const blocked = await idDocumentNumber.handle(
+      text("1020304050"),
+      ctx({ documentType: "CC" }),
+      makeEnv(reads(locked)),
+    );
+    expect(blocked).toMatchObject({
+      goto: "verification_blocked",
+      context: { handoffReason: "verification_locked" },
+    });
     expect(keysOf(blocked.lines)).toEqual(["verify_locked"]);
 
     const unusable = { ...CHALLENGE, questionIds: ["email_hint", "birth_day"] as const };
-    const unverifiable = await idDocumentNumber.handle(text("1020304050"), ctx({ documentType: "CC" }), makeEnv(reads(unusable)));
+    const unverifiable = await idDocumentNumber.handle(
+      text("1020304050"),
+      ctx({ documentType: "CC" }),
+      makeEnv(reads(unusable)),
+    );
     expect(unverifiable.context.handoffReason).toBe("unverifiable");
   });
 
   it("documento desconocido ofrece el pre-registro", async () => {
-    const handled = await idDocumentNumber.handle(text("999999"), ctx({ documentType: "TI" }), makeEnv(reads()));
+    const handled = await idDocumentNumber.handle(
+      text("999999"),
+      ctx({ documentType: "TI" }),
+      makeEnv(reads()),
+    );
     expect(handled.goto).toBe("privacy_notice");
-    expect(handled.context.preRegistration).toEqual({ documentType: "TI", documentNumber: "999999", field: "given_names" });
+    expect(handled.context.preRegistration).toEqual({
+      documentType: "TI",
+      documentNumber: "999999",
+      field: "given_names",
+    });
     expect(keysOf(handled.lines)).toEqual(["prereg_not_found"]);
   });
 });
 
 describe("flujo: verificacion", () => {
-  const draft = { medicalRecordId: "mr-1", questionIds: ["birth_day", "phone_last_4"] as const, index: 0 as const };
+  const draft = {
+    medicalRecordId: "mr-1",
+    questionIds: ["birth_day", "phone_last_4"] as const,
+    index: 0 as const,
+  };
 
   it("la primera respuesta solo deja si fue correcta, nunca el valor", async () => {
-    const handled = await verifyQuestion.handle(text("07"), ctx({ verification: draft }), makeEnv(reads()));
+    const handled = await verifyQuestion.handle(
+      text("07"),
+      ctx({ verification: draft }),
+      makeEnv(reads()),
+    );
     expect(handled.context.verification).toEqual({ ...draft, index: 1, firstCorrect: true });
     expect(JSON.stringify(handled.context)).not.toContain("07");
   });
 
   it("la segunda declara el intento con exito solo si ambas fueron correctas", async () => {
     const second = { ...draft, index: 1 as const, firstCorrect: false };
-    const handled = await verifyQuestion.handle(text("4567"), ctx({ verification: second }), makeEnv(reads()));
-    expect(handled.effect).toEqual({ kind: "verification_attempt", medicalRecordId: "mr-1", success: false });
+    const handled = await verifyQuestion.handle(
+      text("4567"),
+      ctx({ verification: second }),
+      makeEnv(reads()),
+    );
+    expect(handled.effect).toEqual({
+      kind: "verification_attempt",
+      medicalRecordId: "mr-1",
+      success: false,
+    });
   });
 
   it("traduce el resultado del intento", async () => {
     const second = ctx({ verification: { ...draft, index: 1, firstCorrect: true } });
     const handled = await verifyQuestion.handle(text("4567"), second, makeEnv(reads()));
-    const verified = handled.then?.(okOutcome({ verification: { result: "verified", remainingAttempts: 3, lockedUntil: null } }));
+    const verified = handled.then?.(
+      okOutcome({ verification: { result: "verified", remainingAttempts: 3, lockedUntil: null } }),
+    );
     expect(verified).toMatchObject({ goto: "appointments_menu", context: { patientId: "mr-1" } });
     expect(verified?.context.verification).toBeUndefined();
 
-    const failed = handled.then?.(okOutcome({ verification: { result: "failed", remainingAttempts: 2, lockedUntil: null } }));
+    const failed = handled.then?.(
+      okOutcome({ verification: { result: "failed", remainingAttempts: 2, lockedUntil: null } }),
+    );
     expect(failed?.goto).toBe("verify_question");
     expect(failed?.context.verification).toEqual(draft);
-    expect(failed?.lines[0]).toEqual({ text: { key: "verify_failed", params: { remaining: "2" } } });
+    expect(failed?.lines[0]).toEqual({
+      text: { key: "verify_failed", params: { remaining: "2" } },
+    });
 
     const until = new Date(NOW.getTime() + 30 * 60_000);
-    const locked = handled.then?.(okOutcome({ verification: { result: "locked", remainingAttempts: 0, lockedUntil: until } }));
-    expect(locked).toMatchObject({ goto: "verification_blocked", context: { handoffReason: "verification_locked" } });
+    const locked = handled.then?.(
+      okOutcome({ verification: { result: "locked", remainingAttempts: 0, lockedUntil: until } }),
+    );
+    expect(locked).toMatchObject({
+      goto: "verification_blocked",
+      context: { handoffReason: "verification_locked" },
+    });
   });
 
   it("una pregunta de opciones lista sus opciones con prefijo ans:", async () => {
@@ -3736,7 +4067,11 @@ describe("flujo: verificacion", () => {
     const entered = await verifyQuestion.enter(ctx({ verification: months }), makeEnv(reads()));
     expect(entered.kind === "prompt" && entered.options).toHaveLength(12);
     expect(entered.kind === "prompt" && entered.options[2]?.value).toBe("ans:3");
-    const handled = await verifyQuestion.handle(opt("ans:3"), ctx({ verification: months }), makeEnv(reads()));
+    const handled = await verifyQuestion.handle(
+      opt("ans:3"),
+      ctx({ verification: months }),
+      makeEnv(reads()),
+    );
     expect(handled.context.verification?.firstCorrect).toBe(true);
   });
 });
@@ -3857,8 +4192,7 @@ async function startVerification(
   return {
     ...verifying(context, record.id, drawn),
     effect: { kind: "open_challenge", medicalRecordId: record.id, questionIds: drawn },
-    then: (outcome) =>
-      verifying(context, record.id, (outcome.ok && outcome.questionIds) || drawn),
+    then: (outcome) => verifying(context, record.id, (outcome.ok && outcome.questionIds) || drawn),
   };
 }
 ```
@@ -3899,7 +4233,11 @@ export const verifyQuestion: Step = {
     }
     const record = await env.reads.getPatient(env.tenantId, draft.medicalRecordId);
     const options = record && question.options ? question.options(record) : [];
-    return prompt(context, ask, options.map((o) => choice(`ans:${o.value}`, literal(o.label))));
+    return prompt(
+      context,
+      ask,
+      options.map((o) => choice(`ans:${o.value}`, literal(o.label))),
+    );
   },
   async handle(input, context, env) {
     const draft = context.verification;
@@ -3946,9 +4284,15 @@ function afterAttempt(
     return go("appointments_menu", verified, [line("verify_success")]);
   }
   if (result?.result === "failed") {
-    const verification = { medicalRecordId: draft.medicalRecordId, questionIds: draft.questionIds, index: 0 as const };
+    const verification = {
+      medicalRecordId: draft.medicalRecordId,
+      questionIds: draft.questionIds,
+      index: 0 as const,
+    };
     const remaining = String(result.remainingAttempts);
-    return go("verify_question", { ...context, verification }, [line("verify_failed", { remaining })]);
+    return go("verify_question", { ...context, verification }, [
+      line("verify_failed", { remaining }),
+    ]);
   }
   if (result?.result === "locked" && result.lockedUntil) {
     const until = formatWhen(result.lockedUntil, env.timeZone);
@@ -3973,11 +4317,13 @@ git commit -m "feat(conversation): identificacion y verificacion con par fijo y 
 ### Task 11: Pasos del pre-registro
 
 **Files:**
+
 - Create: `backend/src/modules/conversation/domain/pre-registration-fields.ts`
 - Create: `backend/src/modules/conversation/domain/steps/pre-registration.ts`
 - Create: `backend/tests/dominio/flujo-pre-registro.test.ts`
 
 **Interfaces:**
+
 - Consumes: T8.
 - Produces: `PREREG_FIELDS`, `nextField(field): PreRegField | null`, `parseField(field, raw, today): string | null`; `privacyNotice`, `preregField`, `preregConfirm`, `completeDraft(draft?): PreRegistrationPayload | null`.
 
@@ -3994,7 +4340,11 @@ import {
 import type { PreRegistrationDraft } from "@/modules/conversation/domain/types";
 import { ctx, keysOf, makeEnv, okOutcome, opt, text } from "./flujo-support";
 
-const START: PreRegistrationDraft = { documentType: "CC", documentNumber: "99887766", field: "given_names" };
+const START: PreRegistrationDraft = {
+  documentType: "CC",
+  documentNumber: "99887766",
+  field: "given_names",
+};
 const FULL: PreRegistrationDraft = {
   ...START,
   field: "email",
@@ -4007,11 +4357,19 @@ const FULL: PreRegistrationDraft = {
 
 describe("flujo: pre-registro", () => {
   it("sin aceptar el aviso de datos vuelve al menu y descarta el borrador", async () => {
-    const declined = await privacyNotice.handle(opt("privacy:decline"), ctx({ preRegistration: START }), makeEnv());
+    const declined = await privacyNotice.handle(
+      opt("privacy:decline"),
+      ctx({ preRegistration: START }),
+      makeEnv(),
+    );
     expect(declined.goto).toBe("main_menu");
     expect(declined.context.preRegistration).toBeUndefined();
     expect(keysOf(declined.lines)).toEqual(["privacy_declined"]);
-    const accepted = await privacyNotice.handle(opt("privacy:accept"), ctx({ preRegistration: START }), makeEnv());
+    const accepted = await privacyNotice.handle(
+      opt("privacy:accept"),
+      ctx({ preRegistration: START }),
+      makeEnv(),
+    );
     expect(accepted.goto).toBe("prereg_field");
   });
 
@@ -4024,22 +4382,39 @@ describe("flujo: pre-registro", () => {
     }
     expect(context.preRegistration).toMatchObject({ field: "email", phone: "3001234567" });
     const skipped = await preregField.handle(opt("prereg:skip"), context, makeEnv());
-    expect(skipped).toMatchObject({ goto: "prereg_confirm", context: { preRegistration: { email: null } } });
-    const invalid = await preregField.handle(text("2099-01-01"), ctx({ preRegistration: { ...START, field: "birth_date" } }), makeEnv());
+    expect(skipped).toMatchObject({
+      goto: "prereg_confirm",
+      context: { preRegistration: { email: null } },
+    });
+    const invalid = await preregField.handle(
+      text("2099-01-01"),
+      ctx({ preRegistration: { ...START, field: "birth_date" } }),
+      makeEnv(),
+    );
     expect(keysOf(invalid.lines)).toEqual(["prereg_invalid"]);
   });
 
   it("la fecha de nacimiento pide input date y el correo ofrece Omitir", async () => {
-    const date = await preregField.enter(ctx({ preRegistration: { ...START, field: "birth_date" } }), makeEnv());
+    const date = await preregField.enter(
+      ctx({ preRegistration: { ...START, field: "birth_date" } }),
+      makeEnv(),
+    );
     expect(date.kind === "prompt" && date.input).toBe("date");
-    const email = await preregField.enter(ctx({ preRegistration: { ...START, field: "email" } }), makeEnv());
+    const email = await preregField.enter(
+      ctx({ preRegistration: { ...START, field: "email" } }),
+      makeEnv(),
+    );
     expect(email.kind === "prompt" && email.options.map((o) => o.value)).toEqual(["prereg:skip"]);
   });
 
   it("el resumen va redactado y confirmar declara el pre-registro", async () => {
     const entered = await preregConfirm.enter(ctx({ preRegistration: FULL }), makeEnv());
     expect(entered.lines[0]?.redacted).toBe(true);
-    const handled = await preregConfirm.handle(opt("prereg:confirm"), ctx({ preRegistration: FULL }), makeEnv());
+    const handled = await preregConfirm.handle(
+      opt("prereg:confirm"),
+      ctx({ preRegistration: FULL }),
+      makeEnv(),
+    );
     expect(handled.effect).toEqual({
       kind: "pre_register",
       data: {
@@ -4176,7 +4551,10 @@ export const privacyNotice: Step = {
   globals: "full",
   echo: "label",
   async enter(context) {
-    const options = [choice("privacy:accept", t("option_accept")), choice("privacy:decline", t("option_decline"))];
+    const options = [
+      choice("privacy:accept", t("option_accept")),
+      choice("privacy:decline", t("option_decline")),
+    ];
     return prompt(context, [line("privacy_notice")], options);
   },
   async handle(input, context) {
@@ -4185,7 +4563,10 @@ export const privacyNotice: Step = {
       return go("main_menu", resetFlow(context));
     }
     if (isOption(input, "privacy:accept")) {
-      return go("prereg_field", { ...context, preRegistration: { ...draft, field: "given_names" } });
+      return go("prereg_field", {
+        ...context,
+        preRegistration: { ...draft, field: "given_names" },
+      });
     }
     if (isOption(input, "privacy:decline")) {
       return go("main_menu", resetFlow(context), [line("privacy_declined")]);
@@ -4195,7 +4576,11 @@ export const privacyNotice: Step = {
 };
 
 /** Valor del campo; `undefined` si es invalido. El correo admite Omitir (`null`). */
-function valueFor(field: PreRegField, input: PatientInput, today: string): string | null | undefined {
+function valueFor(
+  field: PreRegField,
+  input: PatientInput,
+  today: string,
+): string | null | undefined {
   if (field === "email" && isOption(input, "prereg:skip")) {
     return null;
   }
@@ -4283,7 +4668,10 @@ export const preregConfirm: Step = {
       },
       true,
     );
-    const options = [choice("prereg:confirm", t("option_confirm")), choice("prereg:restart", t("option_restart"))];
+    const options = [
+      choice("prereg:confirm", t("option_confirm")),
+      choice("prereg:restart", t("option_restart")),
+    ];
     return prompt(context, [summary], options);
   },
   async handle(input, context) {
@@ -4293,7 +4681,10 @@ export const preregConfirm: Step = {
       return go("main_menu", resetFlow(context));
     }
     if (isOption(input, "prereg:restart")) {
-      return go("prereg_field", { ...context, preRegistration: { ...draft, field: "given_names" } });
+      return go("prereg_field", {
+        ...context,
+        preRegistration: { ...draft, field: "given_names" },
+      });
     }
     if (!isOption(input, "prereg:confirm")) {
       return retry("prereg_confirm", context);
@@ -4323,6 +4714,7 @@ git commit -m "feat(conversation): pre-registro con aviso de datos y resumen red
 ### Task 12: Pasos de citas (agendar, reprogramar, cancelar) y registro de pasos
 
 **Files:**
+
 - Create: `backend/src/modules/conversation/domain/steps/appointments.ts`
 - Create: `backend/src/modules/conversation/domain/steps/booking.ts`
 - Create: `backend/src/modules/conversation/domain/steps/index.ts`
@@ -4330,6 +4722,7 @@ git commit -m "feat(conversation): pre-registro con aviso de datos y resumen red
 - Create: `backend/tests/dominio/flujo-recorrido.test.ts`
 
 **Interfaces:**
+
 - Consumes: T8–T11.
 - Produces: `appointmentsMenu`, `pickAppointment`, `cancelConfirm`, `failureLines(outcome)` (en `appointments.ts`); `bookService`, `bookPractitioner`, `bookDay`, `bookSlot`, `bookConfirm` (en `booking.ts`); `STEPS: StepRegistry` (en `steps/index.ts`).
 
@@ -4340,8 +4733,17 @@ git commit -m "feat(conversation): pre-registro con aviso de datos y resumen red
 ```ts
 import { describe, expect, it } from "vitest";
 import { formatLocalDay } from "@/modules/conversation/domain/format";
-import { appointmentsMenu, cancelConfirm, pickAppointment } from "@/modules/conversation/domain/steps/appointments";
-import { bookConfirm, bookDay, bookPractitioner, bookSlot } from "@/modules/conversation/domain/steps/booking";
+import {
+  appointmentsMenu,
+  cancelConfirm,
+  pickAppointment,
+} from "@/modules/conversation/domain/steps/appointments";
+import {
+  bookConfirm,
+  bookDay,
+  bookPractitioner,
+  bookSlot,
+} from "@/modules/conversation/domain/steps/booking";
 import type { AvailableSlot } from "@/modules/conversation/domain/reads";
 import { ctx, fakeReads, keysOf, makeEnv, NOW, okOutcome, opt, TZ } from "./flujo-support";
 
@@ -4371,15 +4773,28 @@ const booking = { kind: "book" as const, serviceId: "svc1", practitionerId: null
 
 describe("flujo: citas", () => {
   it("el submenu exige paciente verificado", async () => {
-    expect(await appointmentsMenu.enter(ctx(), env)).toMatchObject({ kind: "goto", goto: "id_document_type" });
+    expect(await appointmentsMenu.enter(ctx(), env)).toMatchObject({
+      kind: "goto",
+      goto: "id_document_type",
+    });
     const handled = await appointmentsMenu.handle(opt("appt:book"), ctx({ patientId: "mr" }), env);
     expect(handled).toMatchObject({ goto: "book_service", context: { booking: { kind: "book" } } });
   });
 
   it("profesional: lista y Cualquiera", async () => {
-    const entered = await bookPractitioner.enter(ctx({ booking: { kind: "book", serviceId: "svc1" } }), env);
-    expect(entered.kind === "prompt" && entered.options.map((o) => o.value)).toEqual(["prac:p1", "prac:any"]);
-    const any = await bookPractitioner.handle(opt("prac:any"), ctx({ booking: { kind: "book", serviceId: "svc1" } }), env);
+    const entered = await bookPractitioner.enter(
+      ctx({ booking: { kind: "book", serviceId: "svc1" } }),
+      env,
+    );
+    expect(entered.kind === "prompt" && entered.options.map((o) => o.value)).toEqual([
+      "prac:p1",
+      "prac:any",
+    ]);
+    const any = await bookPractitioner.handle(
+      opt("prac:any"),
+      ctx({ booking: { kind: "book", serviceId: "svc1" } }),
+      env,
+    );
     expect(any.context.booking).toMatchObject({ practitionerId: null, dayOffset: 0 });
   });
 
@@ -4403,9 +4818,15 @@ describe("flujo: citas", () => {
   });
 
   it("horas del dia elegido y confirmacion con datos de dominio", async () => {
-    const withDay = ctx({ patientId: "mr", booking: { ...booking, day: "2026-10-05", slotOffset: 0 } });
+    const withDay = ctx({
+      patientId: "mr",
+      booking: { ...booking, day: "2026-10-05", slotOffset: 0 },
+    });
     const hours = await bookSlot.enter(withDay, env);
-    expect(hours.kind === "prompt" && hours.options.map((o) => o.value)).toEqual(["slot:s1", "slot:s2"]);
+    expect(hours.kind === "prompt" && hours.options.map((o) => o.value)).toEqual([
+      "slot:s1",
+      "slot:s2",
+    ]);
     const chosen = await bookSlot.handle(opt("slot:s2"), withDay, env);
     const confirm = await bookConfirm.enter(chosen.context, env);
     expect(confirm.kind === "prompt" && confirm.lines[0]?.text).toMatchObject({
@@ -4413,7 +4834,11 @@ describe("flujo: citas", () => {
       params: { service: "Medicina general", practitioner: "Dra. Ruiz" },
     });
     const handled = await bookConfirm.handle(opt("book:confirm"), chosen.context, env);
-    expect(handled.effect).toEqual({ kind: "request_appointment", medicalRecordId: "mr", command: { kind: "book", slotId: "s2" } });
+    expect(handled.effect).toEqual({
+      kind: "request_appointment",
+      medicalRecordId: "mr",
+      command: { kind: "book", slotId: "s2" },
+    });
     const created = handled.then?.(okOutcome({ expiresAt: new Date(NOW.getTime() + 4 * HOUR) }));
     expect(created?.goto).toBe("appointments_menu");
     expect(keysOf(created?.lines ?? [])).toEqual(["request_created"]);
@@ -4429,16 +4854,29 @@ describe("flujo: citas", () => {
     const handled = await pickAppointment.handle(opt("pick:ap1"), context, env);
     expect(handled).toMatchObject({
       goto: "book_day",
-      context: { booking: { kind: "reschedule", appointmentId: "ap1", serviceId: "svc1", practitionerId: null } },
+      context: {
+        booking: {
+          kind: "reschedule",
+          appointmentId: "ap1",
+          serviceId: "svc1",
+          practitionerId: null,
+        },
+      },
     });
   });
 
   it("cancelar declara la solicitud de cancelacion", async () => {
     const context = ctx({ patientId: "mr", booking: { kind: "cancel", appointmentId: "ap1" } });
     const entered = await cancelConfirm.enter(context, env);
-    expect(entered.kind === "prompt" && entered.lines[0]?.text).toMatchObject({ key: "cancel_confirm_prompt" });
+    expect(entered.kind === "prompt" && entered.lines[0]?.text).toMatchObject({
+      key: "cancel_confirm_prompt",
+    });
     const handled = await cancelConfirm.handle(opt("cancel:confirm"), context, env);
-    expect(handled.effect).toEqual({ kind: "request_appointment", medicalRecordId: "mr", command: { kind: "cancel", appointmentId: "ap1" } });
+    expect(handled.effect).toEqual({
+      kind: "request_appointment",
+      medicalRecordId: "mr",
+      command: { kind: "cancel", appointmentId: "ap1" },
+    });
     const pending = handled.then?.({ ok: false, failure: "appointment_change_pending" });
     expect(keysOf(pending?.lines ?? [])).toEqual(["change_pending"]);
   });
@@ -4508,7 +4946,10 @@ function appointmentLabel(appointment: UpcomingAppointment, timeZone: string): s
   return `${formatWhen(appointment.startAt, timeZone)} · ${appointment.serviceName} · ${appointment.practitionerName}`;
 }
 
-async function upcoming(context: ConversationContext, env: StepEnv): Promise<UpcomingAppointment[]> {
+async function upcoming(
+  context: ConversationContext,
+  env: StepEnv,
+): Promise<UpcomingAppointment[]> {
   return context.patientId
     ? env.reads.listUpcomingAppointments(env.tenantId, context.patientId, env.now)
     : [];
@@ -4523,7 +4964,9 @@ export const pickAppointment: Step = {
     if (list.length === 0) {
       return redirect("appointments_menu", context, [line("no_upcoming_appointments")]);
     }
-    const options = list.map((a) => choice(`pick:${a.id}`, literal(appointmentLabel(a, env.timeZone))));
+    const options = list.map((a) =>
+      choice(`pick:${a.id}`, literal(appointmentLabel(a, env.timeZone))),
+    );
     return prompt(context, [line("pick_appointment_prompt")], options);
   },
   async handle(input, context, env) {
@@ -4539,7 +4982,13 @@ export const pickAppointment: Step = {
     if (kind === "cancel") {
       return go("cancel_confirm", { ...context, booking: { kind, appointmentId: id } });
     }
-    const booking = { kind: "reschedule" as const, appointmentId: id, serviceId: found.serviceId, practitionerId: null, dayOffset: 0 };
+    const booking = {
+      kind: "reschedule" as const,
+      appointmentId: id,
+      serviceId: found.serviceId,
+      practitionerId: null,
+      dayOffset: 0,
+    };
     return go("book_day", { ...context, booking });
   },
 };
@@ -4555,7 +5004,11 @@ export const cancelConfirm: Step = {
       return redirect("appointments_menu", context, [line("appointment_unavailable")]);
     }
     const when = formatWhen(found.startAt, env.timeZone);
-    return prompt(context, [line("cancel_confirm_prompt", { when })], [choice("cancel:confirm", t("option_confirm"))]);
+    return prompt(
+      context,
+      [line("cancel_confirm_prompt", { when })],
+      [choice("cancel:confirm", t("option_confirm"))],
+    );
   },
   async handle(input, context) {
     const appointmentId = context.booking?.appointmentId;
@@ -4572,7 +5025,11 @@ export const cancelConfirm: Step = {
         command: { kind: "cancel", appointmentId },
       },
       then: (outcome): HandleResult =>
-        go("appointments_menu", context, outcome.ok ? [line("cancel_request_created")] : failureLines(outcome)),
+        go(
+          "appointments_menu",
+          context,
+          outcome.ok ? [line("cancel_request_created")] : failureLines(outcome),
+        ),
     };
   },
 };
@@ -4602,7 +5059,12 @@ const HORIZON_DAYS = 30;
 const SLOT_LIMIT = 200;
 const DAY_MS = 86_400_000;
 
-function slotsBetween(booking: BookingDraft, env: StepEnv, from: Date, to: Date): Promise<AvailableSlot[]> {
+function slotsBetween(
+  booking: BookingDraft,
+  env: StepEnv,
+  from: Date,
+  to: Date,
+): Promise<AvailableSlot[]> {
   if (!booking.serviceId) {
     return Promise.resolve([]);
   }
@@ -4671,7 +5133,10 @@ export const bookPractitioner: Step = {
       return retry("book_practitioner", context);
     }
     const practitionerId = id === "any" ? null : id;
-    return go("book_day", withBooking(context, { ...context.booking, practitionerId, dayOffset: 0 }));
+    return go(
+      "book_day",
+      withBooking(context, { ...context.booking, practitionerId, dayOffset: 0 }),
+    );
   },
 };
 
@@ -4723,11 +5188,17 @@ export const bookSlot: Step = {
     const offset = booking.slotOffset ?? 0;
     const page = slots.slice(offset, offset + SLOTS_PER_PAGE);
     if (page.length === 0) {
-      return redirect("book_day", withBooking(context, { ...booking, dayOffset: 0 }), [line("slot_taken")]);
+      return redirect("book_day", withBooking(context, { ...booking, dayOffset: 0 }), [
+        line("slot_taken"),
+      ]);
     }
-    const more = slots.length > offset + SLOTS_PER_PAGE ? [choice("slot:more", t("option_more"))] : [];
+    const more =
+      slots.length > offset + SLOTS_PER_PAGE ? [choice("slot:more", t("option_more"))] : [];
     const options = page.map((s) =>
-      choice(`slot:${s.id}`, literal(`${formatTime(s.startAt, env.timeZone)} · ${s.practitionerName}`)),
+      choice(
+        `slot:${s.id}`,
+        literal(`${formatTime(s.startAt, env.timeZone)} · ${s.practitionerName}`),
+      ),
     );
     return prompt(context, [line("book_slot_prompt")], [...options, ...more]);
   },
@@ -4763,13 +5234,21 @@ function withoutSlot(booking: BookingDraft): BookingDraft {
   return rest;
 }
 
-function afterRequest(outcome: EffectOutcome, context: ConversationContext, env: StepEnv): HandleResult {
+function afterRequest(
+  outcome: EffectOutcome,
+  context: ConversationContext,
+  env: StepEnv,
+): HandleResult {
   if (outcome.ok) {
     const holdUntil = formatWhen(outcome.expiresAt ?? env.now, env.timeZone);
     return go("appointments_menu", context, [line("request_created", { hold_until: holdUntil })]);
   }
   if (outcome.failure === "slot_unavailable" && context.booking) {
-    return go("book_slot", withBooking(context, withoutSlot(context.booking)), failureLines(outcome));
+    return go(
+      "book_slot",
+      withBooking(context, withoutSlot(context.booking)),
+      failureLines(outcome),
+    );
   }
   return go("appointments_menu", context, failureLines(outcome));
 }
@@ -4791,7 +5270,11 @@ export const bookConfirm: Step = {
       when: formatWhen(slot.startAt, env.timeZone),
       practitioner: slot.practitionerName,
     };
-    return prompt(context, [line("book_confirm_prompt", params)], [choice("book:confirm", t("option_confirm"))]);
+    return prompt(
+      context,
+      [line("book_confirm_prompt", params)],
+      [choice("book:confirm", t("option_confirm"))],
+    );
   },
   async handle(input, context, env) {
     const command = commandOf(context.booking);
@@ -4865,9 +5348,14 @@ const env = makeEnv(
     listServices: async () => [{ id: "svc1", name: "Medicina general" }],
     listPractitioners: async () => [{ id: "p1", name: "Dra. Ruiz" }],
     listAvailableSlots: async (_t, f) =>
-      [{ id: "s1", startAt: new Date(NOW.getTime() + 3_600_000), serviceName: "Medicina general", practitionerName: "Dra. Ruiz" }].filter(
-        (s) => s.startAt >= f.from && s.startAt < f.to,
-      ),
+      [
+        {
+          id: "s1",
+          startAt: new Date(NOW.getTime() + 3_600_000),
+          serviceName: "Medicina general",
+          practitionerName: "Dra. Ruiz",
+        },
+      ].filter((s) => s.startAt >= f.from && s.startAt < f.to),
   }),
 );
 
@@ -4889,7 +5377,8 @@ describe("flujo: recorrido", () => {
     const runEffect = async (effect: Effect): Promise<EffectOutcome> => {
       effects.push(effect);
       if (effect.kind === "pre_register") return { ok: true, medicalRecordId: "mr-new" };
-      if (effect.kind === "request_appointment") return { ok: true, expiresAt: new Date(NOW.getTime() + 3_600_000) };
+      if (effect.kind === "request_appointment")
+        return { ok: true, expiresAt: new Date(NOW.getTime() + 3_600_000) };
       return { ok: true };
     };
     let out = await startConversation(env, STEPS);
@@ -4914,7 +5403,11 @@ describe("flujo: recorrido", () => {
     await say(pick(out, "slot:s1"));
     await say(pick(out, "book:confirm"));
     expect(effects.map((e) => e.kind)).toEqual(["pre_register", "request_appointment"]);
-    expect(effects[1]).toEqual({ kind: "request_appointment", medicalRecordId: "mr-new", command: { kind: "book", slotId: "s1" } });
+    expect(effects[1]).toEqual({
+      kind: "request_appointment",
+      medicalRecordId: "mr-new",
+      command: { kind: "book", slotId: "s1" },
+    });
     expect(out.state.step).toBe("appointments_menu");
     expect(out.state.context.preRegistration).toBeUndefined();
   });
@@ -4932,15 +5425,18 @@ git commit -m "feat(conversation): agendar, reprogramar y cancelar como solicitu
 ```
 
 ---
+
 ### Task 13: Capa de aplicación de la conversación
 
 **Files:**
+
 - Create: `backend/src/modules/conversation/domain/ports.ts`
 - Create: `backend/src/modules/conversation/application/render.ts`
 - Create: `backend/src/modules/conversation/application/conversation.ts`
 - Create: `backend/tests/dominio/flujo-aplicacion.test.ts`
 
 **Interfaces:**
+
 - Consumes: T8–T12 (`startConversation`, `runTurn`, `TurnOutput`, `STEPS`, tipos), `AuditActor`, `Clock`, `IdGenerator`, `Random`, `TenantId`.
 - Produces:
   - `ports.ts`: `StoredConversation`, `NewMessage = { author: "bot" | "patient"; text: string; redacted: boolean }`, `HistoryMessage = NewMessage & { createdAt: Date }`, `ConversationRepository`, `MessageRepository`, `ConversationConfig = { texts: Readonly<Record<string, string>>; clinicName: string; params: ConversationParams }`, `ConversationConfigReader`, `EffectContext = { tenantId: string; conversationId: string; actor: AuditActor }`, `EffectRunner = (effect, context) => Promise<EffectOutcome>`.
@@ -5062,22 +5558,38 @@ function memory() {
     async open(input) {
       const existing = rows.get(input.widgetSessionId);
       if (existing) return { conversation: existing, created: false };
-      const created = { id: input.id, tenantId: input.tenantId, widgetSessionId: input.widgetSessionId, state: input.state, messageCount: 0 };
+      const created = {
+        id: input.id,
+        tenantId: input.tenantId,
+        widgetSessionId: input.widgetSessionId,
+        state: input.state,
+        messageCount: 0,
+      };
       rows.set(input.widgetSessionId, created);
       return { conversation: created, created: true };
     },
     async save(input) {
       for (const [key, row] of rows) {
-        if (row.id === input.id) rows.set(key, { ...row, state: input.state, messageCount: input.messageCount });
+        if (row.id === input.id)
+          rows.set(key, { ...row, state: input.state, messageCount: input.messageCount });
       }
     },
   };
   const store: MessageRepository = {
     async append(input) {
-      input.messages.forEach((m, i) => messages.push({ ...m, createdAt: input.now, conversationId: input.conversationId, seq: input.firstSeq + i }));
+      input.messages.forEach((m, i) =>
+        messages.push({
+          ...m,
+          createdAt: input.now,
+          conversationId: input.conversationId,
+          seq: input.firstSeq + i,
+        }),
+      );
     },
     async list(_t, conversationId) {
-      return messages.filter((m) => m.conversationId === conversationId).sort((a, b) => a.seq - b.seq);
+      return messages
+        .filter((m) => m.conversationId === conversationId)
+        .sort((a, b) => a.seq - b.seq);
     },
   };
   return { rows, messages, conversations, store };
@@ -5089,7 +5601,11 @@ function setup(runEffect: (effect: Effect) => Promise<EffectOutcome> = async () 
   const deps: ConversationDeps = {
     conversations: mem.conversations,
     messages: mem.store,
-    config: async () => ({ texts: DEFAULT_TEXTS, clinicName: "Clínica Sol", params: { kbMaxResults: 3 } }),
+    config: async () => ({
+      texts: DEFAULT_TEXTS,
+      clinicName: "Clínica Sol",
+      params: { kbMaxResults: 3 },
+    }),
     reads: fakeReads({
       findPatient: async (_t, _type, number) => (number === "1020304050" ? RECORD : null),
       getPatient: async () => RECORD,
@@ -5102,7 +5618,13 @@ function setup(runEffect: (effect: Effect) => Promise<EffectOutcome> = async () 
     timeZone: TZ,
     steps: STEPS,
   };
-  const request = { tenantId: toTenantId("t1"), sessionId: "s1", actorSubject: "widget:s1", actorRole: "widget", requestId: "r1" };
+  const request = {
+    tenantId: toTenantId("t1"),
+    sessionId: "s1",
+    actorSubject: "widget:s1",
+    actorRole: "widget",
+    requestId: "r1",
+  };
   return { mem, get: createGetConversation(deps), send: createHandleMessage(deps), request };
 }
 
@@ -5116,13 +5638,20 @@ describe("flujo: aplicacion", () => {
       "Elige una opción.",
     ]);
     expect(again.messages).toHaveLength(2);
-    expect(first.options.map((o) => o.label)).toEqual(["Mis citas", "Consultas generales", "Hablar con un asesor"]);
+    expect(first.options.map((o) => o.label)).toEqual([
+      "Mis citas",
+      "Consultas generales",
+      "Hablar con un asesor",
+    ]);
   });
 
   it("las respuestas de verificacion no llegan ni a los mensajes ni al estado", async () => {
     const { get, send, request, mem } = setup(async (effect) =>
       effect.kind === "verification_attempt"
-        ? { ok: true, verification: { result: "verified", remainingAttempts: 3, lockedUntil: null } }
+        ? {
+            ok: true,
+            verification: { result: "verified", remainingAttempts: 3, lockedUntil: null },
+          }
         : { ok: true },
     );
     type View = {
@@ -5182,8 +5711,14 @@ export function renderText(text: BotText, config: ConversationConfig): string {
   return text.append ? `${rendered}: ${text.append}` : rendered;
 }
 
-export function renderOptions(context: ConversationContext, config: ConversationConfig): RenderedOption[] {
-  return context.options.map((option) => ({ id: option.id, label: renderText(option.label, config) }));
+export function renderOptions(
+  context: ConversationContext,
+  config: ConversationConfig,
+): RenderedOption[] {
+  return context.options.map((option) => ({
+    id: option.id,
+    label: renderText(option.label, config),
+  }));
 }
 ```
 
@@ -5243,8 +5778,20 @@ export type HistoryView = {
 
 type Opened = { readonly conversation: StoredConversation; readonly messageCount: number };
 
-function envFor(deps: ConversationDeps, tenantId: string, config: ConversationConfig, now: Date): StepEnv {
-  return { tenantId, now, timeZone: deps.timeZone, params: config.params, random: deps.random, reads: deps.reads };
+function envFor(
+  deps: ConversationDeps,
+  tenantId: string,
+  config: ConversationConfig,
+  now: Date,
+): StepEnv {
+  return {
+    tenantId,
+    now,
+    timeZone: deps.timeZone,
+    params: config.params,
+    random: deps.random,
+    reads: deps.reads,
+  };
 }
 
 /** Lo que se guarda: el eco del paciente y las lineas del bot, redactadas donde corresponde. */
@@ -5278,7 +5825,14 @@ async function persist(
   await deps.messages.append({ tenantId, conversationId: id, firstSeq: count + 1, messages, now });
   const messageCount = count + messages.length;
   const medicalRecordId = output.state.context.patientId ?? null;
-  await deps.conversations.save({ id, tenantId, state: output.state, medicalRecordId, messageCount, now });
+  await deps.conversations.save({
+    id,
+    tenantId,
+    state: output.state,
+    medicalRecordId,
+    messageCount,
+    now,
+  });
   return messageCount;
 }
 
@@ -5341,7 +5895,10 @@ export function createHandleMessage(deps: ConversationDeps): HandleMessage {
     );
     await persist(deps, conversation, messageCount, output, config, now);
     const { context } = output.state;
-    const messages = output.lines.map((l) => ({ text: renderText(l.text, config), redacted: l.redacted === true }));
+    const messages = output.lines.map((l) => ({
+      text: renderText(l.text, config),
+      redacted: l.redacted === true,
+    }));
     return { messages, options: renderOptions(context, config), input: context.input };
   };
 }
@@ -5361,6 +5918,7 @@ git commit -m "feat(conversation): apertura con bienvenida, turno con efectos y 
 ### Task 14: Infraestructura, cableado, rutas HTTP y contrato
 
 **Files:**
+
 - Create: `backend/src/modules/shared/infrastructure/prisma-savepoint.ts`
 - Create: `backend/src/modules/conversation/infrastructure/prisma-conversation-repository.ts`
 - Create: `backend/src/modules/conversation/infrastructure/prisma-message-repository.ts`
@@ -5381,6 +5939,7 @@ git commit -m "feat(conversation): apertura con bienvenida, turno con efectos y 
 - Modify: `backend/tests/db/aislamiento-tenant.test.ts`
 
 **Interfaces:**
+
 - Consumes: T1–T13.
 - Produces: `withSavepoint(db, run)`; `createPrismaConversationRepository(db)`, `createPrismaMessageRepository(db, ids)`, `createPrismaConversationReads(db)` (con `listActiveKnowledge` y `clinicName` extra); `createEffectRunner(db, ports): EffectRunner`; `conversationWritePorts(db, config, auditLog, createAppointmentRequest)` → `{ getConversation, handleConversationMessage }` en `WritePorts`; `readIdempotentRequest(request, actorSubject, minKeyLength?, hashKey?)`; opción `sensitiveBody` de `idempotentRoute`; `sessionIdOf(actor)`; `conversationTurnJson`, `storedTurnJson`, `conversationHistoryJson`.
 
@@ -5433,6 +5992,7 @@ export async function withSavepoint<T>(db: PrismaExecutor, run: () => Promise<T>
 - [ ] **Step 3: Repositorios Prisma de la conversación**
 
 `prisma-conversation-repository.ts`:
+
 ```ts
 import type { Prisma } from "@prisma/client";
 import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
@@ -5451,7 +6011,13 @@ function toStored(row: {
     step: row.step as StepId,
     context: row.context as unknown as ConversationContext,
   };
-  return { id: row.id, tenantId: row.tenantId, widgetSessionId: row.widgetSessionId, state, messageCount: row.messageCount };
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    widgetSessionId: row.widgetSessionId,
+    state,
+    messageCount: row.messageCount,
+  };
 }
 
 const asJson = (context: ConversationContext) => context as unknown as Prisma.InputJsonValue;
@@ -5500,12 +6066,16 @@ export function createPrismaConversationRepository(db: PrismaExecutor): Conversa
 ```
 
 `prisma-message-repository.ts`:
+
 ```ts
 import type { IdGenerator } from "@/modules/shared/domain/ports/id-generator";
 import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
 import type { MessageRepository } from "../domain/ports";
 
-export function createPrismaMessageRepository(db: PrismaExecutor, ids: IdGenerator): MessageRepository {
+export function createPrismaMessageRepository(
+  db: PrismaExecutor,
+  ids: IdGenerator,
+): MessageRepository {
   return {
     async append(input) {
       await db.conversationMessage.createMany({
@@ -5534,6 +6104,7 @@ export function createPrismaMessageRepository(db: PrismaExecutor, ids: IdGenerat
 ```
 
 `prisma-conversation-reads.ts` (verifica en `schema.prisma` los nombres de relación `schedules`, `schedule`, `practitioner`, `healthcareService`):
+
 ```ts
 import type { PrismaExecutor } from "@/modules/shared/infrastructure/prisma-client";
 import type { VerifiableRecord } from "@/modules/verification/domain/questions";
@@ -5541,15 +6112,35 @@ import type { ConversationReads } from "../domain/reads";
 
 const MAX_UPCOMING = 10;
 
-function toRecord(row: { id: string; birthDate: Date; phone: string | null; email: string | null }): VerifiableRecord {
-  return { id: row.id, birthDate: row.birthDate.toISOString().slice(0, 10), phone: row.phone, email: row.email };
+function toRecord(row: {
+  id: string;
+  birthDate: Date;
+  phone: string | null;
+  email: string | null;
+}): VerifiableRecord {
+  return {
+    id: row.id,
+    birthDate: row.birthDate.toISOString().slice(0, 10),
+    phone: row.phone,
+    email: row.email,
+  };
 }
 
-const withNames = { schedule: { include: { practitioner: true, healthcareService: true } } } as const;
+const withNames = {
+  schedule: { include: { practitioner: true, healthcareService: true } },
+} as const;
 
 type PrismaReads = Omit<ConversationReads, "challenge" | "searchKnowledge"> & {
   listActiveKnowledge(tenantId: string): Promise<
-    { id: string; question: string; answer: string; detail: string | null; keywords: string[]; position: number; active: boolean }[]
+    {
+      id: string;
+      question: string;
+      answer: string;
+      detail: string | null;
+      keywords: string[];
+      position: number;
+      active: boolean;
+    }[]
   >;
   clinicName(tenantId: string): Promise<string>;
 };
@@ -5627,7 +6218,10 @@ export function createPrismaConversationReads(db: PrismaExecutor): PrismaReads {
       }));
     },
     async clinicName(tenantId) {
-      const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+      const tenant = await db.tenant.findUnique({
+        where: { id: tenantId },
+        select: { name: true },
+      });
       return tenant?.name ?? "";
     },
   };
@@ -5680,7 +6274,9 @@ function failureOf(error: unknown): EffectOutcome | null {
       return null;
     }
     const failure = details.reason as EffectFailure;
-    return details.max === undefined ? { ok: false, failure } : { ok: false, failure, max: details.max };
+    return details.max === undefined
+      ? { ok: false, failure }
+      : { ok: false, failure, max: details.max };
   }
   if (error instanceof ValidationError || error instanceof NotFoundError) {
     return { ok: false, failure: "not_available" };
@@ -5688,7 +6284,10 @@ function failureOf(error: unknown): EffectOutcome | null {
   return null;
 }
 
-async function guarded(db: PrismaExecutor, run: () => Promise<EffectOutcome>): Promise<EffectOutcome> {
+async function guarded(
+  db: PrismaExecutor,
+  run: () => Promise<EffectOutcome>,
+): Promise<EffectOutcome> {
   try {
     return await withSavepoint(db, run);
   } catch (error) {
@@ -5711,7 +6310,12 @@ function toCommand(
     case "book":
       return { ...base, kind: "book", slotId: command.slotId };
     case "reschedule":
-      return { ...base, kind: "reschedule", appointmentId: command.appointmentId, slotId: command.slotId };
+      return {
+        ...base,
+        kind: "reschedule",
+        appointmentId: command.appointmentId,
+        slotId: command.slotId,
+      };
     case "cancel":
       return { ...base, kind: "cancel", appointmentId: command.appointmentId };
   }
@@ -5804,20 +6408,40 @@ function configReader(
 ): ConversationConfigReader {
   return async (tenantId) => {
     const effective = effectiveConfig((await configs.get(toTenantId(tenantId))) ?? EMPTY_OVERRIDES);
-    const texts = Object.fromEntries(Object.entries(effective.texts).map(([key, text]) => [key, text.value]));
-    return { texts, clinicName: await clinicName(tenantId), params: { kbMaxResults: effective.params.kb_max_results } };
+    const texts = Object.fromEntries(
+      Object.entries(effective.texts).map(([key, text]) => [key, text.value]),
+    );
+    return {
+      texts,
+      clinicName: await clinicName(tenantId),
+      params: { kbMaxResults: effective.params.kb_max_results },
+    };
   };
 }
 
-function readsFor(db: PrismaExecutor, prismaReads: ReturnType<typeof createPrismaConversationReads>): ConversationReads {
-  const readChallenge = createReadChallenge({ repo: createPrismaChallengeRepository(db), clock: systemClock });
-  const expire = createExpireDueRequests({ expirer: createPrismaRequestExpirer(db), clock: systemClock });
+function readsFor(
+  db: PrismaExecutor,
+  prismaReads: ReturnType<typeof createPrismaConversationReads>,
+): ConversationReads {
+  const readChallenge = createReadChallenge({
+    repo: createPrismaChallengeRepository(db),
+    clock: systemClock,
+  });
+  const expire = createExpireDueRequests({
+    expirer: createPrismaRequestExpirer(db),
+    clock: systemClock,
+  });
   return {
     ...prismaReads,
     challenge: (tenantId, id) => readChallenge(toTenantId(tenantId), id),
     async searchKnowledge(tenantId, query, max) {
       const entries = await prismaReads.listActiveKnowledge(tenantId);
-      return searchEntries(entries, query, max).map(({ id, question, answer, detail }) => ({ id, question, answer, detail }));
+      return searchEntries(entries, query, max).map(({ id, question, answer, detail }) => ({
+        id,
+        question,
+        answer,
+        detail,
+      }));
     },
     async listAvailableSlots(tenantId, filter) {
       await expire(toTenantId(tenantId));
@@ -5839,9 +6463,19 @@ export function conversationWritePorts(
   const base = { ids: uuidV7Generator, clock: systemClock, audit: auditLog };
   const runEffect = createEffectRunner(db, {
     createAppointmentRequest,
-    preRegisterPatient: createPreRegisterPatient({ ...base, repo: createPrismaMedicalRecordRepository(db) }),
-    createHandoffTicket: createCreateHandoffTicket({ ...base, repo: createPrismaHandoffRepository(db) }),
-    openChallenge: createOpenChallenge({ repo: challenges, ids: uuidV7Generator, clock: systemClock }),
+    preRegisterPatient: createPreRegisterPatient({
+      ...base,
+      repo: createPrismaMedicalRecordRepository(db),
+    }),
+    createHandoffTicket: createCreateHandoffTicket({
+      ...base,
+      repo: createPrismaHandoffRepository(db),
+    }),
+    openChallenge: createOpenChallenge({
+      repo: challenges,
+      ids: uuidV7Generator,
+      clock: systemClock,
+    }),
     recordVerificationAttempt: createRecordVerificationAttempt({
       repo: challenges,
       clock: systemClock,
@@ -5849,7 +6483,10 @@ export function conversationWritePorts(
       audit: auditLog,
       policy: async (tenantId) => {
         const params = await readParams(tenantId);
-        return { maxAttempts: params.verification_max_attempts, lockMinutes: params.verification_lock_minutes };
+        return {
+          maxAttempts: params.verification_max_attempts,
+          lockMinutes: params.verification_lock_minutes,
+        };
       },
       records: (tenantId, id) => prismaReads.getPatient(tenantId, id),
     }),
@@ -5866,7 +6503,10 @@ export function conversationWritePorts(
     timeZone: config.appTimezone,
     steps: STEPS,
   };
-  return { getConversation: createGetConversation(deps), handleConversationMessage: createHandleMessage(deps) };
+  return {
+    getConversation: createGetConversation(deps),
+    handleConversationMessage: createHandleMessage(deps),
+  };
 }
 ```
 
@@ -5875,6 +6515,7 @@ export function conversationWritePorts(
 - [ ] **Step 6: Cablear en el root**
 
 En `composition-root.ts`:
+
 ```ts
 import { conversationWritePorts } from "./composition/conversation-wiring";
 // ...
@@ -5882,6 +6523,7 @@ type ConversationWritePorts = ReturnType<typeof conversationWritePorts>;
 export type WritePorts = BaseWritePorts & /* ...los que ya estan... */ & PreAgendaWritePorts & ConversationWritePorts;
 ```
 y en `buildWritePorts`, sustituye `...preAgendaWritePorts(db, auditLog),` por:
+
 ```ts
     ...preAgenda,
     ...conversationWritePorts(db, config, auditLog, preAgenda.createAppointmentRequest),
@@ -5893,6 +6535,7 @@ Run: `npm --prefix backend run typecheck` → sin errores. Comprueba `wc -l back
 - [ ] **Step 7: Hash con clave para cuerpos sensibles (refinamiento 15)**
 
 En `http/idempotency-core.ts` importa `createHmac` y cambia:
+
 ```ts
 function requestHash(method: string, path: string, bodyText: string, hashKey?: string): string {
   const payload = `${method}\n${path}\n${bodyText}`;
@@ -5913,6 +6556,7 @@ export async function readIdempotentRequest(
 Comentario encima de `requestHash`: «Con `hashKey` (HMAC) el hash no permite recuperar por fuerza bruta un cuerpo corto, como una respuesta de verificación de 4 dígitos (GOBERNANZA §1.5).»
 
 En `http/idempotent-route.ts`, añade a `IdempotentRouteOptions`:
+
 ```ts
   /** El cuerpo puede llevar respuestas de verificacion: hash con clave (refinamiento 15). */
   readonly sensitiveBody?: boolean;
@@ -5922,6 +6566,7 @@ y en el handler: `const idempotent = await readIdempotentRequest(request, actor.
 - [ ] **Step 8: Utilidades HTTP del widget y serializadores**
 
 En `http/widget-session-response.ts` añade (y úsalo en `widget/sessions/refresh/route.ts`, borrando su `sessionIdOf` local):
+
 ```ts
 /** Sesion del token de widget; sin ella el token no sirve para el chat. */
 export function sessionIdOf(actor: Actor): string {
@@ -5934,6 +6579,7 @@ export function sessionIdOf(actor: Actor): string {
 (importa `Actor` de `@/modules/auth/domain/actor` y `unauthorized` de `@/modules/auth/domain/auth-error`).
 
 `http/serializers-conversation.ts`:
+
 ```ts
 import type { HistoryView, TurnView } from "@/modules/conversation/application/conversation";
 import { REDACTED } from "@/modules/conversation/domain/text";
@@ -5976,6 +6622,7 @@ export function conversationHistoryJson(view: HistoryView) {
 - [ ] **Step 9: Rutas**
 
 `backend/src/app/api/v1/widget/conversation/route.ts`:
+
 ```ts
 import { getContainer } from "@/composition-root";
 import { assertSessionOrigin, widgetPreflight, withWidgetCors } from "@/http/cors";
@@ -6007,6 +6654,7 @@ export const OPTIONS = widgetPreflight;
 ```
 
 `backend/src/app/api/v1/widget/conversation/messages/route.ts`:
+
 ```ts
 import { getContainer } from "@/composition-root";
 import { assertSessionOrigin, widgetPreflight, withWidgetCors } from "@/http/cors";
@@ -6022,7 +6670,10 @@ const postMessage = idempotentRoute(
   ["widget"],
   async ({ actor, requestId, body, ports, request }) => {
     const sessionId = sessionIdOf(actor);
-    assertSessionOrigin(request, await getContainer().getActiveWidgetSession(actor.tenantId, sessionId));
+    assertSessionOrigin(
+      request,
+      await getContainer().getActiveWidgetSession(actor.tenantId, sessionId),
+    );
     const turn = await ports.handleConversationMessage({
       tenantId: actor.tenantId,
       sessionId,
@@ -6031,7 +6682,11 @@ const postMessage = idempotentRoute(
       requestId,
       message: parseIncomingMessage(body),
     });
-    return { status: 200, body: conversationTurnJson(turn), stored: storedTurnJson(turn, sessionId) };
+    return {
+      status: 200,
+      body: conversationTurnJson(turn),
+      stored: storedTurnJson(turn, sessionId),
+    };
   },
   {
     sensitiveBody: true,
@@ -6046,6 +6701,7 @@ export const OPTIONS = widgetPreflight;
 - [ ] **Step 10: Contrato OpenAPI**
 
 En `http/openapi-paths-conversation.ts` importa también `errorResponses` y `authErrors` y añade a `CONVERSATION_SCHEMAS`:
+
 ```ts
   ConversationOption: {
     type: "object",
@@ -6093,6 +6749,7 @@ En `http/openapi-paths-conversation.ts` importa también `errorResponses` y `aut
   },
 ```
 y a `CONVERSATION_PATHS`:
+
 ```ts
   "/widget/conversation": {
     get: {
@@ -6127,6 +6784,7 @@ Run: `npm --prefix backend run openapi:generate`, `npm --prefix backend exec vit
 - [ ] **Step 11: Soporte de pruebas HTTP**
 
 `backend/tests/db/chat-support.ts`:
+
 ```ts
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
@@ -6145,10 +6803,16 @@ export type ChatBody = {
 };
 
 /** Da de alta el widget sobre un tenant ya sembrado (seedWorld no crea bot-config). */
-export async function enableWidget(prisma: PrismaClient, tenantId: string, slug: string): Promise<string> {
+export async function enableWidget(
+  prisma: PrismaClient,
+  tenantId: string,
+  slug: string,
+): Promise<string> {
   const widgetKey = `wk_${slug.repeat(43).slice(0, 43)}`;
   await prisma.botConfig.create({ data: { tenantId, allowedOrigins: [CHAT_ORIGIN] } });
-  await prisma.widgetKey.create({ data: { id: `${tenantId}-key`, tenantId, key: widgetKey, createdAt: new Date() } });
+  await prisma.widgetKey.create({
+    data: { id: `${tenantId}-key`, tenantId, key: widgetKey, createdAt: new Date() },
+  });
   return widgetKey;
 }
 
@@ -6156,7 +6820,11 @@ export async function openChat(widgetKey: string): Promise<{ token: string; sess
   const response = await openSession(
     new Request(`${BASE}/sessions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: CHAT_ORIGIN, "Idempotency-Key": randomUUID() },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: CHAT_ORIGIN,
+        "Idempotency-Key": randomUUID(),
+      },
       body: JSON.stringify({ widget_key: widgetKey }),
     }),
   );
@@ -6262,7 +6930,9 @@ describe("flujo: punta a punta por HTTP", () => {
   }
 
   it("documento nuevo: pre-registro y solicitud que llega a la bandeja", async () => {
-    expect(body.messages[0]).toBe("Hola, soy el asistente virtual de Tenant chat. ¿En qué te puedo ayudar?");
+    expect(body.messages[0]).toBe(
+      "Hola, soy el asistente virtual de Tenant chat. ¿En qué te puedo ayudar?",
+    );
     await choose("Mis citas");
     await choose("Cédula de ciudadanía");
     await say({ text: "99887766" });
@@ -6281,11 +6951,18 @@ describe("flujo: punta a punta por HTTP", () => {
     await choose("Confirmar");
     expect(String(body.messages[0])).toMatch(/^Enviamos tu solicitud/);
 
-    const request = await prisma.appointmentRequest.findFirstOrThrow({ where: { tenantId: world.tenantId } });
+    const request = await prisma.appointmentRequest.findFirstOrThrow({
+      where: { tenantId: world.tenantId },
+    });
     expect(request).toMatchObject({ kind: "book", status: "pending" });
-    expect((await prisma.medicalRecord.findUniqueOrThrow({ where: { id: request.medicalRecordId } })).status).toBe("pre_registered");
+    expect(
+      (await prisma.medicalRecord.findUniqueOrThrow({ where: { id: request.medicalRecordId } }))
+        .status,
+    ).toBe("pre_registered");
     const admin = await signToken({ role: "admin", tenantId: world.tenantId });
-    const inbox = await (await listInbox(authedRequest("http://localhost/api/sim/v1/inbox", admin))).json();
+    const inbox = await (
+      await listInbox(authedRequest("http://localhost/api/sim/v1/inbox", admin))
+    ).json();
     expect(inbox.data.map((r: { id: string }) => r.id)).toContain(request.id);
 
     const history = await (await getChat(token)).json();
@@ -6299,15 +6976,21 @@ describe("flujo: punta a punta por HTTP", () => {
     await choose("Cancelar una cita");
     await first();
     await choose("Confirmar");
-    expect(body.messages[0]).toBe("Enviamos tu solicitud de cancelación. Tenant chat la confirmará.");
-    expect(await prisma.appointmentRequest.findFirstOrThrow({ where: { tenantId: world.tenantId } })).toMatchObject({ kind: "cancel" });
+    expect(body.messages[0]).toBe(
+      "Enviamos tu solicitud de cancelación. Tenant chat la confirmará.",
+    );
+    expect(
+      await prisma.appointmentRequest.findFirstOrThrow({ where: { tenantId: world.tenantId } }),
+    ).toMatchObject({ kind: "cancel" });
 
     const texts = (await prisma.conversationMessage.findMany()).map((m) => m.text);
     expect(texts).not.toContain("15");
     expect(texts).not.toContain("4567");
     const context = JSON.stringify((await prisma.conversation.findMany()).map((c) => c.context));
     expect(context).not.toContain('"4567"');
-    const responses = JSON.stringify((await prisma.idempotencyKey.findMany()).map((k) => k.responseBody));
+    const responses = JSON.stringify(
+      (await prisma.idempotencyKey.findMany()).map((k) => k.responseBody),
+    );
     expect(responses).not.toContain('"4567"');
     const audits = await prisma.auditEvent.findMany({ where: { tenantId: world.tenantId } });
     expect(audits.map((a) => a.action)).toContain("verification.succeeded");
@@ -6321,7 +7004,9 @@ describe("flujo: punta a punta por HTTP", () => {
     const bodyText = JSON.stringify({ text: "15" });
     await sendChat(token, { text: "15" }, key);
     const row = await prisma.idempotencyKey.findFirstOrThrow({ where: { key } });
-    const plain = createHash("sha256").update(`POST\n/api/v1/widget/conversation/messages\n${bodyText}`).digest("hex");
+    const plain = createHash("sha256")
+      .update(`POST\n/api/v1/widget/conversation/messages\n${bodyText}`)
+      .digest("hex");
     expect(row.requestHash).not.toBe(plain);
   });
 
@@ -6362,7 +7047,9 @@ describe("flujo: punta a punta por HTTP", () => {
       },
     });
     await choose("Confirmar");
-    expect(body.messages[0]).toBe("Ese documento ya está registrado. Vamos a verificar tu identidad.");
+    expect(body.messages[0]).toBe(
+      "Ese documento ya está registrado. Vamos a verificar tu identidad.",
+    );
     const actions = (await prisma.auditEvent.findMany()).map((a) => a.action);
     expect(actions).not.toContain("patient.pre_registered");
   });
@@ -6416,7 +7103,12 @@ describe("aislamiento-tenant: chat", () => {
     const b = await seedTenantDomain(prisma, "chat-b");
     const session = await openChat(await enableWidget(prisma, a.tenantId, "chat-a"));
     await getChat(session.token);
-    const forged = await signToken({ role: "widget", tenantId: b.tenantId, sessionId: session.sessionId, subject: `widget:${session.sessionId}` });
+    const forged = await signToken({
+      role: "widget",
+      tenantId: b.tenantId,
+      sessionId: session.sessionId,
+      subject: `widget:${session.sessionId}`,
+    });
     expect((await getChat(forged)).status).toBe(401);
     expect((await sendChat(forged, { text: "hola" })).status).toBe(401);
     expect(await prisma.conversation.count({ where: { tenantId: b.tenantId } })).toBe(0);
@@ -6442,6 +7134,7 @@ git commit -m "feat(conversation): rutas del chat del widget con efectos en save
 ### Task 15: Gobernanza, documentación y cierre
 
 **Files:**
+
 - Modify: `GOBERNANZA.md` (§1.4, §1.5, §2.2, §5.1)
 - Modify: `CLAUDE.md` (estado de la 3.3 y lista de suites)
 - Modify: `docs/superpowers/specs/2026-10-02-fase-3-3-motor-conversacional-design.md` (estado)
@@ -6457,6 +7150,7 @@ git commit -m "feat(conversation): rutas del chat del widget con efectos en save
 - [ ] **Step 2: `CLAUDE.md`**
 
 Cambia la viñeta de la 3.3 a:
+
 ```markdown
 - **3.3 motor conversacional — implementada** en la rama `fase-3-3-motor-conversacional` (spec en `docs/superpowers/specs/2026-10-02-fase-3-3-motor-conversacional-design.md`): conversaciones con historial redactado, verificación con banco de preguntas y par fijo, pre-registro, handoff-tickets (solo creación), CORS del widget y alta/baja de orígenes. 3.4 frontend (`/chat`, bandeja, KB, config): pendiente.
 ```
@@ -6469,6 +7163,7 @@ En la spec, la línea de estado pasa a «**implementada** en la rama `fase-3-3-m
 - [ ] **Step 4: Verificación final**
 
 Run, en orden, y confirma la salida de cada uno:
+
 - `npm run ci` → «No fixes applied», sin errores.
 - `npm run typecheck` → sin errores.
 - `npm test` → todo verde (incluye `flujo-*`, `verificacion`, `pre-registro`, `fronteras`, `sin-ia`, `contrato-api`).

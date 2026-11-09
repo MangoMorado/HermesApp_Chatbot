@@ -26,40 +26,42 @@
 
 ## Mapa de archivos
 
-| Archivo | Responsabilidad |
-| --- | --- |
-| `src/modules/shared/domain/ports/clock.ts` | Puerto de reloj (movido desde `health`) |
-| `src/modules/shared/domain/ports/id-generator.ts` | Puerto de IDs |
-| `src/modules/shared/domain/tenant-id.ts` | Tipo `TenantId` |
-| `src/modules/shared/domain/validation-error.ts` | Error de validación del núcleo |
-| `src/modules/shared/domain/pagination.ts` | Límites, cursor opaco, `Page<T>` |
-| `src/modules/shared/domain/audit-event.ts` + `ports/audit-log.ts` | Evento de auditoría sin contenido y su puerto |
-| `src/modules/shared/domain/idempotency.ts` + `ports/idempotency-store.ts` | Registro de idempotencia y su puerto |
-| `src/modules/shared/infrastructure/system-clock.ts` | Reloj del proceso (movido) |
-| `src/modules/shared/infrastructure/uuid-v7-generator.ts` | IDs UUIDv7 |
-| `src/modules/shared/infrastructure/prisma-client.ts` | Fábrica del cliente Prisma y tipo `PrismaExecutor` |
-| `src/modules/shared/infrastructure/prisma-audit-log.ts` | Adaptador de auditoría |
-| `src/modules/shared/infrastructure/prisma-idempotency-store.ts` | Adaptador de idempotencia |
-| `src/modules/tenancy/domain/tenant-settings.ts` + `ports/tenant-settings-repository.ts` | Ajustes del tenant y su puerto |
-| `src/modules/tenancy/infrastructure/prisma-tenant-settings-repository.ts` | Adaptador de ajustes |
-| `prisma/schema.prisma` | Modelo de datos de ambos schemas |
-| `prisma/migrations/*` | Migraciones generadas + CHECKs a mano |
-| `prisma/seed/{time,data,write-chatbot,write-simulator,index}.ts` | Seed determinista |
-| `tests/db/{global-setup,support}.ts` | Base de pruebas: migrar y limpiar |
-| `tests/dominio/*.test.ts` | Suite `dominio` (unitaria) |
-| `tests/db/*.test.ts` | Suites contra Postgres |
-| `docker/entrypoint.sh`, `Dockerfile` | Migrar al arrancar |
+| Archivo                                                                                 | Responsabilidad                                    |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `src/modules/shared/domain/ports/clock.ts`                                              | Puerto de reloj (movido desde `health`)            |
+| `src/modules/shared/domain/ports/id-generator.ts`                                       | Puerto de IDs                                      |
+| `src/modules/shared/domain/tenant-id.ts`                                                | Tipo `TenantId`                                    |
+| `src/modules/shared/domain/validation-error.ts`                                         | Error de validación del núcleo                     |
+| `src/modules/shared/domain/pagination.ts`                                               | Límites, cursor opaco, `Page<T>`                   |
+| `src/modules/shared/domain/audit-event.ts` + `ports/audit-log.ts`                       | Evento de auditoría sin contenido y su puerto      |
+| `src/modules/shared/domain/idempotency.ts` + `ports/idempotency-store.ts`               | Registro de idempotencia y su puerto               |
+| `src/modules/shared/infrastructure/system-clock.ts`                                     | Reloj del proceso (movido)                         |
+| `src/modules/shared/infrastructure/uuid-v7-generator.ts`                                | IDs UUIDv7                                         |
+| `src/modules/shared/infrastructure/prisma-client.ts`                                    | Fábrica del cliente Prisma y tipo `PrismaExecutor` |
+| `src/modules/shared/infrastructure/prisma-audit-log.ts`                                 | Adaptador de auditoría                             |
+| `src/modules/shared/infrastructure/prisma-idempotency-store.ts`                         | Adaptador de idempotencia                          |
+| `src/modules/tenancy/domain/tenant-settings.ts` + `ports/tenant-settings-repository.ts` | Ajustes del tenant y su puerto                     |
+| `src/modules/tenancy/infrastructure/prisma-tenant-settings-repository.ts`               | Adaptador de ajustes                               |
+| `prisma/schema.prisma`                                                                  | Modelo de datos de ambos schemas                   |
+| `prisma/migrations/*`                                                                   | Migraciones generadas + CHECKs a mano              |
+| `prisma/seed/{time,data,write-chatbot,write-simulator,index}.ts`                        | Seed determinista                                  |
+| `tests/db/{global-setup,support}.ts`                                                    | Base de pruebas: migrar y limpiar                  |
+| `tests/dominio/*.test.ts`                                                               | Suite `dominio` (unitaria)                         |
+| `tests/db/*.test.ts`                                                                    | Suites contra Postgres                             |
+| `docker/entrypoint.sh`, `Dockerfile`                                                    | Migrar al arrancar                                 |
 
 ---
 
 ### Task 0: Bases de datos locales y dependencias
 
 **Files:**
+
 - Modify: `backend/package.json`
 - Modify: `backend/prisma.config.ts`
 - Modify: `backend/.env.example`, `backend/.env` (local, no versionado)
 
 **Interfaces:**
+
 - Produces: bases `chatbot_dev` y `chatbot_test` en el Postgres local; paquetes `@prisma/adapter-pg`, `pg`, `uuid`, `@types/pg`.
 
 - [ ] **Step 1: Crear las bases locales**
@@ -142,6 +144,7 @@ git commit -m "chore(backend): dependencias de persistencia y config de prisma p
 ### Task 1: Núcleo compartido y fronteras del simulador
 
 **Files:**
+
 - Create: `src/modules/shared/domain/ports/clock.ts`, `src/modules/shared/domain/ports/id-generator.ts`, `src/modules/shared/domain/tenant-id.ts`, `src/modules/shared/domain/validation-error.ts`, `src/modules/shared/domain/pagination.ts`
 - Create: `src/modules/shared/infrastructure/system-clock.ts`, `src/modules/shared/infrastructure/uuid-v7-generator.ts`
 - Delete: `src/modules/health/domain/ports/clock.ts`, `src/modules/health/infrastructure/system-clock.ts`
@@ -150,6 +153,7 @@ git commit -m "chore(backend): dependencias de persistencia y config de prisma p
 - Test: `tests/dominio/paginacion.test.ts`, `tests/dominio/tenant-id.test.ts`, `tests/dominio/errores-validacion.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `type Clock = { now(): Date }` en `@/modules/shared/domain/ports/clock`
   - `type IdGenerator = { next(): string }` en `@/modules/shared/domain/ports/id-generator`
@@ -191,7 +195,10 @@ describe("dominio: paginacion", () => {
   });
 
   it("el cursor ida y vuelta conserva la posicion", () => {
-    const position = { key: "2026-03-02T13:00:00.000Z", id: "0192a3f0-aaaa-7bbb-8ccc-000000000001" };
+    const position = {
+      key: "2026-03-02T13:00:00.000Z",
+      id: "0192a3f0-aaaa-7bbb-8ccc-000000000001",
+    };
     const raw = encodeCursor(position);
     expect(raw).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(decodeCursor(raw)).toEqual(position);
@@ -466,33 +473,32 @@ import { ValidationError } from "@/modules/shared/domain/validation-error";
 Añadir dentro del `describe` existente:
 
 ```ts
-  it("ningun modulo del chatbot importa hermes-simulator", () => {
-    const chatbotModules = readdirSync(MODULES_DIR).filter(
-      (entry) =>
-        entry !== "hermes-simulator" && statSync(join(MODULES_DIR, entry)).isDirectory(),
-    );
-    const offenders = chatbotModules
-      .flatMap((mod) => listFiles(join(MODULES_DIR, mod)))
-      .flatMap((file) =>
-        importsOf(file)
-          .filter((specifier) => /(^|\/)hermes-simulator(\/|$)/.test(specifier))
-          .map((specifier) => `${file} -> ${specifier}`),
-      );
-
-    expect(offenders).toEqual([]);
-  });
-
-  it("hermes-simulator solo importa shared y auth de otros modulos", () => {
-    const allowed = new Set(["hermes-simulator", "shared", "auth"]);
-    const offenders = listFiles(join(MODULES_DIR, "hermes-simulator")).flatMap((file) =>
+it("ningun modulo del chatbot importa hermes-simulator", () => {
+  const chatbotModules = readdirSync(MODULES_DIR).filter(
+    (entry) => entry !== "hermes-simulator" && statSync(join(MODULES_DIR, entry)).isDirectory(),
+  );
+  const offenders = chatbotModules
+    .flatMap((mod) => listFiles(join(MODULES_DIR, mod)))
+    .flatMap((file) =>
       importsOf(file)
-        .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
-        .filter(({ module }) => module !== undefined && !allowed.has(module))
-        .map(({ specifier }) => `${file} -> ${specifier}`),
+        .filter((specifier) => /(^|\/)hermes-simulator(\/|$)/.test(specifier))
+        .map((specifier) => `${file} -> ${specifier}`),
     );
 
-    expect(offenders).toEqual([]);
-  });
+  expect(offenders).toEqual([]);
+});
+
+it("hermes-simulator solo importa shared y auth de otros modulos", () => {
+  const allowed = new Set(["hermes-simulator", "shared", "auth"]);
+  const offenders = listFiles(join(MODULES_DIR, "hermes-simulator")).flatMap((file) =>
+    importsOf(file)
+      .map((specifier) => ({ specifier, module: /modules\/([^/]+)/.exec(specifier)?.[1] }))
+      .filter(({ module }) => module !== undefined && !allowed.has(module))
+      .map(({ specifier }) => `${file} -> ${specifier}`),
+  );
+
+  expect(offenders).toEqual([]);
+});
 ```
 
 - [ ] **Step 7: Correr pruebas y puertas**
@@ -512,6 +518,7 @@ git commit -m "feat(shared): nucleo compartido (reloj, ids, tenant, paginacion) 
 ### Task 2: Infraestructura de pruebas contra Postgres y esquema del chatbot
 
 **Files:**
+
 - Modify: `prisma/schema.prisma`
 - Create: `prisma/migrations/<timestamp>_fase2_chatbot/migration.sql` (generada + CHECKs)
 - Create: `src/modules/shared/infrastructure/prisma-client.ts`
@@ -520,6 +527,7 @@ git commit -m "feat(shared): nucleo compartido (reloj, ids, tenant, paginacion) 
 - Test: `tests/db/aislamiento-tenant.test.ts`
 
 **Interfaces:**
+
 - Consumes: `IdGenerator`, `uuidV7Generator` (Task 1).
 - Produces:
   - `createPrismaClient(connectionString: string): PrismaClient`
@@ -952,14 +960,26 @@ const SYSTEM = "urn:test";
 
 async function practitioner(tenantId: string, value: string): Promise<string> {
   const row = await prisma.practitioner.create({
-    data: { id: `${tenantId}-${value}`, tenantId, identifierSystem: SYSTEM, identifierValue: value, name: value },
+    data: {
+      id: `${tenantId}-${value}`,
+      tenantId,
+      identifierSystem: SYSTEM,
+      identifierValue: value,
+      name: value,
+    },
   });
   return row.id;
 }
 
 async function service(tenantId: string, value: string): Promise<string> {
   const row = await prisma.healthcareService.create({
-    data: { id: `${tenantId}-${value}`, tenantId, identifierSystem: SYSTEM, identifierValue: value, name: value },
+    data: {
+      id: `${tenantId}-${value}`,
+      tenantId,
+      identifierSystem: SYSTEM,
+      identifierValue: value,
+      name: value,
+    },
   });
   return row.id;
 }
@@ -1010,7 +1030,9 @@ describe("aislamiento-tenant: la base impide referencias entre tenants", () => {
     await expect(
       prisma.tenant.update({ where: { id: tenantA }, data: { maxQueryRangeDays: 367 } }),
     ).rejects.toThrow();
-    expect((await prisma.tenant.findUniqueOrThrow({ where: { id: tenantA } })).maxQueryRangeDays).toBe(31);
+    expect(
+      (await prisma.tenant.findUniqueOrThrow({ where: { id: tenantA } })).maxQueryRangeDays,
+    ).toBe(31);
   });
 
   it("un cupo no puede terminar antes de empezar", async () => {
@@ -1062,11 +1084,13 @@ git commit -m "feat(db): esquema del chatbot con FKs compuestas por tenant y bas
 ### Task 3: Schema `hermes_sim` del simulador
 
 **Files:**
+
 - Modify: `prisma/schema.prisma`
 - Create: `prisma/migrations/<timestamp>_fase2_hermes_sim/migration.sql` (generada + CHECKs)
 - Test: `tests/db/esquema-simulador.test.ts`
 
 **Interfaces:**
+
 - Produces: modelos `SimPractitioner`, `SimHealthcareService`, `SimSchedule`, `SimSlot`, `SimPatient`, `SimAppointment`; enums `SimSlotStatus`, `SimPatientStatus`, `SimAppointmentStatus`, `SimDocumentType` (mismos valores que sus pares del chatbot).
 
 - [ ] **Step 1: Escribir la prueba que falla**
@@ -1358,12 +1382,14 @@ git commit -m "feat(db): schema hermes_sim del simulador, sin FKs hacia el chatb
 ### Task 4: Ajustes del tenant (módulo `tenancy`)
 
 **Files:**
+
 - Create: `src/modules/tenancy/domain/tenant-settings.ts`
 - Create: `src/modules/tenancy/domain/ports/tenant-settings-repository.ts`
 - Create: `src/modules/tenancy/infrastructure/prisma-tenant-settings-repository.ts`
 - Test: `tests/dominio/ajustes-tenant.test.ts`, `tests/db/ajustes-tenant.test.ts`
 
 **Interfaces:**
+
 - Consumes: `TenantId`, `toTenantId`, `ValidationError` (Task 1); `PrismaExecutor` (Task 2).
 - Produces:
   - `type TenantSettings = { readonly maxQueryRangeDays: number }`
@@ -1390,7 +1416,9 @@ describe("dominio: ajustes del tenant", () => {
   });
 
   it.each([1, 31, 366])("acepta %i dias", (days) => {
-    expect(validateTenantSettings({ maxQueryRangeDays: days })).toEqual({ maxQueryRangeDays: days });
+    expect(validateTenantSettings({ maxQueryRangeDays: days })).toEqual({
+      maxQueryRangeDays: days,
+    });
   });
 
   it.each([0, 367, 1.5, Number.NaN])("rechaza %s dias", (days) => {
@@ -1530,11 +1558,13 @@ git commit -m "feat(tenancy): ajustes del tenant con tope de rango y repositorio
 ### Task 5: Auditoría sin contenido
 
 **Files:**
+
 - Create: `src/modules/shared/domain/audit-event.ts`, `src/modules/shared/domain/ports/audit-log.ts`
 - Create: `src/modules/shared/infrastructure/prisma-audit-log.ts`
 - Test: `tests/db/auditoria.test.ts`
 
 **Interfaces:**
+
 - Consumes: `TenantId`, `IdGenerator` (Task 1); `PrismaExecutor` (Task 2).
 - Produces:
   - `type AuditEvent = { readonly tenantId: TenantId; readonly actorSubject: string; readonly actorRole: string; readonly action: string; readonly resourceType: string; readonly resourceId: string; readonly requestId: string; readonly occurredAt: Date }`
@@ -1689,11 +1719,13 @@ git commit -m "feat(shared): auditoria de hechos sin contenido con adaptador Pri
 ### Task 6: Almacén de idempotencia
 
 **Files:**
+
 - Create: `src/modules/shared/domain/idempotency.ts`, `src/modules/shared/domain/ports/idempotency-store.ts`
 - Create: `src/modules/shared/infrastructure/prisma-idempotency-store.ts`
 - Test: `tests/db/idempotencia-store.test.ts`
 
 **Interfaces:**
+
 - Consumes: `TenantId` (Task 1); `PrismaExecutor` (Task 2).
 - Produces:
   - `type IdempotencyRecord = { readonly tenantId: TenantId; readonly key: string; readonly actorSubject: string; readonly method: string; readonly path: string; readonly requestHash: string; readonly responseStatus: number; readonly responseBody: unknown; readonly createdAt: Date }`
@@ -1708,7 +1740,10 @@ git commit -m "feat(shared): auditoria de hechos sin contenido con adaptador Pri
 ```ts
 import type { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { IdempotencyKeyTakenError, type IdempotencyRecord } from "@/modules/shared/domain/idempotency";
+import {
+  IdempotencyKeyTakenError,
+  type IdempotencyRecord,
+} from "@/modules/shared/domain/idempotency";
 import { toTenantId } from "@/modules/shared/domain/tenant-id";
 import { createPrismaIdempotencyStore } from "@/modules/shared/infrastructure/prisma-idempotency-store";
 import { insertTenant, testPrisma, truncateAll } from "./support";
@@ -1889,10 +1924,12 @@ git commit -m "feat(shared): almacen de idempotencia persistido por tenant"
 ### Task 7: Datos del seed (módulo puro y determinista)
 
 **Files:**
+
 - Create: `prisma/seed/time.ts`, `prisma/seed/data.ts`
 - Test: `tests/dominio/seed-datos.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `zonedInstant(date: string, time: string, timeZone: string): Date`, `addDays(date: string, days: number): string`, `isWeekend(date: string): boolean`, `todayIn(timeZone: string, now: Date): string`
   - `IDENTIFIER_SYSTEMS` (objeto con `practitioner`, `healthcareService`, `schedule`, `slot`, `patient`, `appointment`)
@@ -1913,7 +1950,9 @@ const ZONE = "America/Bogota";
 
 describe("dominio: datos del seed", () => {
   it("una hora local de Bogota se guarda en UTC-5", () => {
-    expect(zonedInstant("2026-03-02", "08:00", ZONE).toISOString()).toBe("2026-03-02T13:00:00.000Z");
+    expect(zonedInstant("2026-03-02", "08:00", ZONE).toISOString()).toBe(
+      "2026-03-02T13:00:00.000Z",
+    );
   });
 
   it("todayIn devuelve la fecha local", () => {
@@ -1987,7 +2026,14 @@ function zoneOffsetMs(instant: Date, timeZone: string): number {
     second: "2-digit",
   }).formatToParts(instant);
   const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
-  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second"),
+  );
   return asUtc - instant.getTime();
 }
 
@@ -2170,7 +2216,13 @@ function buildSlots(
   );
 }
 
-type AppointmentPlan = { patient: SeedPatient; schedule: SeedSchedule; date: string; time: string; status: "fulfilled" | "booked" };
+type AppointmentPlan = {
+  patient: SeedPatient;
+  schedule: SeedSchedule;
+  date: string;
+  time: string;
+  status: "fulfilled" | "booked";
+};
 
 function planAppointments(
   patients: SeedPatient[],
@@ -2183,13 +2235,29 @@ function planAppointments(
   return active.flatMap((patient, index) => {
     const schedule = schedules[index % schedules.length] as SeedSchedule;
     return [
-      { patient, schedule, date: past[index % past.length] as string, time: "08:00", status: "fulfilled" as const },
-      { patient, schedule, date: future[index % future.length] as string, time: "08:30", status: "booked" as const },
+      {
+        patient,
+        schedule,
+        date: past[index % past.length] as string,
+        time: "08:00",
+        status: "fulfilled" as const,
+      },
+      {
+        patient,
+        schedule,
+        date: future[index % future.length] as string,
+        time: "08:30",
+        status: "booked" as const,
+      },
     ];
   });
 }
 
-function buildAppointments(slug: string, plans: AppointmentPlan[], slots: SeedSlot[]): SeedAppointment[] {
+function buildAppointments(
+  slug: string,
+  plans: AppointmentPlan[],
+  slots: SeedSlot[],
+): SeedAppointment[] {
   const slotsByValue = new Map(slots.map((slot) => [slot.identifierValue, slot]));
   return plans.map((plan, index) => {
     const slotValue = `${plan.schedule.identifierValue}-${plan.date}-${plan.time.replace(":", "")}`;
@@ -2212,7 +2280,12 @@ function buildAppointments(slug: string, plans: AppointmentPlan[], slots: SeedSl
   });
 }
 
-function buildTenant(template: TenantTemplate, tenantIndex: number, anchor: string, timeZone: string): SeedTenant {
+function buildTenant(
+  template: TenantTemplate,
+  tenantIndex: number,
+  anchor: string,
+  timeZone: string,
+): SeedTenant {
   const { slug } = template;
   const practitioners = template.practitioners.map((name, i) => ({
     id: seedId(`${slug}:practitioner:P-${pad(i + 1)}`),
@@ -2243,8 +2316,22 @@ function buildTenant(template: TenantTemplate, tenantIndex: number, anchor: stri
     status: i === template.patients.length - 1 ? ("pre_registered" as const) : ("active" as const),
   }));
   const slots = buildSlots(slug, schedules, anchor, timeZone);
-  const appointments = buildAppointments(slug, planAppointments(patients, schedules, anchor), slots);
-  return { id: seedId(`tenant:${slug}`), slug, name: template.name, practitioners, services, schedules, slots, patients, appointments };
+  const appointments = buildAppointments(
+    slug,
+    planAppointments(patients, schedules, anchor),
+    slots,
+  );
+  return {
+    id: seedId(`tenant:${slug}`),
+    slug,
+    name: template.name,
+    practitioners,
+    services,
+    schedules,
+    slots,
+    patients,
+    appointments,
+  };
 }
 
 export function buildSeed(anchor: string, timeZone: string): SeedTenant[] {
@@ -2269,10 +2356,12 @@ git commit -m "feat(seed): datos deterministas de dos tenants relativos a una fe
 ### Task 8: Escritores del seed, CLI y suite `simetria-seed`
 
 **Files:**
+
 - Create: `prisma/seed/write-chatbot.ts`, `prisma/seed/write-simulator.ts`, `prisma/seed/index.ts`
 - Test: `tests/db/simetria-seed.test.ts`
 
 **Interfaces:**
+
 - Consumes: `buildSeed`, `SeedTenant`, `IDENTIFIER_SYSTEMS` (Task 7); `createPrismaClient` (Task 2); `loadConfig` (`src/config/env.ts`).
 - Produces: `writeChatbot(prisma: PrismaClient, tenants: readonly SeedTenant[]): Promise<void>`, `writeSimulator(prisma: PrismaClient, tenants: readonly SeedTenant[]): Promise<void>`, script `npm run db:seed -- --anchor YYYY-MM-DD`.
 
@@ -2291,7 +2380,9 @@ import { testPrisma, truncateAll } from "./support";
 const prisma: PrismaClient = testPrisma();
 const seed = buildSeed("2026-03-02", "America/Bogota");
 
-const byIdentifier = <T extends { tenantId: string; identifierSystem: string; identifierValue: string }>(
+const byIdentifier = <
+  T extends { tenantId: string; identifierSystem: string; identifierValue: string },
+>(
   rows: T[],
 ) =>
   rows
@@ -2336,11 +2427,15 @@ describe("simetria-seed: el simulador y el chatbot parten de los mismos datos", 
     expect(byIdentifier(await prisma.simPatient.findMany())).toEqual(
       byIdentifier(await prisma.medicalRecord.findMany()),
     );
-    const simAppointments = (await prisma.simAppointment.findMany()).map(({ patientId, ...row }) => ({
-      ...row,
-      medicalRecordId: patientId,
-    }));
-    expect(byIdentifier(simAppointments)).toEqual(byIdentifier(await prisma.appointment.findMany()));
+    const simAppointments = (await prisma.simAppointment.findMany()).map(
+      ({ patientId, ...row }) => ({
+        ...row,
+        medicalRecordId: patientId,
+      }),
+    );
+    expect(byIdentifier(simAppointments)).toEqual(
+      byIdentifier(await prisma.appointment.findMany()),
+    );
   });
 
   it("volver a sembrar con el mismo ancla no duplica nada", async () => {
@@ -2366,41 +2461,91 @@ type Tx = Prisma.TransactionClient;
 
 async function writeMasters(tx: Tx, t: SeedTenant): Promise<void> {
   for (const p of t.practitioners) {
-    const data = { id: p.id, tenantId: t.id, identifierSystem: SYS.practitioner, identifierValue: p.identifierValue, name: p.name };
+    const data = {
+      id: p.id,
+      tenantId: t.id,
+      identifierSystem: SYS.practitioner,
+      identifierValue: p.identifierValue,
+      name: p.name,
+    };
     await tx.practitioner.upsert({ where: { id: p.id }, create: data, update: data });
   }
   for (const s of t.services) {
-    const data = { id: s.id, tenantId: t.id, identifierSystem: SYS.healthcareService, identifierValue: s.identifierValue, name: s.name };
+    const data = {
+      id: s.id,
+      tenantId: t.id,
+      identifierSystem: SYS.healthcareService,
+      identifierValue: s.identifierValue,
+      name: s.name,
+    };
     await tx.healthcareService.upsert({ where: { id: s.id }, create: data, update: data });
   }
   for (const s of t.schedules) {
-    const data = { id: s.id, tenantId: t.id, identifierSystem: SYS.schedule, identifierValue: s.identifierValue, practitionerId: s.practitionerId, healthcareServiceId: s.healthcareServiceId };
+    const data = {
+      id: s.id,
+      tenantId: t.id,
+      identifierSystem: SYS.schedule,
+      identifierValue: s.identifierValue,
+      practitionerId: s.practitionerId,
+      healthcareServiceId: s.healthcareServiceId,
+    };
     await tx.schedule.upsert({ where: { id: s.id }, create: data, update: data });
   }
 }
 
 async function writeAgenda(tx: Tx, t: SeedTenant): Promise<void> {
   for (const s of t.slots) {
-    const data = { id: s.id, tenantId: t.id, identifierSystem: SYS.slot, identifierValue: s.identifierValue, scheduleId: s.scheduleId, startAt: s.startAt, endAt: s.endAt, status: s.status };
+    const data = {
+      id: s.id,
+      tenantId: t.id,
+      identifierSystem: SYS.slot,
+      identifierValue: s.identifierValue,
+      scheduleId: s.scheduleId,
+      startAt: s.startAt,
+      endAt: s.endAt,
+      status: s.status,
+    };
     await tx.slot.upsert({ where: { id: s.id }, create: data, update: data });
   }
   for (const p of t.patients) {
     const data = {
-      id: p.id, tenantId: t.id, identifierSystem: SYS.patient, identifierValue: p.identifierValue,
-      documentType: p.documentType, documentNumber: p.documentNumber, givenNames: p.givenNames,
-      familyNames: p.familyNames, birthDate: new Date(`${p.birthDate}T00:00:00.000Z`),
-      phone: p.phone, email: p.email, status: p.status,
+      id: p.id,
+      tenantId: t.id,
+      identifierSystem: SYS.patient,
+      identifierValue: p.identifierValue,
+      documentType: p.documentType,
+      documentNumber: p.documentNumber,
+      givenNames: p.givenNames,
+      familyNames: p.familyNames,
+      birthDate: new Date(`${p.birthDate}T00:00:00.000Z`),
+      phone: p.phone,
+      email: p.email,
+      status: p.status,
     };
     await tx.medicalRecord.upsert({ where: { id: p.id }, create: data, update: data });
   }
   for (const a of t.appointments) {
-    const data = { id: a.id, tenantId: t.id, identifierSystem: SYS.appointment, identifierValue: a.identifierValue, medicalRecordId: a.patientId, scheduleId: a.scheduleId, slotId: a.slotId, startAt: a.startAt, endAt: a.endAt, status: a.status };
+    const data = {
+      id: a.id,
+      tenantId: t.id,
+      identifierSystem: SYS.appointment,
+      identifierValue: a.identifierValue,
+      medicalRecordId: a.patientId,
+      scheduleId: a.scheduleId,
+      slotId: a.slotId,
+      startAt: a.startAt,
+      endAt: a.endAt,
+      status: a.status,
+    };
     await tx.appointment.upsert({ where: { id: a.id }, create: data, update: data });
   }
 }
 
 /** Siembra las tablas del chatbot (schema public). Idempotente por id. */
-export async function writeChatbot(prisma: PrismaClient, tenants: readonly SeedTenant[]): Promise<void> {
+export async function writeChatbot(
+  prisma: PrismaClient,
+  tenants: readonly SeedTenant[],
+): Promise<void> {
   await prisma.$transaction(
     async (tx) => {
       for (const t of tenants) {
@@ -2425,41 +2570,91 @@ type Tx = Prisma.TransactionClient;
 
 async function writeMasters(tx: Tx, t: SeedTenant): Promise<void> {
   for (const p of t.practitioners) {
-    const data = { id: p.id, tenantId: t.id, identifierSystem: SYS.practitioner, identifierValue: p.identifierValue, name: p.name };
+    const data = {
+      id: p.id,
+      tenantId: t.id,
+      identifierSystem: SYS.practitioner,
+      identifierValue: p.identifierValue,
+      name: p.name,
+    };
     await tx.simPractitioner.upsert({ where: { id: p.id }, create: data, update: data });
   }
   for (const s of t.services) {
-    const data = { id: s.id, tenantId: t.id, identifierSystem: SYS.healthcareService, identifierValue: s.identifierValue, name: s.name };
+    const data = {
+      id: s.id,
+      tenantId: t.id,
+      identifierSystem: SYS.healthcareService,
+      identifierValue: s.identifierValue,
+      name: s.name,
+    };
     await tx.simHealthcareService.upsert({ where: { id: s.id }, create: data, update: data });
   }
   for (const s of t.schedules) {
-    const data = { id: s.id, tenantId: t.id, identifierSystem: SYS.schedule, identifierValue: s.identifierValue, practitionerId: s.practitionerId, healthcareServiceId: s.healthcareServiceId };
+    const data = {
+      id: s.id,
+      tenantId: t.id,
+      identifierSystem: SYS.schedule,
+      identifierValue: s.identifierValue,
+      practitionerId: s.practitionerId,
+      healthcareServiceId: s.healthcareServiceId,
+    };
     await tx.simSchedule.upsert({ where: { id: s.id }, create: data, update: data });
   }
 }
 
 async function writeAgenda(tx: Tx, t: SeedTenant): Promise<void> {
   for (const s of t.slots) {
-    const data = { id: s.id, tenantId: t.id, identifierSystem: SYS.slot, identifierValue: s.identifierValue, scheduleId: s.scheduleId, startAt: s.startAt, endAt: s.endAt, status: s.status };
+    const data = {
+      id: s.id,
+      tenantId: t.id,
+      identifierSystem: SYS.slot,
+      identifierValue: s.identifierValue,
+      scheduleId: s.scheduleId,
+      startAt: s.startAt,
+      endAt: s.endAt,
+      status: s.status,
+    };
     await tx.simSlot.upsert({ where: { id: s.id }, create: data, update: data });
   }
   for (const p of t.patients) {
     const data = {
-      id: p.id, tenantId: t.id, identifierSystem: SYS.patient, identifierValue: p.identifierValue,
-      documentType: p.documentType, documentNumber: p.documentNumber, givenNames: p.givenNames,
-      familyNames: p.familyNames, birthDate: new Date(`${p.birthDate}T00:00:00.000Z`),
-      phone: p.phone, email: p.email, status: p.status,
+      id: p.id,
+      tenantId: t.id,
+      identifierSystem: SYS.patient,
+      identifierValue: p.identifierValue,
+      documentType: p.documentType,
+      documentNumber: p.documentNumber,
+      givenNames: p.givenNames,
+      familyNames: p.familyNames,
+      birthDate: new Date(`${p.birthDate}T00:00:00.000Z`),
+      phone: p.phone,
+      email: p.email,
+      status: p.status,
     };
     await tx.simPatient.upsert({ where: { id: p.id }, create: data, update: data });
   }
   for (const a of t.appointments) {
-    const data = { id: a.id, tenantId: t.id, identifierSystem: SYS.appointment, identifierValue: a.identifierValue, patientId: a.patientId, scheduleId: a.scheduleId, slotId: a.slotId, startAt: a.startAt, endAt: a.endAt, status: a.status };
+    const data = {
+      id: a.id,
+      tenantId: t.id,
+      identifierSystem: SYS.appointment,
+      identifierValue: a.identifierValue,
+      patientId: a.patientId,
+      scheduleId: a.scheduleId,
+      slotId: a.slotId,
+      startAt: a.startAt,
+      endAt: a.endAt,
+      status: a.status,
+    };
     await tx.simAppointment.upsert({ where: { id: a.id }, create: data, update: data });
   }
 }
 
 /** Siembra el schema hermes_sim: los maestros "de Hermes" antes de cualquier sincronizacion. */
-export async function writeSimulator(prisma: PrismaClient, tenants: readonly SeedTenant[]): Promise<void> {
+export async function writeSimulator(
+  prisma: PrismaClient,
+  tenants: readonly SeedTenant[],
+): Promise<void> {
   await prisma.$transaction(
     async (tx) => {
       for (const t of tenants) {
@@ -2540,12 +2735,14 @@ git commit -m "feat(seed): escritores simetricos del chatbot y del simulador, su
 ### Task 9: CI con Postgres, imagen que migra al arrancar y documentación
 
 **Files:**
+
 - Modify: `.github/workflows/ci.yml` (raíz del repo)
 - Modify: `backend/Dockerfile`
 - Create: `backend/docker/entrypoint.sh`
 - Modify: `README.md`, `CLAUDE.md` (raíz)
 
 **Interfaces:**
+
 - Consumes: scripts `test`, `db:seed` (Tasks 2 y 8); migraciones (Tasks 2 y 3).
 
 - [ ] **Step 1: Servicio Postgres en el job `backend` de CI**
@@ -2553,26 +2750,26 @@ git commit -m "feat(seed): escritores simetricos del chatbot y del simulador, su
 En `.github/workflows/ci.yml`, dentro de `jobs.backend`, añadir antes de `steps:`:
 
 ```yaml
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: chatbot_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+services:
+  postgres:
+    image: postgres:18-alpine
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chatbot_test
+    ports:
+      - 5432:5432
+    options: >-
+      --health-cmd "pg_isready -U postgres"
+      --health-interval 5s
+      --health-timeout 5s
+      --health-retries 10
 ```
 
 y en el bloque `env:` del job añadir:
 
 ```yaml
-      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/chatbot_test
+TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/chatbot_test
 ```
 
 - [ ] **Step 2: Entrypoint que migra y arranca**
@@ -2692,17 +2889,17 @@ git commit -m "chore: CI con Postgres, imagen que migra al arrancar y docs de ba
 
 ## Cobertura de la spec (sub-proyecto 1)
 
-| Spec | Task |
-| --- | --- |
-| §3.1 tablas `public`, FKs compuestas, CHECKs | 2 |
-| §3.2 schema `hermes_sim` sin FK a `public` | 3 |
-| §4.1 `shared` (Clock, IdGenerator, TenantId, cursor), frontera del simulador | 1 |
-| §4.2 paginación 50/200 y cursor opaco | 1 |
-| §5.3 idempotencia (almacén; la envoltura HTTP es del sub-proyecto 2) | 6 |
-| Auditoría sin contenido | 5 |
-| Tope de rango por tenant (dato y repositorio; rutas en sub-proyecto 2) | 2, 4 |
-| §6 seed determinista, dos escritores | 7, 8 |
-| §8 `simetria-seed`, base de `aislamiento-tenant`, `dominio` | 1, 2, 4, 7, 8 |
-| §9 migrar al arrancar, CI con Postgres | 9 |
+| Spec                                                                         | Task          |
+| ---------------------------------------------------------------------------- | ------------- |
+| §3.1 tablas `public`, FKs compuestas, CHECKs                                 | 2             |
+| §3.2 schema `hermes_sim` sin FK a `public`                                   | 3             |
+| §4.1 `shared` (Clock, IdGenerator, TenantId, cursor), frontera del simulador | 1             |
+| §4.2 paginación 50/200 y cursor opaco                                        | 1             |
+| §5.3 idempotencia (almacén; la envoltura HTTP es del sub-proyecto 2)         | 6             |
+| Auditoría sin contenido                                                      | 5             |
+| Tope de rango por tenant (dato y repositorio; rutas en sub-proyecto 2)       | 2, 4          |
+| §6 seed determinista, dos escritores                                         | 7, 8          |
+| §8 `simetria-seed`, base de `aislamiento-tenant`, `dominio`                  | 1, 2, 4, 7, 8 |
+| §9 migrar al arrancar, CI con Postgres                                       | 9             |
 
 Queda para el sub-proyecto 2: casos de uso de lectura y sus adaptadores Prisma, `idempotentRoute`, `conflict` (409) en `ERROR_CODES`, rutas `/api/v1` y `/api/sim/v1`, `openapi-sim.json`, `HERMES_SIMULATOR_ENABLED`, suites `dominio` de casos de uso, `aislamiento-tenant` completa e `idempotencia` HTTP.

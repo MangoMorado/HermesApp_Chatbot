@@ -1,5 +1,5 @@
 import type { Fragment, PostmanItem } from "../items";
-import { expectStatus, PREFIX, step, type StepSpec } from "./request";
+import { expectStatus, PREFIX, type StepSpec, step } from "./request";
 import { seedPatient } from "./seed-patients";
 
 /**

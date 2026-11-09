@@ -25,16 +25,16 @@ de correo y eco de documento), que son de backend y van por su propio arreglo.
 
 ## 2. Decisiones tomadas
 
-| Tema | Decisión | Razón |
-| --- | --- | --- |
-| Alcance de `/chat` | Consola de pruebas **y** widget embebible para sitios de tenants | Pedido del producto: el paciente es usuario de igual peso que el operador |
-| Incrustación | Dos modelos: script en la página e iframe | Pedido del producto; comparten núcleo, el coste extra es un montaje |
+| Tema                        | Decisión                                                                  | Razón                                                                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Alcance de `/chat`          | Consola de pruebas **y** widget embebible para sitios de tenants          | Pedido del producto: el paciente es usuario de igual peso que el operador                                                                                 |
+| Incrustación                | Dos modelos: script en la página e iframe                                 | Pedido del producto; comparten núcleo, el coste extra es un montaje                                                                                       |
 | Control de origen en iframe | Ninguno propio: el admin añade el origen del frontend a `allowed_origins` | Cero cambios de contrato. Coste asumido: con la clave pública cualquiera puede incrustar el iframe; la protección por origen queda solo en el modo script |
-| Núcleo | React, empaquetado con esbuild para el script | Un solo paradigma de UI; consola e iframe importan el componente. Pasar a Preact es un cambio de build |
-| Camino de red | El widget habla **directo al backend** por CORS en los tres montajes | Es lo que la 3.3 construyó; el proxy del frontend no reenvía `Origin` y haría caer a todos los pacientes en un mismo cubo del rate limit |
-| Cliente del chat | Tercer destino de orval con mutator propio | El mutator actual usa rutas relativas y el JWT del panel; el cliente no se escribe a mano |
-| Sesión del paciente | `sessionStorage`, por clave de widget | Recargar conserva la conversación; cerrar la pestaña la termina. El historial ya llega redactado |
-| Validación | No se duplican rangos ni reglas: se muestra el `422` del backend | Regla del frontend: sin reglas de negocio |
+| Núcleo                      | React, empaquetado con esbuild para el script                             | Un solo paradigma de UI; consola e iframe importan el componente. Pasar a Preact es un cambio de build                                                    |
+| Camino de red               | El widget habla **directo al backend** por CORS en los tres montajes      | Es lo que la 3.3 construyó; el proxy del frontend no reenvía `Origin` y haría caer a todos los pacientes en un mismo cubo del rate limit                  |
+| Cliente del chat            | Tercer destino de orval con mutator propio                                | El mutator actual usa rutas relativas y el JWT del panel; el cliente no se escribe a mano                                                                 |
+| Sesión del paciente         | `sessionStorage`, por clave de widget                                     | Recargar conserva la conversación; cerrar la pestaña la termina. El historial ya llega redactado                                                          |
+| Validación                  | No se duplican rangos ni reglas: se muestra el `422` del backend          | Regla del frontend: sin reglas de negocio                                                                                                                 |
 
 ## 3. Cambios fuera de `frontend/`
 
@@ -103,15 +103,15 @@ Cada envío genera un `Idempotency-Key` con `crypto.randomUUID()`. Si la petici�
 o `5xx`, el reintento manual del paciente reutiliza **la misma clave y el mismo cuerpo**; la
 clave se descarta al recibir una respuesta `2xx` o `4xx`.
 
-| Respuesta | Comportamiento |
-| --- | --- |
-| `200` | Añade el eco del paciente y las líneas del bot; reemplaza opciones y entrada |
-| `409` con `details.reason = "stale_option"` | Recarga la conversación y muestra el turno vigente |
-| `401` | Abre sesión nueva y recarga la conversación; no reenvía el turno |
-| `403` | Estado terminal «Este sitio no está autorizado para el chat»; solo se alcanza cuando el origen pertenece a otro tenant |
-| `422` | Muestra el mensaje del backend junto al campo; el turno sigue vigente |
-| `429` | Bloquea el envío los segundos de `Retry-After` |
-| Red / `5xx` | Aviso con botón «Reintentar»; un origen no registrado por ningún tenant también se ve así (el preflight CORS falla) |
+| Respuesta                                   | Comportamiento                                                                                                         |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `200`                                       | Añade el eco del paciente y las líneas del bot; reemplaza opciones y entrada                                           |
+| `409` con `details.reason = "stale_option"` | Recarga la conversación y muestra el turno vigente                                                                     |
+| `401`                                       | Abre sesión nueva y recarga la conversación; no reenvía el turno                                                       |
+| `403`                                       | Estado terminal «Este sitio no está autorizado para el chat»; solo se alcanza cuando el origen pertenece a otro tenant |
+| `422`                                       | Muestra el mensaje del backend junto al campo; el turno sigue vigente                                                  |
+| `429`                                       | Bloquea el envío los segundos de `Retry-After`                                                                         |
+| Red / `5xx`                                 | Aviso con botón «Reintentar»; un origen no registrado por ningún tenant también se ve así (el preflight CORS falla)    |
 
 El eco del paciente se toma siempre del historial del backend, sea opción o texto: tras el
 `200` se recarga la conversación y se muestra el último mensaje del paciente tal como el

@@ -1,10 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildPostmanCollection } from "../scripts/postman/build-collection";
-import { buildEnvironmentTemplate } from "../scripts/postman/environment";
-import { FRAGMENTS } from "../scripts/postman/fragments";
-import { COLLECTION_PATH, ENVIRONMENT_TEMPLATE_PATH, serialized } from "../scripts/postman/paths";
 import { GET as getHealth } from "@/app/api/v1/health/route";
 import { GET as getIdentity } from "@/app/api/v1/me/route";
 import { ERROR_CODES } from "@/http/error-codes";
@@ -20,6 +16,10 @@ import {
 } from "@/modules/auth/domain/machine-credential-error";
 import { createCheckHealth } from "@/modules/health/application/check-health";
 import { RateLimitedError } from "@/modules/shared/domain/rate-limited-error";
+import { buildPostmanCollection } from "../scripts/postman/build-collection";
+import { buildEnvironmentTemplate } from "../scripts/postman/environment";
+import { FRAGMENTS } from "../scripts/postman/fragments";
+import { COLLECTION_PATH, ENVIRONMENT_TEMPLATE_PATH, serialized } from "../scripts/postman/paths";
 import { signToken } from "./helpers/idp";
 
 const API_DIR = join(process.cwd(), "src", "app", "api", "v1");

@@ -37,12 +37,14 @@
 ### Task 1: `GET /api/platform/v1/me`
 
 **Files:**
+
 - Create: `backend/src/app/api/platform/v1/me/route.ts`
 - Modify: `backend/src/http/openapi-platform.ts` (schema y path)
 - Regenerate: `backend/openapi-platform.json`
 - Test: `backend/tests/roles.test.ts`
 
 **Interfaces:**
+
 - Produces: `GET /api/platform/v1/me` → `200 { subject: string, role: "platform" }`. `operationId: "getPlatformIdentity"`. Schema `PlatformIdentity` (`required: ["subject", "role"]`, `role: { type: "string", enum: ["platform"] }`). Responses `okJson(...)` + `readErrors`, `security: platformAuth`.
 
 - [x] **Step 1: Write the failing tests** en `roles.test.ts`, dentro del `describe` HTTP que ya usa `signToken`/`authedRequest`:
@@ -89,12 +91,14 @@ git commit -m "feat(platform): GET /api/platform/v1/me para la identidad de plat
 ### Task 2: usuario `platform-lab` en el laboratorio
 
 **Files:**
+
 - Modify: `backend/scripts/idp-lab/plan.ts` (`UserPlan`, `buildLabPlan`)
 - Modify: `backend/scripts/idp-lab/apply.ts` (`createUser`, `ensureUser`)
 - Modify: `backend/scripts/idp-lab/index.ts` (`printEnv`)
 - Test: `backend/tests/idp-lab-plan.test.ts`
 
 **Interfaces:**
+
 - Produces: `UserPlan = { username: string; tenantId?: string; role: LabRole }`. `export function userAttributes(existing: Record<string, unknown> | undefined, plan: UserPlan): Record<string, unknown>` en `apply.ts`. La función es pura: con `tenantId` pone `tenant_id: [tenantId]`, y sin él **quita** `tenant_id` y conserva el resto.
 
 - [x] **Step 1: Write the failing tests.** Actualiza el test «usuarios admin y operator por tenant» para que la lista termine en `"platform-lab"`, y añade estos:
@@ -107,10 +111,13 @@ it("platform-lab tiene rol platform y no lleva tenant", () => {
   });
 });
 it("userAttributes fija tenant_id o lo quita", () => {
-  expect(userAttributes({ x: ["1"] }, { username: "a", role: "admin", tenantId: "t" }))
-    .toEqual({ x: ["1"], tenant_id: ["t"] });
-  expect(userAttributes({ x: ["1"], tenant_id: ["viejo"] }, { username: "p", role: "platform" }))
-    .toEqual({ x: ["1"] });
+  expect(userAttributes({ x: ["1"] }, { username: "a", role: "admin", tenantId: "t" })).toEqual({
+    x: ["1"],
+    tenant_id: ["t"],
+  });
+  expect(
+    userAttributes({ x: ["1"], tenant_id: ["viejo"] }, { username: "p", role: "platform" }),
+  ).toEqual({ x: ["1"] });
   expect(userAttributes(undefined, { username: "p", role: "platform" })).toEqual({});
 });
 ```
@@ -128,6 +135,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 `lib/token.ts` deja de guardar un JWT pegado y pasa a ser un almacén en memoria de la sesión que le entrega el adaptador OIDC. Además coordina la renovación ante un `401`.
 
 **Files:**
+
 - Rewrite: `frontend/src/lib/token.ts`
 - Modify: `frontend/src/lib/api-fetcher.ts`
 - Modify: `frontend/src/lib/use-session.ts` (solo `useToken`, `useSessionKey` y `useAuthStatus`; `useIdentity` es de la tarea 5)
@@ -135,6 +143,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 - Modify: `frontend/tests/api-fetcher.test.ts`
 
 **Interfaces:**
+
 - Produces (`lib/token.ts`):
   - `type AuthStatus = "unconfigured" | "loading" | "anonymous" | "authenticated"`
   - `type SessionSnapshot = { status: AuthStatus; accessToken: string | null; sessionKey: string | null }`
@@ -185,6 +194,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 ### Task 4: adaptador OIDC, configuración y callback
 
 **Files:**
+
 - Modify: `frontend/package.json` (dependencia `oidc-client-ts` ^3, con `npm --prefix frontend install oidc-client-ts@^3`)
 - Modify: `frontend/src/config/env.ts`
 - Create: `frontend/src/lib/auth/settings.ts`
@@ -195,6 +205,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 - Test: `frontend/tests/env.test.ts`, `frontend/tests/auth-settings.test.ts`, `frontend/tests/auth-bind.test.ts`
 
 **Interfaces:**
+
 - Consumes: `setSession`, `setAuthStatus`, `setRenewer` (tarea 3).
 - Produces:
   - `env.ts`: `oidcConfig(): { issuer: string; clientId: string } | null`. Lee `PUBLIC_OIDC_ISSUER` (sin barras finales, con `withoutTrailingSlashes`) y `PUBLIC_OIDC_CLIENT_ID`. Devuelve `null` si falta alguna de las dos.
@@ -257,6 +268,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 ### Task 5: identidad de clínica o de plataforma
 
 **Files:**
+
 - Regenerate: `frontend/src/platform/**` (`npm --prefix frontend run api:generate`, que produce `getPlatformIdentity`)
 - Create: `frontend/src/lib/identity.ts`
 - Modify: `frontend/src/lib/use-session.ts` (`useIdentity`)
@@ -269,6 +281,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 - Test: `frontend/tests/identity.test.ts`
 
 **Interfaces:**
+
 - Consumes: `getIdentity` (cliente `chatbot`) y `getPlatformIdentity` (cliente `platform`).
 - Produces:
   - `type SessionIdentity = { kind: "tenant"; subject: string; role: "widget" | "operator" | "admin" | "service"; tenantId: string } | { kind: "platform"; subject: string; role: "platform" }`
@@ -295,6 +308,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 ### Task 6: pantallas sin token pegado
 
 **Files:**
+
 - Modify: `frontend/src/components/shell/session-drawer.tsx`
 - Modify: `frontend/src/components/simulador/tenants-panel.tsx`
 - Create: `frontend/src/components/shell/platform-notice.tsx`
@@ -308,6 +322,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
   - `components/chat/chat-console.tsx`
 
 **Interfaces:**
+
 - Consumes: `useAuthStatus` (tarea 3), `useAuthActions` (tarea 4), `useIdentity`/`SessionIdentity` (tarea 5).
 
 - [x] **Step 1: Session drawer.** Con `useAuthStatus()`:
@@ -338,6 +353,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
 ### Task 7: documentación, configuración y verificación
 
 **Files:**
+
 - Modify: `frontend/.env.example`
   - `PUBLIC_OIDC_ISSUER=https://keycloak.mangomorado.com/realms/chatbot-lab`
   - `PUBLIC_OIDC_CLIENT_ID=chatbot-reference-ui`
@@ -368,7 +384,7 @@ it("userAttributes fija tenant_id o lo quita", () => {
   2. `operator-clinica-sur` ve solo lo de su clínica.
   3. `platform-lab` da de alta una clínica y ve la franja de `PlatformNotice` en `/panel`.
   4. Tras más de 5 minutos sigue operando y la lista no parpadea.
-  6. `/chat` funciona sin login, y con sesión admin propone la clave vigente.
+  5. `/chat` funciona sin login, y con sesión admin propone la clave vigente.
 
   Anota además el resultado del callback con error: cancelar en la pantalla del proveedor muestra el error y «Volver a intentar».
 

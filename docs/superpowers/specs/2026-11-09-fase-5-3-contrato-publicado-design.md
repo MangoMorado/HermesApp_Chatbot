@@ -45,22 +45,22 @@ mismo peso:
 
 ## 2. Decisiones
 
-| Tema | Decisión | Quién |
-| --- | --- | --- |
-| Alcance | Swagger, Postman con Newman y `contrato-rutas`, con el mismo peso (§8 de la spec madre completa) | usuario |
-| `/docs` en producción | Apagado. Solo se enciende en laboratorio y desarrollo; en producción la consulta se hace con Postman | usuario |
-| Tokens de usuario en Newman | Cliente `chatbot-newman` en el realm de laboratorio, con password grant solo para él; Newman pide tokens de `admin-*`, `operator-*` y `platform-lab` con `LAB_USER_PASSWORD` | usuario |
-| Profundidad de `contrato-rutas` | Camino feliz más cada 4xx declarado que se pueda reproducir (400, 401, 403, 404, 409, 422 y 429). 500 y 503 solo por forma | usuario |
-| Datos tras Newman | La colección deshace lo que crea: cancela por FHIR y borra el conocimiento. Conversaciones, tickets y pre-registros quedan con un prefijo reconocible | usuario |
-| Activos de Swagger UI | `swagger-ui-dist` como dependencia, servido por el backend; nunca desde un CDN | Claude |
-| URLs OAuth2 en el JSON versionado | Marcadores fijos en el JSON generado; `/docs` los sustituye en el momento de servir por los endpoints del proveedor configurado (§3.2) | Claude |
-| Tokens en Postman | Scripts de pre-petición contra el token endpoint, no el asistente OAuth2 de Postman (Newman no lo ejecuta) | Claude |
-| Validador de esquema en tests | `ajv` (con `ajv-formats`) como devDependency del backend | Claude |
-| Newman | devDependency del backend, con un script npm. No entra en el CI (no hay red) | spec madre |
-| Esquema del simulador | `oidcUser`: sus 24 rutas exigen `admin`. No se abren a `service` | Claude (lo dicta el código) |
-| Pre-agenda en Newman | Se recorren rechazo y aprobación más cancelación; las dos dejan el cupo en `free` (§4.4) | Claude |
-| Escrituras irreversibles | `POST /tenants` con un slug fijo (`201` o `409`); rotar la clave del widget y reescribir su cliente quedan fuera de Newman, en una carpeta manual (§4.4.1) | Claude |
-| Maestros y CRUD del simulador | `PUT` FHIR idempotentes sobre lo sembrado; el CRUD crea con `newman-` y borra en la misma carpeta (§4.4.1) | Claude |
+| Tema                              | Decisión                                                                                                                                                                     | Quién                       |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| Alcance                           | Swagger, Postman con Newman y `contrato-rutas`, con el mismo peso (§8 de la spec madre completa)                                                                             | usuario                     |
+| `/docs` en producción             | Apagado. Solo se enciende en laboratorio y desarrollo; en producción la consulta se hace con Postman                                                                         | usuario                     |
+| Tokens de usuario en Newman       | Cliente `chatbot-newman` en el realm de laboratorio, con password grant solo para él; Newman pide tokens de `admin-*`, `operator-*` y `platform-lab` con `LAB_USER_PASSWORD` | usuario                     |
+| Profundidad de `contrato-rutas`   | Camino feliz más cada 4xx declarado que se pueda reproducir (400, 401, 403, 404, 409, 422 y 429). 500 y 503 solo por forma                                                   | usuario                     |
+| Datos tras Newman                 | La colección deshace lo que crea: cancela por FHIR y borra el conocimiento. Conversaciones, tickets y pre-registros quedan con un prefijo reconocible                        | usuario                     |
+| Activos de Swagger UI             | `swagger-ui-dist` como dependencia, servido por el backend; nunca desde un CDN                                                                                               | Claude                      |
+| URLs OAuth2 en el JSON versionado | Marcadores fijos en el JSON generado; `/docs` los sustituye en el momento de servir por los endpoints del proveedor configurado (§3.2)                                       | Claude                      |
+| Tokens en Postman                 | Scripts de pre-petición contra el token endpoint, no el asistente OAuth2 de Postman (Newman no lo ejecuta)                                                                   | Claude                      |
+| Validador de esquema en tests     | `ajv` (con `ajv-formats`) como devDependency del backend                                                                                                                     | Claude                      |
+| Newman                            | devDependency del backend, con un script npm. No entra en el CI (no hay red)                                                                                                 | spec madre                  |
+| Esquema del simulador             | `oidcUser`: sus 24 rutas exigen `admin`. No se abren a `service`                                                                                                             | Claude (lo dicta el código) |
+| Pre-agenda en Newman              | Se recorren rechazo y aprobación más cancelación; las dos dejan el cupo en `free` (§4.4)                                                                                     | Claude                      |
+| Escrituras irreversibles          | `POST /tenants` con un slug fijo (`201` o `409`); rotar la clave del widget y reescribir su cliente quedan fuera de Newman, en una carpeta manual (§4.4.1)                   | Claude                      |
+| Maestros y CRUD del simulador     | `PUT` FHIR idempotentes sobre lo sembrado; el CRUD crea con `newman-` y borra en la misma carpeta (§4.4.1)                                                                   | Claude                      |
 
 ## 3. Swagger UI en `/docs`
 
@@ -96,11 +96,11 @@ mismo peso:
 `bearerAuth` (chatbot y simulador) y `platformBearer` (plataforma) desaparecen. Los tres
 documentos declaran:
 
-| Esquema | Tipo | Flujos | Operaciones |
-| --- | --- | --- | --- |
-| `oidcUser` | `oauth2` | `authorizationCode` (PKCE) | las de `admin`/`operator` del chatbot, **las 24 del simulador** (hoy exigen `admin`, un usuario) y las de plataforma hechas por `platform-lab` |
-| `oidcClient` | `oauth2` | `clientCredentials` | las de plataforma hechas por `chatbot-platform` y `GET /api/v1/me` con `service` (en REST, `service` solo llega ahí; el resto de su trabajo va por `/fhir`) |
-| `widgetSession` | `http` bearer | — | las del widget; el token sale de `POST /widget/sessions` |
+| Esquema         | Tipo          | Flujos                     | Operaciones                                                                                                                                                 |
+| --------------- | ------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `oidcUser`      | `oauth2`      | `authorizationCode` (PKCE) | las de `admin`/`operator` del chatbot, **las 24 del simulador** (hoy exigen `admin`, un usuario) y las de plataforma hechas por `platform-lab`              |
+| `oidcClient`    | `oauth2`      | `clientCredentials`        | las de plataforma hechas por `chatbot-platform` y `GET /api/v1/me` con `service` (en REST, `service` solo llega ahí; el resto de su trabajo va por `/fhir`) |
+| `widgetSession` | `http` bearer | —                          | las del widget; el token sale de `POST /widget/sessions`                                                                                                    |
 
 Las operaciones públicas (`/health`, `/auth/backchannel-logout`, `/widget/sessions` y
 `/widget/sessions/refresh`) siguen con `security: []`. Esta entrega no cambia ningún rol: los
@@ -176,8 +176,8 @@ esquemas describen lo que el código ya exige.
     cancelación; y Hermes lo resuelve con `PUT /fhir/Task/{id}` `completed`, que libera el cupo.
   - La bandeja del simulador (`/api/sim/v1/inbox`) se ejercita con una tercera solicitud que
     termina rechazada.
-  (Un `Task` de cancelación lo origina el chatbot, nunca Hermes: Newman no puede crearlo
-  directamente.)
+    (Un `Task` de cancelación lo origina el chatbot, nunca Hermes: Newman no puede crearlo
+    directamente.)
 - Una carpeta de limpieza final, por si un paso falló a medias: rechaza cada `Appointment`
   `proposed` que lleve el prefijo, borra las entradas de conocimiento que creó y restaura la
   configuración del bot si la cambió (lee antes, escribe después).
@@ -201,9 +201,9 @@ esquemas describen lo que el código ya exige.
   - `POST /bot-config/widget-keys/rotate` invalida la `widget_key` que usan el frontend del
     laboratorio y el propio entorno de Postman;
   - `PUT /tenants/{id}/widget-client` sobrescribe el secreto OIDC del widget de la clínica.
-  Las dos peticiones siguen en la colección, en una carpeta «manual — rompe el laboratorio»
-  que Newman salta (`--folder` o equivalente), para que Hermes las vea y las pueda lanzar a
-  conciencia.
+    Las dos peticiones siguen en la colección, en una carpeta «manual — rompe el laboratorio»
+    que Newman salta (`--folder` o equivalente), para que Hermes las vea y las pueda lanzar a
+    conciencia.
 
 ### 4.5 Ejecución
 

@@ -41,7 +41,7 @@
    - `identity_unavailable` (503): el proveedor no responde o rechaza las credenciales de un cliente máquina.
    - `invalid_request` (400): `logout_token` inválido, porque OIDC exige 400.
 5. **Comodín `"*"` en `HERMES_SIM_SERVICE_CLIENTS`:** `{"*": {"client_id": "service-{tenant}", "client_secret": "…"}}` vale para cualquier tenant que no tenga entrada propia. Lo usan el laboratorio (todos los `service-*` comparten secreto) y las suites, cuyos tenants se crean al vuelo.
-6. **Sesiones antiguas:** `widget_sessions.secret_hash` es *nullable*. Las sesiones creadas antes del corte quedan inalcanzables y vencen solas. No hay migración destructiva.
+6. **Sesiones antiguas:** `widget_sessions.secret_hash` es _nullable_. Las sesiones creadas antes del corte quedan inalcanzables y vencen solas. No hay migración destructiva.
 7. **Back-channel logout sin `Idempotency-Key`:** cerrar un `sid` es idempotente por naturaleza (upsert con `GREATEST`). Se documenta como excepción en GOBERNANZA.
 8. **Token `platform` con claim de tenant:** se ignora el tenant, no se rechaza.
 9. **Mientras la PR está abierta, el frontend de referencia pega tokens:** el panel de tenants del simulador pide un bearer `platform` y pierde el botón «adoptar», que emitía un token admin. El login OIDC llega en la 5.2.
@@ -59,12 +59,14 @@
 ### Tarea 1: Configuración OIDC y proveedor falso de pruebas
 
 **Archivos:**
+
 - Modificar: `backend/src/config/env.ts` (añade el bloque `oidc`, `credentialsEncryptionKey` y `simServiceClients`; **conserva** `jwt` y `platformSecret` hasta la tarea 10)
 - Crear: `backend/tests/helpers/idp.ts`
 - Modificar: `backend/tests/setup-env.ts`
 - Prueba: `backend/tests/config-oidc.test.ts`, `backend/tests/idp-falso.test.ts`
 
 **Interfaces:**
+
 - Produce:
   - `type ClaimPath = { readonly segments: readonly string[]; readonly pick: "value" | "single-element" | "single-key" }`, exportado de `src/config/env.ts`.
   - `AppConfig.oidc: { issuer: string; audience: string; tenantClaim: ClaimPath; rolesClaim: readonly string[]; roleMap: ReadonlyMap<string, Role>; clockToleranceSeconds: number; logoutAudiences: readonly string[]; maxTokenLifetimeSeconds: number }`.
@@ -85,20 +87,50 @@
 `tests/config-oidc.test.ts` (patrón de `tests/fhir/config.test.ts`: guarda y restaura `process.env`, llama a `loadConfig()`):
 
 ```ts
-it("sin OIDC_ISSUER no arranca", () => expect(() => load({ OIDC_ISSUER: undefined })).toThrow(/OIDC_ISSUER/));
+it("sin OIDC_ISSUER no arranca", () =>
+  expect(() => load({ OIDC_ISSUER: undefined })).toThrow(/OIDC_ISSUER/));
 it("tenant claim con puntos y sufijos", () => {
-  expect(load({ OIDC_TENANT_CLAIM: "org.tenant_id" }).oidc.tenantClaim).toEqual({ segments: ["org", "tenant_id"], pick: "value" });
-  expect(load({ OIDC_TENANT_CLAIM: "organization[]" }).oidc.tenantClaim).toEqual({ segments: ["organization"], pick: "single-element" });
-  expect(load({ OIDC_TENANT_CLAIM: "organization{}" }).oidc.tenantClaim).toEqual({ segments: ["organization"], pick: "single-key" });
+  expect(load({ OIDC_TENANT_CLAIM: "org.tenant_id" }).oidc.tenantClaim).toEqual({
+    segments: ["org", "tenant_id"],
+    pick: "value",
+  });
+  expect(load({ OIDC_TENANT_CLAIM: "organization[]" }).oidc.tenantClaim).toEqual({
+    segments: ["organization"],
+    pick: "single-element",
+  });
+  expect(load({ OIDC_TENANT_CLAIM: "organization{}" }).oidc.tenantClaim).toEqual({
+    segments: ["organization"],
+    pick: "single-key",
+  });
 });
-it("un sufijo en medio de la ruta es invalido", () => expect(() => load({ OIDC_TENANT_CLAIM: "a[].b" })).toThrow(/OIDC_TENANT_CLAIM/));
+it("un sufijo en medio de la ruta es invalido", () =>
+  expect(() => load({ OIDC_TENANT_CLAIM: "a[].b" })).toThrow(/OIDC_TENANT_CLAIM/));
 it("OIDC_ROLE_MAP mapea a roles del producto", () =>
-  expect([...load({ OIDC_ROLE_MAP: "clinic-staff=operator,clinic-admin=admin" }).oidc.roleMap]).toEqual([["clinic-staff", "operator"], ["clinic-admin", "admin"]]));
-it("OIDC_ROLE_MAP con rol desconocido no arranca", () => expect(() => load({ OIDC_ROLE_MAP: "x=root" })).toThrow(/OIDC_ROLE_MAP/));
-it("CREDENTIALS_ENCRYPTION_KEY exige 32 bytes", () => expect(() => load({ CREDENTIALS_ENCRYPTION_KEY: "AQID" })).toThrow(/32 bytes/));
+  expect([
+    ...load({ OIDC_ROLE_MAP: "clinic-staff=operator,clinic-admin=admin" }).oidc.roleMap,
+  ]).toEqual([
+    ["clinic-staff", "operator"],
+    ["clinic-admin", "admin"],
+  ]));
+it("OIDC_ROLE_MAP con rol desconocido no arranca", () =>
+  expect(() => load({ OIDC_ROLE_MAP: "x=root" })).toThrow(/OIDC_ROLE_MAP/));
+it("CREDENTIALS_ENCRYPTION_KEY exige 32 bytes", () =>
+  expect(() => load({ CREDENTIALS_ENCRYPTION_KEY: "AQID" })).toThrow(/32 bytes/));
 it("con simulador encendido exige HERMES_SIM_SERVICE_CLIENTS", () =>
-  expect(() => load({ HERMES_SIMULATOR_ENABLED: "true", FHIR_GATEWAY: "handlers", HERMES_SIM_SERVICE_CLIENTS: undefined })).toThrow(/HERMES_SIM_SERVICE_CLIENTS/));
-it("defaults", () => expect(load({}).oidc).toMatchObject({ rolesClaim: ["roles"], clockToleranceSeconds: 30, logoutAudiences: [], maxTokenLifetimeSeconds: 300 }));
+  expect(() =>
+    load({
+      HERMES_SIMULATOR_ENABLED: "true",
+      FHIR_GATEWAY: "handlers",
+      HERMES_SIM_SERVICE_CLIENTS: undefined,
+    }),
+  ).toThrow(/HERMES_SIM_SERVICE_CLIENTS/));
+it("defaults", () =>
+  expect(load({}).oidc).toMatchObject({
+    rolesClaim: ["roles"],
+    clockToleranceSeconds: 30,
+    logoutAudiences: [],
+    maxTokenLifetimeSeconds: 300,
+  }));
 ```
 
 `tests/idp-falso.test.ts`:
@@ -112,12 +144,22 @@ it("discovery y JWKS responden en el issuer de pruebas", async () => {
 it("client_credentials emite roles y tenant por convención de client_id", async () => {
   const body = await clientCredentials("widget-tenant-a", TEST_CLIENT_SECRET);
   const payload = decodeJwt(body.access_token);
-  expect(payload).toMatchObject({ roles: ["widget"], tenant_id: "tenant-a", aud: "chatbot-api", iss: TEST_OIDC.issuer });
+  expect(payload).toMatchObject({
+    roles: ["widget"],
+    tenant_id: "tenant-a",
+    aud: "chatbot-api",
+    iss: TEST_OIDC.issuer,
+  });
   expect(payload.sid).toBeUndefined();
   expect(body.expires_in).toBe(300);
 });
-it("secreto erróneo → 401 invalid_client", async () => expect((await rawClientCredentials("service-x", "mal")).status).toBe(401));
-it("caído → fetch rechaza", async () => { setFakeIdpDown(true); await expect(fetch(`${TEST_OIDC.issuer}/.well-known/openid-configuration`)).rejects.toThrow(); setFakeIdpDown(false); });
+it("secreto erróneo → 401 invalid_client", async () =>
+  expect((await rawClientCredentials("service-x", "mal")).status).toBe(401));
+it("caído → fetch rechaza", async () => {
+  setFakeIdpDown(true);
+  await expect(fetch(`${TEST_OIDC.issuer}/.well-known/openid-configuration`)).rejects.toThrow();
+  setFakeIdpDown(false);
+});
 ```
 
 - [ ] **Paso 2: Ejecútalas y comprueba que fallan**
@@ -159,10 +201,12 @@ Ejecuta `npm --prefix backend exec vitest run tests/config-oidc.test.ts tests/id
 ### Tarea 2: `SecretBox` (AES-256-GCM)
 
 **Archivos:**
+
 - Crear: `backend/src/modules/shared/domain/ports/secret-box.ts`, `backend/src/modules/shared/infrastructure/aes-gcm-secret-box.ts`
 - Prueba: `backend/tests/secret-box.test.ts`
 
 **Interfaces:**
+
 - Produce:
   - `type SecretBox = { seal(plain: string): string; open(sealed: string): string }`.
   - `createAesGcmSecretBox(key: Uint8Array): SecretBox`. El formato es `v1.<base64url(iv12)>.<base64url(ciphertext||tag16)>`.
@@ -172,11 +216,18 @@ Ejecuta `npm --prefix backend exec vitest run tests/config-oidc.test.ts tests/id
 
 ```ts
 it("ida y vuelta", () => expect(box.open(box.seal("s3cr3t"))).toBe("s3cr3t"));
-it("dos sellos del mismo texto difieren (iv aleatorio)", () => expect(box.seal("a")).not.toBe(box.seal("a")));
-it("clave errónea falla", () => expect(() => otherBox.open(box.seal("a"))).toThrow("Secreto sellado invalido"));
-it("manipulación detectada", () => { const s = box.seal("a"); expect(() => box.open(flipLastChar(s))).toThrow("Secreto sellado invalido"); });
-it("el sello no contiene el texto", () => expect(box.seal("visible-text")).not.toContain("visible-text"));
-it("clave de longitud distinta de 32 lanza al crear", () => expect(() => createAesGcmSecretBox(new Uint8Array(16))).toThrow());
+it("dos sellos del mismo texto difieren (iv aleatorio)", () =>
+  expect(box.seal("a")).not.toBe(box.seal("a")));
+it("clave errónea falla", () =>
+  expect(() => otherBox.open(box.seal("a"))).toThrow("Secreto sellado invalido"));
+it("manipulación detectada", () => {
+  const s = box.seal("a");
+  expect(() => box.open(flipLastChar(s))).toThrow("Secreto sellado invalido");
+});
+it("el sello no contiene el texto", () =>
+  expect(box.seal("visible-text")).not.toContain("visible-text"));
+it("clave de longitud distinta de 32 lanza al crear", () =>
+  expect(() => createAesGcmSecretBox(new Uint8Array(16))).toThrow());
 ```
 
 - [ ] **Paso 2: Ejecútalas y comprueba que fallan:** `npm --prefix backend exec vitest run tests/secret-box.test.ts`. Resultado esperado: FAIL.
@@ -189,12 +240,14 @@ it("clave de longitud distinta de 32 lanza al crear", () => expect(() => createA
 ### Tarea 3: Mapper de claims, discovery y verificador OIDC (sin cablear)
 
 **Archivos:**
+
 - Crear: `backend/src/modules/auth/infrastructure/claims-mapper.ts`, `oidc-discovery.ts`, `oidc-token-verifier.ts`
 - Modificar: `backend/src/modules/auth/domain/role.ts` (añade `platform` y `TenantRole`), `backend/src/modules/auth/domain/ports/token-verifier.ts`
 - Crear: `backend/src/modules/auth/domain/ports/logout-token-verifier.ts`
 - Prueba: `backend/tests/claims-mapper.test.ts`, `backend/tests/oidc-verificador.test.ts`
 
 **Interfaces:**
+
 - Consume: `AppConfig.oidc` y `ClaimPath` de la tarea 1, y el proveedor falso.
 - Produce:
   - `ROLES = ["widget","operator","admin","service","platform"]` y `type TenantRole = Exclude<Role, "platform">`.
@@ -210,41 +263,137 @@ it("clave de longitud distinta de 32 lanza al crear", () => expect(() => createA
 `claims-mapper.test.ts` (puro, sin red):
 
 ```ts
-const base = { tenantClaim: { segments: ["tenant_id"], pick: "value" }, rolesClaim: ["roles"], roleMap: new Map() };
-it("contrato por defecto", () => expect(mapClaims({ sub: "u", tenant_id: "t", roles: ["operator"], sid: "s1" }, base)).toEqual({ subject: "u", role: "operator", tenantId: "t", providerSessionId: "s1" }));
-it("ignora roles desconocidos", () => expect(mapClaims({ sub: "u", tenant_id: "t", roles: ["offline_access", "default-roles-x", "admin"] }, base).role).toBe("admin"));
-it("cero roles → error", () => expect(() => mapClaims({ sub: "u", tenant_id: "t", roles: ["x"] }, base)).toThrow());
-it("dos roles → error", () => expect(() => mapClaims({ sub: "u", tenant_id: "t", roles: ["admin", "operator"] }, base)).toThrow());
-it("role map", () => expect(mapClaims({ sub: "u", tenant_id: "t", roles: ["clinic-staff"] }, { ...base, roleMap: new Map([["clinic-staff", "operator"]]) }).role).toBe("operator"));
-it("ruta anidada de roles", () => expect(mapClaims({ sub: "u", tenant_id: "t", realm_access: { roles: ["service"] } }, { ...base, rolesClaim: ["realm_access", "roles"] }).role).toBe("service"));
-it.each([[123], [null], [{}], [""], [undefined]])("tenant no string (%j) → error", (v) => expect(() => mapClaims({ sub: "u", tenant_id: v, roles: ["admin"] }, base)).toThrow());
-it("single-element", () => expect(mapClaims({ sub: "u", organization: ["clinica-x"], roles: ["admin"] }, { ...base, tenantClaim: { segments: ["organization"], pick: "single-element" } }).tenantId).toBe("clinica-x"));
-it.each([[[]], [["a", "b"]], [[1]]])("single-element inválido %j", (v) => expect(() => mapClaims({ sub: "u", organization: v, roles: ["admin"] }, { ...base, tenantClaim: { segments: ["organization"], pick: "single-element" } })).toThrow());
-it("single-key", () => expect(mapClaims({ sub: "u", organization: { "clinica-x": { id: "9" } }, roles: ["admin"] }, { ...base, tenantClaim: { segments: ["organization"], pick: "single-key" } }).tenantId).toBe("clinica-x"));
-it.each([[{}], [{ a: 1, b: 2 }], [["a"]]])("single-key inválido %j", (v) => expect(() => mapClaims({ sub: "u", organization: v, roles: ["admin"] }, { ...base, tenantClaim: { segments: ["organization"], pick: "single-key" } })).toThrow());
-it("platform sin tenant", () => expect(mapClaims({ sub: "p", roles: ["platform"] }, base)).toEqual({ subject: "p", role: "platform", tenantId: null }));
-it("platform con tenant lo ignora", () => expect(mapClaims({ sub: "p", tenant_id: "t", roles: ["platform"] }, base).tenantId).toBeNull());
-it("sin sub → error", () => expect(() => mapClaims({ tenant_id: "t", roles: ["admin"] }, base)).toThrow());
+const base = {
+  tenantClaim: { segments: ["tenant_id"], pick: "value" },
+  rolesClaim: ["roles"],
+  roleMap: new Map(),
+};
+it("contrato por defecto", () =>
+  expect(mapClaims({ sub: "u", tenant_id: "t", roles: ["operator"], sid: "s1" }, base)).toEqual({
+    subject: "u",
+    role: "operator",
+    tenantId: "t",
+    providerSessionId: "s1",
+  }));
+it("ignora roles desconocidos", () =>
+  expect(
+    mapClaims(
+      { sub: "u", tenant_id: "t", roles: ["offline_access", "default-roles-x", "admin"] },
+      base,
+    ).role,
+  ).toBe("admin"));
+it("cero roles → error", () =>
+  expect(() => mapClaims({ sub: "u", tenant_id: "t", roles: ["x"] }, base)).toThrow());
+it("dos roles → error", () =>
+  expect(() =>
+    mapClaims({ sub: "u", tenant_id: "t", roles: ["admin", "operator"] }, base),
+  ).toThrow());
+it("role map", () =>
+  expect(
+    mapClaims(
+      { sub: "u", tenant_id: "t", roles: ["clinic-staff"] },
+      { ...base, roleMap: new Map([["clinic-staff", "operator"]]) },
+    ).role,
+  ).toBe("operator"));
+it("ruta anidada de roles", () =>
+  expect(
+    mapClaims(
+      { sub: "u", tenant_id: "t", realm_access: { roles: ["service"] } },
+      { ...base, rolesClaim: ["realm_access", "roles"] },
+    ).role,
+  ).toBe("service"));
+it.each([[123], [null], [{}], [""], [undefined]])("tenant no string (%j) → error", (v) =>
+  expect(() => mapClaims({ sub: "u", tenant_id: v, roles: ["admin"] }, base)).toThrow(),
+);
+it("single-element", () =>
+  expect(
+    mapClaims(
+      { sub: "u", organization: ["clinica-x"], roles: ["admin"] },
+      { ...base, tenantClaim: { segments: ["organization"], pick: "single-element" } },
+    ).tenantId,
+  ).toBe("clinica-x"));
+it.each([[[]], [["a", "b"]], [[1]]])("single-element inválido %j", (v) =>
+  expect(() =>
+    mapClaims(
+      { sub: "u", organization: v, roles: ["admin"] },
+      { ...base, tenantClaim: { segments: ["organization"], pick: "single-element" } },
+    ),
+  ).toThrow(),
+);
+it("single-key", () =>
+  expect(
+    mapClaims(
+      { sub: "u", organization: { "clinica-x": { id: "9" } }, roles: ["admin"] },
+      { ...base, tenantClaim: { segments: ["organization"], pick: "single-key" } },
+    ).tenantId,
+  ).toBe("clinica-x"));
+it.each([[{}], [{ a: 1, b: 2 }], [["a"]]])("single-key inválido %j", (v) =>
+  expect(() =>
+    mapClaims(
+      { sub: "u", organization: v, roles: ["admin"] },
+      { ...base, tenantClaim: { segments: ["organization"], pick: "single-key" } },
+    ),
+  ).toThrow(),
+);
+it("platform sin tenant", () =>
+  expect(mapClaims({ sub: "p", roles: ["platform"] }, base)).toEqual({
+    subject: "p",
+    role: "platform",
+    tenantId: null,
+  }));
+it("platform con tenant lo ignora", () =>
+  expect(mapClaims({ sub: "p", tenant_id: "t", roles: ["platform"] }, base).tenantId).toBeNull());
+it("sin sub → error", () =>
+  expect(() => mapClaims({ tenant_id: "t", roles: ["admin"] }, base)).toThrow());
 ```
 
 `oidc-verificador.test.ts` (con el proveedor falso):
 
 ```ts
-it("acepta RS256 y ES256 válidos", async () => { /* signToken({role:"admin",tenantId:"t"}) y alg ES256 → verify ok */ });
+it("acepta RS256 y ES256 válidos", async () => {
+  /* signToken({role:"admin",tenantId:"t"}) y alg ES256 → verify ok */
+});
 it.each([
   ["firma con clave ajena", { foreignKey: true }],
   ["HS256", { alg: "HS256" }],
   ["emisor ajeno", { issuer: "https://otro" }],
   ["audiencia ajena", { audience: "otra" }],
   ["expirado más allá de la tolerancia", { expiresIn: "-31s" }],
-])("rechaza %s", async (_, opts) => await expect(verifier.verify(await signToken({ role: "admin", tenantId: "t", ...opts }))).rejects.toThrow());
-it("expirado dentro de la tolerancia pasa", async () => expect((await verifier.verify(await signToken({ role: "admin", tenantId: "t", expiresIn: "-10s" }))).role).toBe("admin"));
-it("proveedor caído → rechaza", async () => { setFakeIdpDown(true); await expect(verifier.verify(await signToken({ role: "admin", tenantId: "t" }))).rejects.toThrow(); setFakeIdpDown(false); });
-it("logout token válido devuelve sid", async () => expect(await verifier.verifyLogout(await signLogoutToken({ sid: "s1" }))).toEqual({ providerSessionId: "s1" }));
+])(
+  "rechaza %s",
+  async (_, opts) =>
+    await expect(
+      verifier.verify(await signToken({ role: "admin", tenantId: "t", ...opts })),
+    ).rejects.toThrow(),
+);
+it("expirado dentro de la tolerancia pasa", async () =>
+  expect(
+    (await verifier.verify(await signToken({ role: "admin", tenantId: "t", expiresIn: "-10s" })))
+      .role,
+  ).toBe("admin"));
+it("proveedor caído → rechaza", async () => {
+  setFakeIdpDown(true);
+  await expect(
+    verifier.verify(await signToken({ role: "admin", tenantId: "t" })),
+  ).rejects.toThrow();
+  setFakeIdpDown(false);
+});
+it("logout token válido devuelve sid", async () =>
+  expect(await verifier.verifyLogout(await signLogoutToken({ sid: "s1" }))).toEqual({
+    providerSessionId: "s1",
+  }));
 it.each([
-  ["sin evento", { events: {} }], ["con nonce", { nonce: "n" }], ["sin sid", { sid: undefined }],
+  ["sin evento", { events: {} }],
+  ["con nonce", { nonce: "n" }],
+  ["sin sid", { sid: undefined }],
   ["audiencia no listada", { audience: "chatbot-api" }],
-])("logout rechaza %s", async (_, opts) => await expect(verifier.verifyLogout(await signLogoutToken({ sid: "s1", ...opts }))).rejects.toThrow());
+])(
+  "logout rechaza %s",
+  async (_, opts) =>
+    await expect(
+      verifier.verifyLogout(await signLogoutToken({ sid: "s1", ...opts })),
+    ).rejects.toThrow(),
+);
 ```
 
 - [ ] **Paso 2: Ejecútalas y comprueba que fallan.** Resultado esperado: FAIL.
@@ -260,6 +409,7 @@ it.each([
 ### Tarea 4: Credenciales de clientes máquina, `ClientTokenSource` y sesiones cerradas (sin cablear)
 
 **Archivos:**
+
 - Modificar: `backend/prisma/schema.prisma`. Añade los modelos `MachineCredential` (`machine_credentials`: `tenant_id`, `kind`, `client_id`, `secret_sealed`, `created_at`, `updated_at`; `@@id([tenantId, kind])`; FK a `Tenant`) y `ClosedProviderSession` (`closed_provider_sessions`: `sid` PK, `closed_until timestamptz(3)`).
 - Crear: migración `backend/prisma/migrations/<ts>_fase5_1_identidad/` (la genera `prisma migrate dev --name fase5_1_identidad`). En la misma migración, `widget_sessions.secret_hash TEXT NULL UNIQUE`.
 - Crear en `backend/src/modules/auth/domain/ports/`: `client-token-source.ts`, `machine-credentials.ts`, `closed-sessions.ts`
@@ -268,6 +418,7 @@ it.each([
 - Prueba: `backend/tests/client-credentials.test.ts`, `backend/tests/db/credenciales-maquina.test.ts`
 
 **Interfaces:**
+
 - Consume: `SecretBox` (tarea 2) y `OidcDiscovery` (tarea 3).
 - Produce:
   - `type MachineCredentialRef = { readonly kind: "widget" | "service"; readonly tenantId: string }`.
@@ -289,24 +440,68 @@ it.each([
 `client-credentials.test.ts` (proveedor falso y reloj mutable):
 
 ```ts
-it("obtiene token con roles del cliente", async () => { const t = await source.tokenFor({ kind: "service", tenantId: "t1" }); expect(decodeJwt(t.accessToken)).toMatchObject({ roles: ["service"], tenant_id: "t1" }); });
-it("cachea hasta expiresAt − 30 s", async () => { await source.tokenFor(ref); await source.tokenFor(ref); expect(tokenCalls()).toBe(1); clock.advance(271_000); await source.tokenFor(ref); expect(tokenCalls()).toBe(2); });
-it("rotar el secreto invalida la caché", async () => { /* resolver devuelve otro secreto → nueva llamada */ });
-it("sin credenciales → MachineCredentialMissingError", async () => await expect(sourceWith(async () => null).tokenFor(ref)).rejects.toBeInstanceOf(MachineCredentialMissingError));
-it("secreto rechazado → IdentityUnavailableError", async () => await expect(sourceWith(async () => ({ clientId: "service-t1", clientSecret: "mal" })).tokenFor(ref)).rejects.toBeInstanceOf(IdentityUnavailableError));
-it("proveedor caído → IdentityUnavailableError", async () => { setFakeIdpDown(true); await expect(source.tokenFor(ref)).rejects.toBeInstanceOf(IdentityUnavailableError); setFakeIdpDown(false); });
-it("comodín de service", async () => expect(await configServiceResolver(new Map([["*", { clientId: "service-{tenant}", clientSecret: "s" }]]))({ kind: "service", tenantId: "t9" })).toEqual({ clientId: "service-t9", clientSecret: "s" }));
-it("widget nunca se resuelve desde config", async () => expect(await configServiceResolver(map)({ kind: "widget", tenantId: "t9" })).toBeNull());
+it("obtiene token con roles del cliente", async () => {
+  const t = await source.tokenFor({ kind: "service", tenantId: "t1" });
+  expect(decodeJwt(t.accessToken)).toMatchObject({ roles: ["service"], tenant_id: "t1" });
+});
+it("cachea hasta expiresAt − 30 s", async () => {
+  await source.tokenFor(ref);
+  await source.tokenFor(ref);
+  expect(tokenCalls()).toBe(1);
+  clock.advance(271_000);
+  await source.tokenFor(ref);
+  expect(tokenCalls()).toBe(2);
+});
+it("rotar el secreto invalida la caché", async () => {
+  /* resolver devuelve otro secreto → nueva llamada */
+});
+it("sin credenciales → MachineCredentialMissingError", async () =>
+  await expect(sourceWith(async () => null).tokenFor(ref)).rejects.toBeInstanceOf(
+    MachineCredentialMissingError,
+  ));
+it("secreto rechazado → IdentityUnavailableError", async () =>
+  await expect(
+    sourceWith(async () => ({ clientId: "service-t1", clientSecret: "mal" })).tokenFor(ref),
+  ).rejects.toBeInstanceOf(IdentityUnavailableError));
+it("proveedor caído → IdentityUnavailableError", async () => {
+  setFakeIdpDown(true);
+  await expect(source.tokenFor(ref)).rejects.toBeInstanceOf(IdentityUnavailableError);
+  setFakeIdpDown(false);
+});
+it("comodín de service", async () =>
+  expect(
+    await configServiceResolver(
+      new Map([["*", { clientId: "service-{tenant}", clientSecret: "s" }]]),
+    )({ kind: "service", tenantId: "t9" }),
+  ).toEqual({ clientId: "service-t9", clientSecret: "s" }));
+it("widget nunca se resuelve desde config", async () =>
+  expect(await configServiceResolver(map)({ kind: "widget", tenantId: "t9" })).toBeNull());
 ```
 
 `db/credenciales-maquina.test.ts`:
 
 ```ts
-it("put/get con secreto sellado en base", async () => { await store.put(t, "widget", { clientId: "widget-a", clientSecret: "abc" }, now); const row = await prisma.machineCredential.findFirstOrThrow(); expect(row.secretSealed).not.toContain("abc"); expect(await store.get(t, "widget")).toEqual({ clientId: "widget-a", clientSecret: "abc" }); });
-it("put reemplaza", async () => { /* segundo put con otro client_id → get devuelve el nuevo */ });
-it("otro tenant no ve la credencial", async () => expect(await store.get(other, "widget")).toBeNull());
-it("closed sessions: cerrado hasta until, luego no", async () => { await closed.close("s1", t0plus5m); expect(await closed.isClosed("s1", t0)).toBe(true); expect(await closed.isClosed("s1", t0plus6m)).toBe(false); });
-it("close nunca acorta", async () => { await closed.close("s1", late); await closed.close("s1", early); expect(await closed.isClosed("s1", between)).toBe(true); });
+it("put/get con secreto sellado en base", async () => {
+  await store.put(t, "widget", { clientId: "widget-a", clientSecret: "abc" }, now);
+  const row = await prisma.machineCredential.findFirstOrThrow();
+  expect(row.secretSealed).not.toContain("abc");
+  expect(await store.get(t, "widget")).toEqual({ clientId: "widget-a", clientSecret: "abc" });
+});
+it("put reemplaza", async () => {
+  /* segundo put con otro client_id → get devuelve el nuevo */
+});
+it("otro tenant no ve la credencial", async () =>
+  expect(await store.get(other, "widget")).toBeNull());
+it("closed sessions: cerrado hasta until, luego no", async () => {
+  await closed.close("s1", t0plus5m);
+  expect(await closed.isClosed("s1", t0)).toBe(true);
+  expect(await closed.isClosed("s1", t0plus6m)).toBe(false);
+});
+it("close nunca acorta", async () => {
+  await closed.close("s1", late);
+  await closed.close("s1", early);
+  expect(await closed.isClosed("s1", between)).toBe(true);
+});
 ```
 
 - [ ] **Paso 2: Ejecútalas y comprueba que fallan.**
@@ -321,12 +516,14 @@ it("close nunca acorta", async () => { await closed.close("s1", late); await clo
 Desde aquí el verificador ya no acepta HS256. **Suites que quedan en rojo de forma declarada hasta su tarea:** `sesion-widget`, `flujo`, `verificacion`, `cors` y `pre-registro-handoff` (widget, tarea 8), `alta-chatbot` (tarea 6), y `hermes-simulador` y `pre-agenda-bandeja` (tarea 7). Todas las demás tienen que acabar en verde.
 
 **Archivos:**
+
 - Modificar en `backend/src/modules/auth/`: `domain/actor.ts`, `domain/ports/token-verifier.ts` (quita `sessionId`), `application/authenticate.ts` y `application/authorize.ts`
 - Modificar en `backend/src/`: `composition-root.ts`, `http/route.ts`, `http/idempotent-route.ts`, `http/fhir-route.ts`, `http/fhir-idempotent-route.ts` y `app/api/v1/me/route.ts` (si narra el actor)
 - Modificar: todas las pruebas que importan `signToken` desde `helpers/token`, que pasan a importarlo de `helpers/idp`. Incluye `tests/helpers/fhir.ts`, donde `serviceToken` emite `roles: ["service"]`.
 - Prueba: `backend/tests/roles.test.ts` (se reescribe el bloque «emisión de tokens»)
 
 **Interfaces:**
+
 - Consume: `createOidcTokenVerifier` y `createOidcDiscovery` (tarea 3), y `createPrismaClosedSessions` (tarea 4).
 - Produce:
   - Tipos de actor:
@@ -344,11 +541,31 @@ Desde aquí el verificador ya no acepta HS256. **Suites que quedan en rojo de fo
   - El bloque «emisión de tokens» y los de plataforma se sustituyen por:
 
 ```ts
-it("platform no alcanza rutas de tenant", async () => expect((await getIdentity(authorized(await signToken({ role: "platform" })))).status).toBe(403));
-it("tenant fuera de una ruta FHIR con token platform → 403", async () => expect((await fhirGet("Patient", await signToken({ role: "platform" }))).response.status).toBe(403));
-it("sesión del proveedor cerrada → 401", async () => { await container().closedSessions.close("sid-x", inFiveMinutes()); expect((await getIdentity(authorized(await signToken({ role: "admin", tenantId: "t", sid: "sid-x" })))).status).toBe(401); });
-it("token sin sid se acepta", async () => expect((await getIdentity(authorized(await signToken({ role: "admin", tenantId: "t" })))).status).toBe(200));
-it("cero o dos roles → 401", async () => expect((await getIdentity(authorized(await signToken({ roles: ["admin", "operator"], tenantId: "t" })))).status).toBe(401));
+it("platform no alcanza rutas de tenant", async () =>
+  expect((await getIdentity(authorized(await signToken({ role: "platform" })))).status).toBe(403));
+it("tenant fuera de una ruta FHIR con token platform → 403", async () =>
+  expect((await fhirGet("Patient", await signToken({ role: "platform" }))).response.status).toBe(
+    403,
+  ));
+it("sesión del proveedor cerrada → 401", async () => {
+  await container().closedSessions.close("sid-x", inFiveMinutes());
+  expect(
+    (await getIdentity(authorized(await signToken({ role: "admin", tenantId: "t", sid: "sid-x" }))))
+      .status,
+  ).toBe(401);
+});
+it("token sin sid se acepta", async () =>
+  expect(
+    (await getIdentity(authorized(await signToken({ role: "admin", tenantId: "t" })))).status,
+  ).toBe(200));
+it("cero o dos roles → 401", async () =>
+  expect(
+    (
+      await getIdentity(
+        authorized(await signToken({ roles: ["admin", "operator"], tenantId: "t" })),
+      )
+    ).status,
+  ).toBe(401));
 ```
 
 Los casos de sesión cerrada van en una suite `db` si `closedSessions` necesita Postgres: `tests/db/sesion-cerrada.test.ts`.
@@ -363,6 +580,7 @@ Los casos de sesión cerrada van en una suite `db` si `closedSessions` necesita 
 ### Tarea 6: Plataforma por rol `platform` y credenciales de widget
 
 **Archivos:**
+
 - Modificar: `backend/src/http/platform-route.ts` (`requirePlatform` por secreto → `authenticate` + `requirePlatformActor`; el handler recibe `actor: PlatformActor`)
 - Modificar en `backend/src/modules/platform/`: `application/register-tenant.ts`, `domain/tenant-registration.ts` y `domain/platform-actor.ts` (se elimina `PLATFORM_AUDIT_ACTOR`)
 - Crear: `backend/src/modules/platform/application/set-widget-client.ts` y `backend/src/modules/platform/domain/widget-client.ts`
@@ -373,6 +591,7 @@ Los casos de sesión cerrada van en una suite `db` si `closedSessions` necesita 
 - Prueba: `backend/tests/db/alta-chatbot.test.ts` (se reescribe) y `backend/tests/dominio/plataforma.test.ts`
 
 **Interfaces:**
+
 - Consume: `MachineCredentialStore` (tarea 4) y `requirePlatformActor` (tarea 5).
 - Produce:
   - `parseWidgetClient(raw: unknown): MachineCredential`. Exige `client_id` y `client_secret` no vacíos, de 200 caracteres como máximo. Si falla, lanza `ValidationError` con `field`.
@@ -407,6 +626,7 @@ El token platform de las pruebas se obtiene con `ClientTokenSource`/`fetch` cont
 ### Tarea 7: Token `service` del simulador por `client_credentials`
 
 **Archivos:**
+
 - Modificar: `backend/src/modules/hermes-simulator/application/service-tokens.ts`. Pasa a `createServiceTokens(source: ClientTokenSource): ServiceTokenIssuer`, con `issue(tenantId)` = `(await source.tokenFor({ kind: "service", tenantId })).accessToken`.
 - Modificar: `backend/src/composition/chatbot-requests.ts` y `backend/scripts/hermes-sync.ts`. Crean `createOidcClientCredentials({ discovery, resolve: configServiceResolver(config.simServiceClients), clock: systemClock })`. El composition root comparte la instancia de discovery.
 - Prueba: `backend/tests/db/hermes-simulador.test.ts` y `backend/tests/db/pre-agenda-bandeja.test.ts`
@@ -416,7 +636,9 @@ El token platform de las pruebas se obtiene con `ClientTokenSource`/`fetch` cont
 ```ts
 it("el sujeto auditado de una escritura FHIR es el sub del proveedor", async () => {
   await sync(alpha.tenantId);
-  const ev = await prisma.auditEvent.findFirstOrThrow({ where: { tenantId: alpha.tenantId, actorRole: "service" } });
+  const ev = await prisma.auditEvent.findFirstOrThrow({
+    where: { tenantId: alpha.tenantId, actorRole: "service" },
+  });
   expect(ev.actorSubject).toBe(`service-account-service-${alpha.tenantId}`);
 });
 ```
@@ -431,6 +653,7 @@ it("el sujeto auditado de una escritura FHIR es el sub del proveedor", async () 
 ### Tarea 8: Sesión del widget por el proveedor con `conversation_secret`
 
 **Archivos:**
+
 - Modificar en `backend/src/modules/widget/`:
   - `domain/widget-session.ts`: `WidgetSession` gana `secretHash: string | null`.
   - `domain/ports/ports.ts`: `WidgetSessionRepository.getBySecretHash(tenantId, hash)` y el puerto `ConversationSecrets`.
@@ -442,6 +665,7 @@ it("el sujeto auditado de una escritura FHIR es el sub del proveedor", async () 
 - Prueba: `backend/tests/db/sesion-widget.test.ts` (se reescribe), `backend/tests/db/chat-support.ts` y `backend/tests/db/support.ts`. `insertChatbotTenant` guarda la credencial `widget-<tenantId>`/`TEST_CLIENT_SECRET` con `SecretBox`; se añade la opción `{ widgetClient: false }`.
 
 **Interfaces:**
+
 - Consume: `ClientTokenSource` (tarea 4), resolver de widget `(ref) => ref.kind === "widget" ? store.get(ref.tenantId, "widget") : null` y `SecretBox` (tarea 2).
 - Produce:
   - `type ConversationSecrets = { generate(): string; hash(secret: string): string }`. Genera 32 bytes aleatorios en base64url; el hash es sha256 en hex.
@@ -511,11 +735,13 @@ Se conservan los casos actuales de clave inválida, origen, rate limit por IP y 
 ### Tarea 9: Back-channel logout
 
 **Archivos:**
+
 - Crear: `backend/src/modules/auth/application/close-provider-session.ts` y `backend/src/app/api/v1/auth/backchannel-logout/route.ts`
 - Modificar: `backend/src/composition-root.ts` (`Container.closeProviderSession`) y `backend/src/http/openapi.ts`
 - Prueba: `backend/tests/db/backchannel-logout.test.ts`
 
 **Interfaces:**
+
 - Consume: `LogoutTokenVerifier` (tarea 3) y `ClosedSessions` (tarea 4).
 - Produce: `createCloseProviderSession(deps: { verifier: LogoutTokenVerifier; closedSessions: ClosedSessions; clock: Clock; maxTokenLifetimeSeconds: number }): (logoutToken: unknown) => Promise<void>`.
   - Un token ausente o inválido → `InvalidRequestError` (400 `invalid_request`).
@@ -547,6 +773,7 @@ it("repetir el mismo logout es inocuo → 200", ...);
 ### Tarea 10: Retiro del emisor HS256 y regla de agnosticismo
 
 **Archivos:**
+
 - Borrar en `backend/src/modules/auth/`: `domain/ports/token-issuer.ts`, `infrastructure/jose-token-issuer.ts` y `infrastructure/jose-token-verifier.ts`
 - Borrar: `backend/scripts/token-dev.ts`, `backend/tests/helpers/token.ts` y el script `token:dev` de `backend/package.json`
 - Modificar: `backend/src/config/env.ts` (se quitan `jwt` y `platformSecret`), `backend/tests/setup-env.ts` y `backend/tests/fhir/config.test.ts`
@@ -559,11 +786,15 @@ it("repetir el mismo logout es inocuo → 200", ...);
 ```ts
 it("ningun archivo de backend/src ni frontend/src menciona keycloak", () => {
   const roots = [join(process.cwd(), "src"), join(process.cwd(), "..", "frontend", "src")];
-  const offenders = roots.flatMap(listAllFiles).filter((f) => /keycloak/i.test(readFileSync(f, "utf8")));
+  const offenders = roots
+    .flatMap(listAllFiles)
+    .filter((f) => /keycloak/i.test(readFileSync(f, "utf8")));
   expect(offenders).toEqual([]);
 });
 it("no queda emisor de tokens en el backend", () => {
-  const offenders = listAllFiles(join(process.cwd(), "src")).filter((f) => /\bSignJWT\b|TokenIssuer\b|JWT_SECRET|PLATFORM_SECRET/.test(readFileSync(f, "utf8")));
+  const offenders = listAllFiles(join(process.cwd(), "src")).filter((f) =>
+    /\bSignJWT\b|TokenIssuer\b|JWT_SECRET|PLATFORM_SECRET/.test(readFileSync(f, "utf8")),
+  );
   expect(offenders).toEqual([]);
 });
 ```
@@ -580,6 +811,7 @@ it("no queda emisor de tokens en el backend", () => {
 ### Tarea 11: Script del laboratorio (`backend/scripts/idp-lab/`)
 
 **Archivos:**
+
 - Crear en `backend/scripts/idp-lab/`:
   - `plan.ts`: puro. A partir de los tenants y las URLs devuelve el estado deseado.
   - `admin-client.ts`: `fetch` contra la API de administración.
@@ -589,6 +821,7 @@ it("no queda emisor de tokens en el backend", () => {
 - Prueba: `backend/tests/idp-lab-plan.test.ts`
 
 **Interfaces:**
+
 - Entradas (env del script, leídas en `index.ts`; los scripts quedan fuera de la regla de `process.env`, como `demo.ts`):
   - Conexión: `IDP_ADMIN_URL`, `IDP_ADMIN_REALM` (por defecto `master`), `IDP_ADMIN_CLIENT_ID` e `IDP_ADMIN_CLIENT_SECRET`.
   - URLs: `LAB_API_URL` y `LAB_FRONTEND_URLS` (lista con comas; siempre incluye `http://localhost:3000`).
@@ -617,12 +850,27 @@ it("no queda emisor de tokens en el backend", () => {
 - [ ] **Paso 1: Escribe la prueba que falla** (solo `plan.ts`, sin red):
 
 ```ts
-const plan = buildLabPlan({ tenants: [{ id: "t-n", slug: "clinica-norte" }], apiUrl: "https://api.x", frontendUrls: ["http://localhost:3000"] });
-it("un widget y un service por tenant, con claim fijo", () => expect(plan.clients.find(c => c.clientId === "widget-t-n")?.hardcodedTenant).toBe("t-n"));
-it("reference-ui público, PKCE y back-channel a la API", () => expect(plan.clients.find(c => c.clientId === "chatbot-reference-ui")).toMatchObject({ public: true, pkce: "S256", backchannelLogoutUrl: "https://api.x/api/v1/auth/backchannel-logout" }));
-it("atributo tenant_id declarado en el user profile", () => expect(plan.userProfileAttributes).toContain("tenant_id"));
+const plan = buildLabPlan({
+  tenants: [{ id: "t-n", slug: "clinica-norte" }],
+  apiUrl: "https://api.x",
+  frontendUrls: ["http://localhost:3000"],
+});
+it("un widget y un service por tenant, con claim fijo", () =>
+  expect(plan.clients.find((c) => c.clientId === "widget-t-n")?.hardcodedTenant).toBe("t-n"));
+it("reference-ui público, PKCE y back-channel a la API", () =>
+  expect(plan.clients.find((c) => c.clientId === "chatbot-reference-ui")).toMatchObject({
+    public: true,
+    pkce: "S256",
+    backchannelLogoutUrl: "https://api.x/api/v1/auth/backchannel-logout",
+  }));
+it("atributo tenant_id declarado en el user profile", () =>
+  expect(plan.userProfileAttributes).toContain("tenant_id"));
 it("vida de acceso 300 s", () => expect(plan.realm.accessTokenLifespan).toBe(300));
-it("usuarios admin y operator por tenant", () => expect(plan.users.map(u => u.username)).toEqual(["admin-clinica-norte", "operator-clinica-norte"]));
+it("usuarios admin y operator por tenant", () =>
+  expect(plan.users.map((u) => u.username)).toEqual([
+    "admin-clinica-norte",
+    "operator-clinica-norte",
+  ]));
 ```
 
 - [ ] **Paso 2: Ejecútala y comprueba que falla.**
@@ -639,6 +887,7 @@ it("usuarios admin y operator por tenant", () => expect(plan.users.map(u => u.us
 ### Tarea 12: Gobernanza, roadmap y README
 
 **Archivos:**
+
 - Modificar: `GOBERNANZA.md`
   - §1.3: plataforma con rol `platform` del proveedor; no emite tokens.
   - §1.4: token del widget del proveedor, conversación por `conversation_secret`, cinco roles.

@@ -25,7 +25,8 @@
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "hermes:sync": "tsx scripts/hermes-sync.ts",
     "idp:lab": "tsx scripts/idp-lab/index.ts",
-    "postman:generate": "tsx scripts/postman/generate.ts"
+    "postman:generate": "tsx scripts/postman/generate.ts",
+    "postman:run": "tsx scripts/postman/run.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",
@@ -42,12 +43,14 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.6",
+    "@types/newman": "^5.3.6",
     "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@vitest/coverage-v8": "^5.1.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "newman": "^6.2.3",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   },
