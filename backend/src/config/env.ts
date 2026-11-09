@@ -43,7 +43,11 @@ export type AppConfig = {
   readonly fhirBaseUrl: string | null;
   /** `handlers` solo lo usan las pruebas, que invocan `/fhir` sin abrir un puerto. */
   readonly fhirGateway: "fetch" | "handlers";
+  /** Swagger UI en `/docs`: solo laboratorio y desarrollo; en produccion, apagado. */
+  readonly docs: DocsConfig;
 };
+
+export type DocsConfig = { readonly enabled: boolean; readonly oidcClientId: string };
 
 function required(name: string): string {
   const value = process.env[name];
@@ -221,6 +225,10 @@ export function loadConfig(): AppConfig {
     trustProxy: optional("TRUST_PROXY", "false") === "true",
     fhirBaseUrl: fhirBaseUrl(),
     fhirGateway: fhirGateway(),
+    docs: {
+      enabled: optional("DOCS_ENABLED", "false") === "true",
+      oidcClientId: optional("DOCS_OIDC_CLIENT_ID", "chatbot-swagger"),
+    },
   };
   if (
     config.hermesSimulatorEnabled &&

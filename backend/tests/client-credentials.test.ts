@@ -97,7 +97,11 @@ describe("client-credentials", () => {
         init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
       });
     const source = createOidcClientCredentials({
-      discovery: async () => ({ jwksUri: "https://idp.x/certs", tokenEndpoint: "https://idp.x/t" }),
+      discovery: async () => ({
+        jwksUri: "https://idp.x/certs",
+        tokenEndpoint: "https://idp.x/t",
+        authorizationEndpoint: null,
+      }),
       resolve: good,
       clock,
       httpTimeoutMs: 20,

@@ -3,6 +3,7 @@ import { type AuthWiring, authWiring } from "./composition/auth-wiring";
 import { botConfigReads, botConfigWritePorts } from "./composition/bot-config-wiring";
 import { chatbotRequests } from "./composition/chatbot-requests";
 import { conversationWritePorts } from "./composition/conversation-wiring";
+import { type DocsWiring, docsWiring } from "./composition/docs-wiring";
 import {
   type FhirReads,
   type FhirWritePorts,
@@ -86,6 +87,8 @@ export type Container = {
   readonly idempotencyStore: IdempotencyStore;
   readonly platformIdempotencyStore: PlatformIdempotencyStore;
   readonly hermesSimulatorEnabled: boolean;
+  /** Swagger UI de `/docs` (spec 5.3 §3). */
+  readonly docs: DocsWiring;
   readonly withWriteTransaction: <T>(fn: (ports: WritePorts) => Promise<T>) => Promise<T>;
 } & AuthWiring &
   PreAgendaReads &
@@ -150,6 +153,7 @@ export function getContainer(): Container {
       idempotencyStore: createPrismaIdempotencyStore(prisma),
       platformIdempotencyStore: createPrismaPlatformIdempotencyStore(prisma),
       hermesSimulatorEnabled: config.hermesSimulatorEnabled,
+      docs: docsWiring(config, auth.oidcDiscovery),
       ...preAgenda,
       ...schedulingReads(prisma, preAgenda.expireDueRequests),
       ...patientReads(prisma),
