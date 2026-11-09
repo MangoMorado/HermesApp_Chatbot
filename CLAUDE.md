@@ -92,7 +92,7 @@ Detalles de instalación que muerden: npm 12 bloquea los scripts de instalación
 Si `biome` no produce salida, el binario se bajó truncado: borra `node_modules/@biomejs`
 y reinstala (el `.exe` correcto pesa ~76 MB).
 
-Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`.
+Las suites de Vitest se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`, `dominio`, `aislamiento-tenant`, `simetria-seed`, `flujo`, `verificacion`, `pre-agenda`, `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`, `fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`, `contrato-rutas`.
 
 ## Puertas de calidad por PR
 

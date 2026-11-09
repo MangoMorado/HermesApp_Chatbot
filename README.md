@@ -107,7 +107,8 @@ npm --prefix backend run idp:lab
 
 Construye el realm `chatbot-lab` en un Keycloak y sus clientes: `chatbot-platform`,
 `widget-<tenant>`, `service-<tenant>`, `chatbot-reference-ui` (PKCE, back-channel logout) y
-`chatbot-swagger`, más los usuarios `admin-<slug>`, `operator-<slug>` y `platform-lab` (rol
+`chatbot-swagger` y `chatbot-newman` (confidencial, el único con password grant: solo para
+Newman), más los usuarios `admin-<slug>`, `operator-<slug>` y `platform-lab` (rol
 `platform`, sin clínica: da de alta tenants desde el simulador). Imprime las líneas
 `OIDC_*` para pegar en `.env`. Variables del laboratorio: `IDP_ADMIN_URL`, `IDP_ADMIN_REALM`,
 `IDP_ADMIN_CLIENT_ID`, `IDP_ADMIN_CLIENT_SECRET` (conexión de administración), `LAB_API_URL`,
@@ -165,6 +166,61 @@ Para que Hermes sea el proveedor de identidad de este servicio:
    sobreviviría al cierre de su sesión.
 4. En producción, Hermes obtiene su propio token `service` de su proveedor; este servicio nunca
    ve ese secreto.
+
+## Contrato publicado
+
+Tres caminos para probar el contrato REST sin escribirnos: Swagger UI, la colección Postman con
+Newman y la suite `contrato-rutas` del CI.
+
+### Swagger UI (`/docs`)
+
+Con `DOCS_ENABLED=true` (laboratorio y desarrollo; en producción, apagado), el backend sirve
+`/docs` con los tres contratos: chatbot, plataforma y, si `HERMES_SIMULATOR_ENABLED=true`,
+simulador. Los activos salen del paquete `swagger-ui-dist` (nada de CDN) y `/docs` lleva su
+propia CSP. «Authorize» ofrece:
+
+- `oidcUser` (authorization code con PKCE, cliente `DOCS_OIDC_CLIENT_ID`): `admin-*`, `operator-*`
+  o `platform-lab`;
+- `oidcClient` (client credentials): `service-<tenant>` o `chatbot-platform`; el secreto lo
+  teclea quien prueba, `/docs` nunca lo sirve;
+- `widgetSession`: el `access_token` que devuelve `POST /widget/sessions`.
+
+El JSON versionado lleva URLs OAuth2 de marcador (`https://oidc.invalid/...`); `/docs/openapi/*.json`
+las sustituye por las del discovery de `OIDC_ISSUER`. Si el proveedor no responde, `503`.
+
+### Postman y Newman
+
+La colección [`docs/chatbot-ingenius-360.postman_collection.json`](docs/chatbot-ingenius-360.postman_collection.json)
+se **genera** desde los builders OpenAPI y los recorridos de `backend/scripts/postman/fragments/`:
+
+```bash
+npm --prefix backend run postman:generate
+```
+
+Editarla a mano rompe `contrato-api`. Sus carpetas de recorrido (`setup`, widget E2E de las dos
+clínicas, maestros FHIR, CRUD del simulador, plataforma, panel y `cleanup`) son lo que ejecuta
+Newman. La carpeta `catálogo` trae una petición por operación para explorar a mano, y su
+subcarpeta `manual — rompe el laboratorio` (rotar la clave del widget y reescribir su cliente)
+nunca la ejecuta Newman.
+
+Para preparar el entorno, corre `idp:lab` con `LAB_POSTMAN_ENV_OUT=<ruta fuera del repo>`: escribe
+el entorno con valores, con los secretos marcados como `secret`. También puedes copiar
+[`docs/lab.postman_environment.template.json`](docs/lab.postman_environment.template.json) y
+rellenarla con el bloque `# Postman` que imprime `idp:lab`. Los archivos `*.postman_environment.json`
+están en `.gitignore`. Después:
+
+```bash
+npm --prefix backend run postman:run -- --env <ruta-al-entorno>
+```
+
+Requisitos: el laboratorio sembrado con `db:seed` (las dos clínicas, cupos futuros y el
+primer paciente de cada una) y el simulador encendido. Newman no entra en el CI.
+
+La colección se deshace sola: rechaza o cancela lo que reserva, borra el conocimiento que crea
+y restaura el texto del bot y los orígenes. Al final comprueba que los cupos `free` son los
+mismos que al empezar. Un paso fallido salta a `cleanup`. Quedan de rastro, con nombres
+reconocibles, las conversaciones, los tickets, los pre-registros «Newman Prueba» y una sola
+clínica `newman-clinica`.
 
 ## Widget del chat
 
@@ -248,6 +304,8 @@ provisionales hasta la Fase 6, donde salen del YAML versionado.
 | `HERMES_SIM_SERVICE_CLIENTS`                          | backend           | JSON de clientes `service` del simulador por tenant; obligatoria solo con `HERMES_SIMULATOR_ENABLED=true`. Acepta `"*"` con `{tenant}` en el `client_id`                                                                                                                                                                                                                                                                                                   |
 | `TRUST_PROXY`                                         | backend           | `true` detrás de Traefik (Easypanel): el rate limit usa `X-Forwarded-For`, tomando el primer salto. Solo es seguro detrás de un proxy que **sobrescribe** la cabecera (Traefik por defecto); uno que la **añade** (p. ej. `$proxy_add_x_forwarded_for` de nginx) deja el límite evadible                                                                                                                                                                   |
 | `FHIR_BASE_URL`                                       | backend           | Base pública de `/fhir` para los enlaces y `fullUrl` de los `Bundle`, y destino del cliente del simulador. Debe ser una URL absoluta `http(s)` que **incluya** la ruta `/fhir` (p. ej. `https://api.clinica.com/fhir`); si no es una URL absoluta, el backend se niega a arrancar. Obligatoria cuando `HERMES_SIMULATOR_ENABLED=true` y `FHIR_GATEWAY=fetch`. Sin ella, y con el simulador apagado, los enlaces se construyen con el origen de la petición |
+| `DOCS_ENABLED`                                        | backend           | `true` enciende Swagger UI en `/docs` (laboratorio y desarrollo). Por defecto `false`: **en producción queda apagado** y `/docs` responde `404`                                                                                                                                                                                                                                                                                                            |
+| `DOCS_OIDC_CLIENT_ID`                                 | backend           | Cliente público con PKCE que usa «Authorize» de Swagger UI; por defecto `chatbot-swagger` (redirect `${api}/docs/*`)                                                                                                                                                                                                                                                                                                                                       |
 | `FHIR_GATEWAY`                                        | backend           | `fetch` (el proceso y `hermes:sync`) o `handlers` (las pruebas invocan `/fhir` sin abrir un puerto). Por defecto `fetch`                                                                                                                                                                                                                                                                                                                                   |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | compose           | Credenciales del contenedor de Postgres                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `BACKEND_URL`                                         | frontend          | URL del backend a la que el proxy `/api/*` reenvía; se lee en runtime (en Easypanel, la interna del servicio)                                                                                                                                                                                                                                                                                                                                              |
@@ -352,5 +410,6 @@ con `-t "<nombre>"`.
 | `fhir-conformance`    | Forma R4, búsqueda, `OperationOutcome`, `metadata` igual a lo implementado y vencimiento al leer                      |
 | `hermes-simulador`    | El simulador cierra maestros, pre-agenda y pre-registro solo por `/fhir`                                              |
 | `cors`                | CORS del widget y alta / baja de orígenes                                                                             |
+| `contrato-rutas`      | Cada operación REST de los tres contratos contra su esquema OpenAPI (status, cuerpo, `Content-Type`, `X-Request-Id`)  |
 
 `carga-basica` llega con la Fase 6. El inventario completo está en `GOBERNANZA.md` §5.1.

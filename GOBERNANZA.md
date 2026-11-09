@@ -58,6 +58,13 @@ si el texto `keycloak` (sin distinguir mayúsculas) aparece en `backend/src/**` 
 `frontend/src/**`. Se admite en `backend/scripts/idp-lab/**`, en los documentos y en
 `.env.example`.
 
+**Contrato publicado y laboratorio.** Swagger UI (`/docs`) solo se enciende en laboratorio y
+desarrollo (`DOCS_ENABLED=true`); en producción queda apagado y responde `404`, como una ruta
+inexistente. El contrato se consulta allí con Postman. El password grant solo existe en el realm
+de laboratorio y solo en el cliente `chatbot-newman`, para que Newman pida tokens de usuario sin
+navegador; ningún otro cliente lo tiene (lo prueba `idp-lab-plan`) y Hermes nunca lo necesita:
+usa `client_credentials`.
+
 ### 1.4 Alcance del widget
 
 El rol `widget` alcanza únicamente el chat de su propia sesión. Nunca datos de dominio,
@@ -257,13 +264,16 @@ código, o se cambia la regla en una PR aparte que argumente el cambio.
 Se nombran por comportamiento, no por archivo: `contrato-api`, `roles`, `fronteras`,
 `dominio`, `simetria-seed`, `aislamiento-tenant`, `flujo`, `verificacion`, `pre-agenda`,
 `conocimiento-config`, `alta-chatbot`, `sesion-widget`, `idempotencia`, `sin-ia`,
-`fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`.
+`fhir-conformance`, `hermes-simulador`, `carga-basica`, `cors`, `contrato-rutas`.
 
 `fronteras` también hace cumplir el agnosticismo del proveedor (§1.3).
 
 `flujo` cubre el motor conversacional: el motor, los pasos, el recorrido completo y el chat
 por HTTP. `cors` cubre las respuestas CORS de las rutas del widget y el alta/baja de
-orígenes.
+orígenes. `contrato-rutas` invoca cada operación de los tres contratos REST y valida status,
+`Content-Type`, cuerpo (con `ajv` contra el esquema del builder) y `X-Request-Id`; un
+meta-test exige un caso o una exención con motivo por cada par (operación, status 2xx o
+400/401/403/404/409/422/429) declarado.
 
 ---
 
