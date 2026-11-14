@@ -6,7 +6,7 @@ calidad y Docker listos en la primera versión.
 
 ## Estado
 
-> Revisión: 9 de noviembre de 2026. El cálculo y la obligación de reescribir este
+> Revisión: 14 de noviembre de 2026. El cálculo y la obligación de reescribir este
 > bloque al lanzar o cerrar una spec están en `GOBERNANZA.md` §7.1. Solo cuenta lo
 > cerrado en `main`.
 
@@ -15,9 +15,9 @@ calidad y Docker listos en la primera versión.
 | MVP (fases 1–5)              | **100%**  |
 | Roadmap completo (fases 1–6) | **83,3%** |
 
-Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 se partió en tres sub-proyectos de igual peso (spec `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, §3), y los tres están en `main`: la 5.1 (corte de identidad a OIDC, PR #13), la 5.2 (frontend de referencia, PR #14) y la 5.3 (contrato publicado, PR #15). El porcentaje cuenta la 5.3 porque está en `main` (`GOBERNANZA.md` §7.1). Para cerrar la Fase 5 falta terminar su verificación manual en el laboratorio (ver «Siguiente tarea»). Mientras tanto, el criterio 7 de la Fase 5 (Postman de punta a punta contra el entorno desplegado) y el criterio 9 del MVP (§3.6) siguen sin demostrar. La Fase 6 no está abierta.
+Las fases 1 a 5 están cerradas y el MVP está completo. La Fase 5 se partió en tres sub-proyectos de igual peso (spec `docs/superpowers/specs/2026-10-27-fase-5-identidad-oidc-contrato-design.md`, §3), los tres en `main`: la 5.1 (corte de identidad a OIDC, PR #13), la 5.2 (frontend de referencia, PR #14) y la 5.3 (contrato publicado, PR #15). La verificación manual de la 5.3 terminó el 14 de noviembre de 2026 y demuestra el criterio 7 de la Fase 5 y el criterio 9 del MVP (§3.6). La Fase 6 no está abierta.
 
-**5.3 en `main`** el 9 de noviembre de 2026 (PR #15; spec `docs/superpowers/specs/2026-11-09-fase-5-3-contrato-publicado-design.md`):
+**5.3 cerrada** el 14 de noviembre de 2026 (PR #15, en `main` desde el 9 de noviembre; spec `docs/superpowers/specs/2026-11-09-fase-5-3-contrato-publicado-design.md`):
 
 - Swagger UI en `/docs` con los tres contratos y «Authorize» contra el proveedor. Solo funciona en laboratorio y desarrollo (`DOCS_ENABLED`) y no hace peticiones a terceros.
 - Colección Postman generada desde los contratos OpenAPI. Recorre el widget de punta a punta, el panel, la plataforma, el simulador y el ciclo de Hermes por `/fhir` con las dos clínicas, y deshace lo que crea.
@@ -25,11 +25,18 @@ Las fases 1, 2, 3 y 4 están cerradas. La Fase 5 se partió en tres sub-proyecto
 - Cliente `chatbot-newman` del laboratorio, el único con password grant.
 - Suite `contrato-rutas`: invoca cada operación declarada y valida su status y su cuerpo contra el esquema.
 
-Verificación manual (§8 de la spec):
+Verificación manual (§8 de la spec), en Easypanel contra `chatbot-lab`:
 
-- Hecho: `/docs` carga los tres contratos. «Authorize» con PKCE como `admin-clinica-norte` da `200` en el panel.
-- Hecho: en `chatbot-lab` se configuraron a mano `chatbot-newman` y los `webOrigins` del backend.
-- Pendiente: el recorrido de Newman no se ha ejecutado de punta a punta. Se interrumpió en local por falta de memoria.
+- `/docs` carga los tres contratos sin peticiones a terceros (`validatorUrl: null`). «Authorize» con PKCE como `admin-clinica-norte` da `200` en el panel.
+- `client_credentials`: `chatbot-platform` recibe `200` en `GET /api/platform/v1/me` (rol `platform`) y `403` en `/api/v1/me`; los dos `service-<tenant>` reciben `200` en `GET /api/v1/me` con su tenant y `403` en la plataforma. El proveedor responde con CORS para el origen del backend.
+- `newman run` dos veces seguidas en verde (161 peticiones y 222 aserciones cada una, 0 fallos), con los cupos `free` de las dos clínicas iguales antes y después.
+- Con `DOCS_ENABLED=false`, `/docs`, sus activos y los contratos responden `404`.
+
+Para llegar ahí hizo falta, el 14 de noviembre:
+
+- Arreglar la imagen de herramientas: `config/env.ts` importa los roles de `auth/domain` desde la 5.1 y la etapa `tools` del `Dockerfile` no los copiaba, así que `db:seed` fallaba en el contenedor. Nueva prueba `imagen-herramientas`.
+- Volver a sembrar el laboratorio (`cd /app/tools && npm run db:seed`): los cupos sembrados eran del 18 de septiembre al 8 de octubre y el bot solo ofrece los próximos 30 días. Sin cupos futuros, el recorrido del widget falla.
+- Devolver `max_query_range_days` de `clinica-norte` a 31: estaba en 1 y el panel de la colección consulta 7 días.
 
 Quedan dos menores diferidos a la Fase 6:
 
@@ -50,13 +57,7 @@ El 9 de noviembre de 2026 se creó `platform-lab` a mano con la API de administr
 
 **La 5.1** cerró el corte total del emisor HS256: el backend verifica tokens de un proveedor OIDC (RS256/ES256, JWKS), con rol `platform`, credenciales de widget cifradas, sesión del widget emitida por el proveedor, `service` del simulador por `client_credentials` y back-channel logout. Se retiraron `JWT_*`, `PLATFORM_SECRET`, `POST /api/platform/v1/tokens` y `token:dev`.
 
-**Siguiente tarea:** terminar la verificación manual de la **5.3** en Easypanel (§8 de su spec). Hace falta desplegar la rama con `DOCS_ENABLED=true` (incluye el arreglo del validador de Swagger, `d95a48e`) y comprobar tres cosas:
-
-- «Authorize» con `client_credentials`: como `chatbot-platform`, `GET /api/platform/v1/me` da `200`; como `service-<tenant>`, `GET /api/v1/me` da `200`.
-- `newman run` pasa dos veces seguidas en verde, con los mismos cupos `free` antes y después.
-- Con `DOCS_ENABLED=false`, `/docs` responde `404`.
-
-Con eso cierran la Fase 5 y el MVP. La Fase 6 (pipelines, cobertura al 100%, oleadas de SonarQube y endurecimiento) espera a ese cierre.
+**Siguiente tarea:** abrir la **Fase 6** (endurecimiento y entrega) con su spec SDD y su corte en sub-proyectos. Entran ahí los dos menores diferidos de la 5.3.
 
 ---
 
