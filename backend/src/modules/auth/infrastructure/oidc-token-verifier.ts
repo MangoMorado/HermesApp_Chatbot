@@ -7,7 +7,12 @@ import { mapClaims } from "./claims-mapper";
 import type { OidcDiscovery } from "./oidc-discovery";
 
 const ALGORITHMS = ["RS256", "ES256"];
-const BACKCHANNEL_EVENT = "http://schemas.openid.net/event/backchannel-logout";
+/**
+ * Identificador fijo del evento en el claim `events` del `logout_token` (OIDC Back-Channel
+ * Logout 1.0, §2.4). Es un URI de nombre, no una URL a la que se conecte: el proveedor lo
+ * emite literalmente con `http`, y cambiarlo a `https` rompería la verificación.
+ */
+const BACKCHANNEL_EVENT = "http://schemas.openid.net/event/backchannel-logout"; // NOSONAR typescript:S5332
 
 /**
  * Fallo al traer el JWKS: red, timeout, respuesta no 200 o JSON invalido. Una clave que no
