@@ -12,12 +12,12 @@ export function PlatformNotice() {
     return null;
   }
   return (
-    <div className="notice" role="status">
+    <output className="notice">
       <span className="notice-code data">platform</span>
       <span>
         La sesión <code>platform</code> no opera dentro de una clínica: solo da de alta tenants
         (Simulador → Tenants).
       </span>
-    </div>
+    </output>
   );
 }

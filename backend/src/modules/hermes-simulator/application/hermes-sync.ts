@@ -204,9 +204,11 @@ async function closePreAgenda(deps: SyncDeps, tenantId: string): Promise<number>
       throw new Error("La bandeja no termino");
     }
   }
-  for (const request of pending) {
-    await deps.approve({ tenantId, requestId: request.id, actor: HERMES_ACTOR });
-  }
+  await Promise.all(
+    pending.map((request) =>
+      deps.approve({ tenantId, requestId: request.id, actor: HERMES_ACTOR }),
+    ),
+  );
   return pending.length;
 }
 

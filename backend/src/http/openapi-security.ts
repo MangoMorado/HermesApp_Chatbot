@@ -45,9 +45,7 @@ export type ProviderEndpoints = {
   readonly tokenEndpoint: string;
 };
 
-type Json = unknown;
-
-function replacePlaceholders(value: Json, endpoints: ProviderEndpoints): Json {
+function replacePlaceholders(value: unknown, endpoints: ProviderEndpoints): unknown {
   if (value === OAUTH_PLACEHOLDERS.tokenUrl) {
     return endpoints.tokenEndpoint;
   }
@@ -66,7 +64,7 @@ function replacePlaceholders(value: Json, endpoints: ProviderEndpoints): Json {
 }
 
 /** Quita `oidcUser` de las alternativas de `security`; una lista que se vacia desaparece. */
-function dropUserRequirement(value: Json): Json {
+function dropUserRequirement(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(dropUserRequirement);
   }
@@ -87,7 +85,7 @@ type WithSchemes = { components?: { securitySchemes?: Record<string, unknown> } 
 
 function withoutUserScheme(document: WithSchemes): WithSchemes {
   const cleaned = dropUserRequirement(document) as WithSchemes;
-  const schemes = { ...(cleaned.components?.securitySchemes ?? {}) };
+  const schemes = { ...cleaned.components?.securitySchemes };
   delete schemes.oidcUser;
   return { ...cleaned, components: { ...cleaned.components, securitySchemes: schemes } };
 }

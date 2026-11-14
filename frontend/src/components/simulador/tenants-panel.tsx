@@ -48,7 +48,7 @@ function SessionHint({ isPlatform }: { readonly isPlatform: boolean }) {
     return null;
   }
   return (
-    <p className="hint" role="status">
+    <output className="hint">
       {status === "authenticated" ? (
         <>
           El alta de clínicas requiere una sesión <code>platform</code> (usuario{" "}
@@ -57,7 +57,7 @@ function SessionHint({ isPlatform }: { readonly isPlatform: boolean }) {
       ) : (
         "Inicia sesión en la franja de sesión (tecla 0) con una cuenta platform."
       )}
-    </p>
+    </output>
   );
 }
 

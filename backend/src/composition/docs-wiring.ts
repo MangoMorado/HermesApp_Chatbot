@@ -14,7 +14,7 @@ export type DocsWiring = {
   readonly oidcClientId: string;
   readonly contracts: readonly DocsContract[];
   /** `null` si el nombre no es un contrato ofrecido; rechaza si el discovery falla. */
-  servedDocument(name: string): Promise<unknown | null>;
+  servedDocument(name: string): Promise<unknown>;
 };
 
 const BUILDERS: Readonly<Record<DocsContractName, () => unknown>> = {

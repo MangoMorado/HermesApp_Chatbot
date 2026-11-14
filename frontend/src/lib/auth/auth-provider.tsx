@@ -14,8 +14,8 @@ type AuthActions = {
 
 const AuthContext = createContext<AuthActions>({
   manager: null,
-  signIn: async () => undefined,
-  signOut: async () => undefined,
+  signIn: () => Promise.resolve(),
+  signOut: () => Promise.resolve(),
 });
 
 function useManager(config: OidcConfig | null): UserManager | null {

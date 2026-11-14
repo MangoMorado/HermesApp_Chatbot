@@ -24,7 +24,11 @@ function optionalUrl(document: Record<string, unknown>, field: string): string |
 
 /** Solo aqui se quita la barra final: el issuer se compara tal cual contra `iss`. */
 export function discoveryUrl(issuer: string): string {
-  return `${issuer.replace(/\/+$/, "")}/.well-known/openid-configuration`;
+  let end = issuer.length;
+  while (end > 0 && issuer[end - 1] === "/") {
+    end--;
+  }
+  return `${issuer.slice(0, end)}/.well-known/openid-configuration`;
 }
 
 async function fetchDiscovery(

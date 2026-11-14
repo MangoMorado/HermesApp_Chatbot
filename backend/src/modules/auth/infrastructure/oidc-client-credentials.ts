@@ -117,21 +117,26 @@ export function createOidcClientCredentials(deps: Deps): ClientTokenSource {
 export function configServiceResolver(
   clients: AppConfig["simServiceClients"],
 ): MachineCredentialResolver {
-  return async (ref) => {
-    if (ref.kind !== "service") {
-      return null;
-    }
-    const exact = clients.get(ref.tenantId);
-    if (exact) {
-      return { clientId: exact.clientId, clientSecret: exact.clientSecret };
-    }
-    const wildcard = clients.get("*");
-    if (!wildcard) {
-      return null;
-    }
-    return {
-      clientId: wildcard.clientId.replaceAll("{tenant}", ref.tenantId),
-      clientSecret: wildcard.clientSecret,
-    };
+  return (ref) => Promise.resolve(resolveServiceClient(clients, ref));
+}
+
+function resolveServiceClient(
+  clients: AppConfig["simServiceClients"],
+  ref: MachineCredentialRef,
+): MachineCredential | null {
+  if (ref.kind !== "service") {
+    return null;
+  }
+  const exact = clients.get(ref.tenantId);
+  if (exact) {
+    return { clientId: exact.clientId, clientSecret: exact.clientSecret };
+  }
+  const wildcard = clients.get("*");
+  if (!wildcard) {
+    return null;
+  }
+  return {
+    clientId: wildcard.clientId.replaceAll("{tenant}", ref.tenantId),
+    clientSecret: wildcard.clientSecret,
   };
 }
