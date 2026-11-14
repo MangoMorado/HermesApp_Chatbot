@@ -9,10 +9,10 @@ function SessionControls() {
   const { signIn, signOut } = useAuthActions();
   if (status === "unconfigured") {
     return (
-      <p className="hint" role="status">
+      <output className="hint">
         Falta configurar el proveedor de identidad (<code>PUBLIC_OIDC_ISSUER</code>,{" "}
         <code>PUBLIC_OIDC_CLIENT_ID</code>).
-      </p>
+      </output>
     );
   }
   if (status === "loading") {

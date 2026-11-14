@@ -276,6 +276,10 @@ kbd {
   font-size: 0.8125rem;
 }
 
+output.hint {
+  display: block;
+}
+
 .claims {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);

@@ -15,7 +15,7 @@ function configScript(input: DocsPageInput): string {
     clientId: input.oidcClientId,
   };
   // `<` escapado: el JSON no puede cerrar la etiqueta script.
-  return JSON.stringify(config).replace(/</g, "\\u003c");
+  return JSON.stringify(config).replaceAll("<", String.raw`\u003c`);
 }
 
 export function docsPage(input: DocsPageInput): string {

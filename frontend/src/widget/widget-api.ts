@@ -7,17 +7,16 @@ import {
 import type {
   ConversationHistory,
   ConversationMessageInput,
-  ConversationOption,
   ConversationTurn,
   WidgetSessionOpened,
   WidgetSessionRefreshed,
 } from "./api/models";
 import type { WidgetRequestInit } from "./fetcher";
 
+export type { ConversationOption } from "./api/models";
 export type {
   ConversationHistory,
   ConversationMessageInput,
-  ConversationOption,
   ConversationTurn,
   WidgetSessionOpened,
   WidgetSessionRefreshed,
