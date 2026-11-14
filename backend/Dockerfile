@@ -24,6 +24,8 @@ COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY scripts/demo.ts ./scripts/demo.ts
 COPY src/config ./src/config
+# config/env.ts importa los roles (lista de roles admitidos en la configuracion).
+COPY src/modules/auth/domain ./src/modules/auth/domain
 COPY src/modules/shared ./src/modules/shared
 COPY src/modules/knowledge/domain ./src/modules/knowledge/domain
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=public
